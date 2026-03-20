@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "549766360925",
+    "project_id": "keyfi-9d041",
+    "storage_bucket": "keyfi-9d041.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:549766360925:android:148e039669cfe0f7ae42b4",
+        "android_client_info": {
+          "package_name": "com.keyfi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKgYP7cUtBxqDcXBUDti9Vw_XWMvGoWG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
