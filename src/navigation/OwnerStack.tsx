@@ -18,7 +18,8 @@ import { OwnerPixKeyScreen } from "../screens/owner/OwnerPixKeyScreen";
 import { OwnerWalletScreen } from "../screens/owner/OwnerWalletScreen";
 import { OwnerBoletoWebViewScreen } from "../screens/owner/OwnerBoletoWebViewScreen";
 import { CardTokenizeWebViewScreen } from "../screens/payments/CardTokenizeWebViewScreen";
-
+import { OwnerShippingMethodScreen } from "../screens/owner/OwnerShippingMethodScreen";
+import { OwnerCheckoutAddressScreen } from "../screens/owner/OwnerCheckoutAddressScreen";
 // NOVO
 import { OwnerCartRequestsScreen } from "../screens/owner/OwnerCartRequestsScreen";
 import { OwnerCartRequestDetailsScreen } from "../screens/owner/OwnerCartRequestDetailsScreen";
@@ -57,6 +58,16 @@ export function OwnerStack() {
         name={OWNER_SCREENS.CartRequestDetails}
         component={OwnerCartRequestDetailsScreen}
       />
+      <Stack.Screen
+  name={OWNER_SCREENS.CheckoutAddress}
+  component={OwnerCheckoutAddressScreen}
+/>
+
+<Stack.Screen
+  name={OWNER_SCREENS.ShippingMethod}
+  component={OwnerShippingMethodScreen}
+/>
+
     </Stack.Navigator>
   );
 }

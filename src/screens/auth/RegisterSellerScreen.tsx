@@ -90,8 +90,9 @@ export function RegisterSellerScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const login = useAuthStore((s) => s.login);
-  const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+const login = useAuthStore((s) => s.login);
+const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
+const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
   function showModal(title: string, message: string) {
@@ -215,10 +216,11 @@ export function RegisterSellerScreen() {
         cnpj: cnpjDigits,
       });
 
-      await login(email.trim(), password);
-      setNeedsOnboarding(false);
+const normalizedEmail = email.trim().toLowerCase();
 
-      showModal("Sucesso", "Conta criada e login efetuado!");
+await login(normalizedEmail, password);
+setNeedsOnboarding(false);
+await queueBiometricSetup(normalizedEmail);
     } catch (e: any) {
       handleCooldownFromError(e);
 

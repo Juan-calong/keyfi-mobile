@@ -10,8 +10,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useNavigation, DrawerActions } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import Icon from "react-native-vector-icons/Ionicons";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -24,6 +26,8 @@ import { endpoints } from "../../core/api/endpoints";
 import { t } from "../../ui/tokens";
 
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
+import { useCartStore } from "../../stores/cart.store";
+import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton";
 
 type TargetType =
   | "NONE"
@@ -54,8 +58,37 @@ type ProductDTO = {
   sku?: string;
   name: string;
   price: string;
-  customerPrice?: string | null;
   effectivePrice?: string | number;
+  isFavorite?: boolean;
+  favorited?: boolean;
+
+  promoType?: string | null;
+  promoValue?: string | number | null;
+  promoPrice?: string | number | null;
+  salePrice?: string | number | null;
+  pricePromo?: string | number | null;
+  promotionalPrice?: string | number | null;
+  discountedPrice?: string | number | null;
+  finalPrice?: string | number | null;
+  discountPct?: string | number | null;
+  discountPercent?: string | number | null;
+  discountValue?: string | number | null;
+  discountAmount?: string | number | null;
+
+  averageRating?: string | number | null;
+  avgRating?: string | number | null;
+  ratingAverage?: string | number | null;
+  rating?: string | number | null;
+  reviewCount?: number | null;
+  reviewsCount?: number | null;
+  ratingCount?: number | null;
+  ratingsCount?: number | null;
+  commentsCount?: number | null;
+  stats?: {
+    averageRating?: string | number | null;
+    reviewCount?: number | null;
+  } | null;
+
   active?: boolean;
   stock?: number | null;
   primaryImageUrl?: string | null;
@@ -69,7 +102,23 @@ type PreviewItem = {
   name: string;
   imageUri?: string;
   price?: string | number | null;
+  originalPrice?: string | number | null;
+  hasDiscount?: boolean;
+  ratingValue?: number | null;
+  ratingCount?: number | null;
+  isFavorite?: boolean;
 };
+
+type ReviewItem = {
+  id?: string;
+  rating?: number | null;
+  stars?: number | null;
+  score?: number | null;
+};
+
+function getProductFavorited(p: any) {
+  return Boolean(p?.isFavorite ?? p?.favorited ?? false);
+}
 
 function toNumberBR(v: string | number | null | undefined) {
   const n = Number(String(v ?? "0").replace(",", "."));
@@ -80,6 +129,32 @@ function formatBRL(value: string | number | null | undefined) {
   const n = toNumberBR(value);
   if (!Number.isFinite(n)) return "R$ —";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function clampMin(n: number, min = 0) {
+  return n < min ? min : n;
+}
+
+function applyPromo(basePrice: number, promo: { type: string; value: string | number }) {
+  const value = toNumberBR(promo.value);
+
+  switch (String(promo.type || "").toUpperCase()) {
+    case "PCT": {
+      const pct = clampMin(value, 0);
+      const final = basePrice * (1 - pct / 100);
+      return clampMin(final, 0);
+    }
+    case "VALUE": {
+      const final = basePrice - value;
+      return clampMin(final, 0);
+    }
+    case "PRICE":
+    case "FIXED_PRICE": {
+      return clampMin(value, 0);
+    }
+    default:
+      return basePrice;
+  }
 }
 
 function asProducts(data: any): ProductDTO[] {
@@ -97,38 +172,256 @@ function asHomeBanners(data: any): HomeBannerDTO[] {
 }
 
 function getEffectivePrice(p: any) {
-  return p?.effectivePrice ?? p?.customerPrice ?? p?.price;
+  return p?.effectivePrice ?? p?.price;
+}
+
+function getBasePrice(p: any) {
+  const base = toNumberBR(getEffectivePrice(p));
+  return Number.isFinite(base) ? base : 0;
+}
+
+function getCardPriceData(p: any) {
+  const base = getBasePrice(p);
+
+  const promoType = p?.promoType ?? p?.promo?.type ?? null;
+  const promoValue = p?.promoValue ?? p?.promo?.value ?? null;
+
+  if (promoType != null && promoValue != null) {
+    const final = applyPromo(base, {
+      type: String(promoType),
+      value: promoValue,
+    });
+
+    if (final < base) {
+      return {
+        price: final,
+        originalPrice: base,
+        hasDiscount: true,
+      };
+    }
+  }
+
+  const directPromoCandidates = [
+    p?.promoPrice,
+    p?.salePrice,
+    p?.pricePromo,
+    p?.promotionalPrice,
+    p?.discountedPrice,
+    p?.finalPrice,
+  ];
+
+  for (const candidate of directPromoCandidates) {
+    const promoPrice = toNumberBR(candidate);
+    if (promoPrice > 0 && promoPrice < base) {
+      return {
+        price: promoPrice,
+        originalPrice: base,
+        hasDiscount: true,
+      };
+    }
+  }
+
+  const pct = toNumberBR(p?.discountPct ?? p?.discountPercent);
+  if (pct > 0) {
+    const final = clampMin(base * (1 - pct / 100), 0);
+    if (final < base) {
+      return {
+        price: final,
+        originalPrice: base,
+        hasDiscount: true,
+      };
+    }
+  }
+
+  const val = toNumberBR(p?.discountValue ?? p?.discountAmount);
+  if (val > 0) {
+    const final = clampMin(base - val, 0);
+    if (final < base) {
+      return {
+        price: final,
+        originalPrice: base,
+        hasDiscount: true,
+      };
+    }
+  }
+
+  return {
+    price: base,
+    originalPrice: null,
+    hasDiscount: false,
+  };
 }
 
 function getProductImageUri(p: ProductDTO) {
   return p.primaryImageUrl || p.images?.[0]?.url || p.imageUrl || undefined;
 }
 
+function getProductRatingValue(p: any) {
+  const candidates = [
+    p?.averageRating,
+    p?.avgRating,
+    p?.ratingAverage,
+    p?.rating,
+    p?.stats?.averageRating,
+  ];
+
+  for (const candidate of candidates) {
+    const n = Number(candidate);
+    if (Number.isFinite(n) && n > 0) {
+      return Math.max(0, Math.min(5, n));
+    }
+  }
+
+  return 0;
+}
+
+function getProductRatingCount(p: any) {
+  const candidates = [
+    p?.reviewCount,
+    p?.reviewsCount,
+    p?.ratingCount,
+    p?.ratingsCount,
+    p?.commentsCount,
+    p?.stats?.reviewCount,
+  ];
+
+  for (const candidate of candidates) {
+    const n = Number(candidate);
+    if (Number.isFinite(n) && n > 0) {
+      return n;
+    }
+  }
+
+  return 0;
+}
+
 function asPromoProducts(data: any): ProductDTO[] {
   const arr = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
 
   const mapped: any[] = arr.map((x: any) => {
-    if (x?.product && (x.product.id || x.product.productId)) return x.product;
-    if (x?.productRef && (x.productRef.id || x.productRef.productId)) return x.productRef;
-    if (x?.productItem && (x.productItem.id || x.productItem.productId)) return x.productItem;
+    const promoMeta = {
+      promoType: x?.promo?.type ?? x?.type ?? null,
+      promoValue: x?.promo?.value ?? x?.value ?? null,
+      promoPrice:
+        x?.promoPrice ?? x?.salePrice ?? x?.pricePromo ?? x?.promotionalPrice ?? null,
+      salePrice: x?.salePrice ?? null,
+      pricePromo: x?.pricePromo ?? null,
+      promotionalPrice: x?.promotionalPrice ?? null,
+      discountedPrice: x?.discountedPrice ?? null,
+      finalPrice: x?.finalPrice ?? null,
+      discountPct: x?.discountPct ?? x?.discountPercent ?? null,
+      discountPercent: x?.discountPercent ?? null,
+      discountValue: x?.discountValue ?? x?.discountAmount ?? null,
+      discountAmount: x?.discountAmount ?? null,
+    };
+
+    if (x?.product && (x.product.id || x.product.productId)) {
+      return {
+        ...x.product,
+        ...promoMeta,
+        id: x.product.id ?? x.product.productId,
+      };
+    }
+
+    if (x?.productRef && (x.productRef.id || x.productRef.productId)) {
+      return {
+        ...x.productRef,
+        ...promoMeta,
+        id: x.productRef.id ?? x.productRef.productId,
+      };
+    }
+
+    if (x?.productItem && (x.productItem.id || x.productItem.productId)) {
+      return {
+        ...x.productItem,
+        ...promoMeta,
+        id: x.productItem.id ?? x.productItem.productId,
+      };
+    }
 
     if (x?.productId && x?.name) {
       return {
         id: x.productId,
         name: x.name,
         price: String(x.price ?? "0"),
-        effectivePrice: x.effectivePrice ?? x.customerPrice ?? x.price ?? "0",
+        effectivePrice: x?.effectivePrice ?? x?.price ?? "0",
         imageUrl: x.imageUri ?? x.imageUrl ?? x.primaryImageUrl ?? null,
+        averageRating:
+          x?.averageRating ?? x?.avgRating ?? x?.ratingAverage ?? x?.rating ?? null,
+        reviewCount:
+          x?.reviewCount ??
+          x?.reviewsCount ??
+          x?.ratingCount ??
+          x?.ratingsCount ??
+          x?.commentsCount ??
+          null,
+        stats: x?.stats ?? null,
         active: true,
+        isFavorite: x?.isFavorite ?? x?.favorited ?? false,
+        favorited: x?.favorited ?? x?.isFavorite ?? false,
+        ...promoMeta,
       } as ProductDTO;
     }
 
-    return x;
+    return {
+      ...x,
+      ...promoMeta,
+    };
   });
 
   return mapped
     .map((p: any) => ({ ...p, id: p?.id ?? p?.productId }))
     .filter((p: any) => !!p?.id && !!p?.name);
+}
+
+function getReviewRating(item: any) {
+  const n = Number(item?.rating ?? item?.stars ?? item?.score ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return 0;
+  if (n > 5) return 5;
+  return n;
+}
+
+function extractCommentsItems(data: any): ReviewItem[] {
+  if (Array.isArray(data)) return data as ReviewItem[];
+  if (Array.isArray(data?.items)) return data.items as ReviewItem[];
+  if (Array.isArray(data?.data?.items)) return data.data.items as ReviewItem[];
+  return [];
+}
+
+function getCommentsAverageRating(data: any) {
+  const direct = Number(
+    data?.averageRating ??
+      data?.avgRating ??
+      data?.ratingAverage ??
+      data?.stats?.averageRating
+  );
+
+  if (Number.isFinite(direct) && direct >= 0) {
+    return Math.max(0, Math.min(5, direct));
+  }
+
+  const items = extractCommentsItems(data);
+  const rated = items.map((item) => getReviewRating(item)).filter((n) => n > 0);
+
+  if (!rated.length) return 0;
+
+  const sum = rated.reduce((acc, n) => acc + n, 0);
+  return Math.max(0, Math.min(5, sum / rated.length));
+}
+
+function getCommentsTotal(data: any) {
+  const direct = Number(
+    data?.total ??
+      data?.ratingsCount ??
+      data?.reviewsCount ??
+      data?.commentsCount ??
+      data?.stats?.reviewCount
+  );
+
+  if (Number.isFinite(direct) && direct > 0) return direct;
+
+  return extractCommentsItems(data).length;
 }
 
 function Hairline() {
@@ -253,12 +546,43 @@ function BackgroundTexture() {
   );
 }
 
+function AddToCartButton({
+  inCart,
+  onPress,
+}: {
+  inCart: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={(e) => {
+        e.stopPropagation?.();
+        onPress();
+      }}
+      hitSlop={10}
+      style={({ pressed }) => [
+        styles.cardCartButton,
+        inCart && styles.cardCartButtonSelected,
+        pressed && styles.cardActionButtonPressed,
+      ]}
+    >
+      <Icon
+        name={inCart ? "bag" : "bag-outline"}
+        size={18}
+        color={inCart ? "#FFF" : "#000"}
+      />
+    </Pressable>
+  );
+}
+
 function PreviewGrid({
   data,
   onPressItem,
+  onAddToCart,
 }: {
   data: PreviewItem[];
   onPressItem: (id: string) => void;
+  onAddToCart: (id: string) => void;
 }) {
   const { width } = useWindowDimensions();
 
@@ -266,50 +590,124 @@ function PreviewGrid({
   const horizontalPadding = 4;
   const containerHorizontalInset = 32;
   const cardWidth = (width - containerHorizontalInset - horizontalPadding - gap) / 2;
+  const qtyById = useCartStore((s) => s.qtyById);
 
   return (
     <FlatList
       data={data}
-      keyExtractor={(i) => i.id}
+      extraData={qtyById}
+      keyExtractor={(i) => String(i.id)}
       numColumns={2}
       scrollEnabled={false}
       columnWrapperStyle={styles.gridRow}
       contentContainerStyle={styles.gridContent}
       ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
-      renderItem={({ item }) => (
-        <Pressable
-          onPress={() => onPressItem(item.id)}
-          style={[styles.cardWrap, { width: cardWidth }]}
-        >
-          <View style={styles.card}>
-            <View style={styles.cardImageWrap}>
-              {item.imageUri ? (
-                <Image source={{ uri: item.imageUri }} style={styles.cardImage} resizeMode="cover" />
-              ) : (
-                <View style={styles.cardImageFallback} />
-              )}
+      renderItem={({ item }) => {
+        const productId = String(item.id);
+        const inCart = Number(qtyById?.[productId] ?? 0) > 0;
+
+        return (
+          <Pressable
+            onPress={() => onPressItem(productId)}
+            style={[styles.cardWrap, { width: cardWidth }]}
+          >
+            <View style={styles.card}>
+              <View style={styles.cardImageWrap}>
+                {item.imageUri ? (
+                  <Image
+                    source={{ uri: item.imageUri }}
+                    style={styles.cardImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.cardImageFallback} />
+                )}
+
+                <View style={styles.cardTopRightAction}>
+                  <ProductFavoriteButton
+                    productId={productId}
+                    initialFavorited={item.isFavorite}
+                  />
+                </View>
+
+                <View style={styles.cardBottomRightAction}>
+                  <AddToCartButton
+                    inCart={inCart}
+                    onPress={() => onAddToCart(productId)}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.cardInnerDivider} />
+
+              <View style={styles.cardMeta}>
+                <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardName}>
+                  {item.name}
+                </Text>
+
+                {Number(item.ratingValue ?? 0) > 0 ? (
+                  <View style={styles.cardRatingRow}>
+                    <View style={styles.cardStarsRow}>
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const rating = Number(item.ratingValue ?? 0);
+
+                        const iconName =
+                          rating >= star
+                            ? "star"
+                            : rating >= star - 0.5
+                            ? "star-half"
+                            : "star-outline";
+
+                        return (
+                          <Icon
+                            key={star}
+                            name={iconName}
+                            size={11}
+                            color="#B8943C"
+                            style={styles.cardRatingStar}
+                          />
+                        );
+                      })}
+                    </View>
+
+                    <Text numberOfLines={1} style={styles.cardRatingText}>
+                      {Number(item.ratingValue).toFixed(1)}
+                      {Number(item.ratingCount ?? 0) > 0 ? ` (${item.ratingCount})` : ""}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.cardRatingSpacer} />
+                )}
+
+                <View style={styles.cardPriceBlock}>
+                  <View style={styles.cardPriceRow}>
+                    <Text numberOfLines={1} style={styles.cardPrice}>
+                      {formatBRL(item.price)}
+                    </Text>
+
+                    {item.hasDiscount && item.originalPrice ? (
+                      <Text numberOfLines={1} style={styles.cardOldPriceInline}>
+                        {formatBRL(item.originalPrice)}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
             </View>
-
-            <View style={styles.cardInnerDivider} />
-
-            <View style={styles.cardMeta}>
-              <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardName}>
-                {item.name}
-              </Text>
-
-              <Text numberOfLines={1} style={styles.cardPrice}>
-                {formatBRL(item.price)}
-              </Text>
-            </View>
-          </View>
-        </Pressable>
-      )}
+          </Pressable>
+        );
+      }}
     />
   );
 }
 
 export function OwnerHomeScreen() {
   const nav = useNavigation<any>();
+  const tabBarHeight = useBottomTabBarHeight();
+
+  const qtyById = useCartStore((s) => s.qtyById);
+  const addToCart = useCartStore((s) => s.inc);
+  const removeFromCart = useCartStore((s) => s.remove);
 
   const meQ = useQuery({
     queryKey: ["me"],
@@ -343,26 +741,11 @@ export function OwnerHomeScreen() {
     queryKey: ["owner-home-promos-preview", { appliesTo: "SALON" }],
     queryFn: async () => {
       const res = await api.get(endpoints.products.promosActive, {
-        params: { take: 10, appliesTo: "SALON" },
+        params: { take: 200, appliesTo: "SALON" },
       });
 
       const items = asPromoProducts(res.data);
-
-      const discounted = items.filter((p: any) => {
-        const base = Number(String(getEffectivePrice(p) ?? "0").replace(",", "."));
-
-        const promoPrice = Number(
-          String(p?.promoPrice ?? p?.salePrice ?? p?.pricePromo ?? "").replace(",", ".")
-        );
-
-        if (Number.isFinite(base) && Number.isFinite(promoPrice) && promoPrice > 0) {
-          return promoPrice < base;
-        }
-
-        const pct = Number(p?.discountPct ?? p?.discountPercent ?? 0);
-        const val = Number(p?.discountValue ?? p?.discountAmount ?? 0);
-        return (Number.isFinite(pct) && pct > 0) || (Number.isFinite(val) && val > 0);
-      });
+      const discounted = items.filter((p: any) => getCardPriceData(p).hasDiscount);
 
       return discounted.length ? discounted : items;
     },
@@ -383,18 +766,51 @@ export function OwnerHomeScreen() {
     return (promosQ.data ?? []).filter((p) => p?.active !== false);
   }, [promosQ.data]);
 
-  const promoPreview = useMemo<PreviewItem[]>(
+  const promoProductById = useMemo(() => {
+    const map = new Map<string, ProductDTO>();
+    for (const item of promoProducts) {
+      map.set(item.id, item);
+    }
+    return map;
+  }, [promoProducts]);
+
+  const promoBasePreview = useMemo<PreviewItem[]>(
     () =>
-      promoProducts.slice(0, 10).map((p) => ({
-        id: p.id,
-        name: p.name,
-        imageUri: getProductImageUri(p),
-        price: getEffectivePrice(p),
-      })),
+      promoProducts.slice(0, 10).map((p) => {
+        const priceData = getCardPriceData(p);
+
+        return {
+          id: p.id,
+          name: p.name,
+          imageUri: getProductImageUri(p),
+          price: priceData.price,
+          originalPrice: priceData.originalPrice,
+          hasDiscount: priceData.hasDiscount,
+          ratingValue: getProductRatingValue(p),
+          ratingCount: getProductRatingCount(p),
+          isFavorite: getProductFavorited(p),
+        };
+      }),
     [promoProducts]
   );
 
-  const newestPreview = useMemo<PreviewItem[]>(() => {
+  const handleAddToCart = useCallback(
+    (productId: string) => {
+      if (!productId) return;
+
+      const currentQty = Number(qtyById?.[productId] ?? 0);
+
+      if (currentQty > 0) {
+        removeFromCart(productId);
+        return;
+      }
+
+      addToCart(productId, 1);
+    },
+    [addToCart, removeFromCart, qtyById]
+  );
+
+  const newestBasePreview = useMemo<PreviewItem[]>(() => {
     const copy = [...products];
 
     copy.sort((a, b) => {
@@ -403,13 +819,101 @@ export function OwnerHomeScreen() {
       return db - da;
     });
 
-    return copy.slice(0, 10).map((p) => ({
-      id: p.id,
-      name: p.name,
-      imageUri: getProductImageUri(p),
-      price: getEffectivePrice(p),
-    }));
-  }, [products]);
+    return copy.slice(0, 10).map((p) => {
+      const merged = promoProductById.get(p.id)
+        ? { ...p, ...promoProductById.get(p.id) }
+        : p;
+
+      const priceData = getCardPriceData(merged);
+
+      return {
+        id: p.id,
+        name: p.name,
+        imageUri: getProductImageUri(merged),
+        price: priceData.price,
+        originalPrice: priceData.originalPrice,
+        hasDiscount: priceData.hasDiscount,
+        ratingValue: getProductRatingValue(merged),
+        ratingCount: getProductRatingCount(merged),
+        isFavorite: getProductFavorited(merged),
+      };
+    });
+  }, [products, promoProductById]);
+
+  const previewProductIds = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...promoBasePreview.map((item) => item.id),
+          ...newestBasePreview.map((item) => item.id),
+        ])
+      ),
+    [promoBasePreview, newestBasePreview]
+  );
+
+  const ratingQueries = useQueries({
+    queries: previewProductIds.map((productId) => ({
+      queryKey: ["owner-product-comments-summary-home", productId],
+      queryFn: async () => {
+        const res = await api.get<any>(endpoints.products.comments(productId), {
+          params: { page: 1, limit: 20 },
+        });
+
+        return {
+          productId,
+          averageRating: getCommentsAverageRating(res.data),
+          reviewsCount: getCommentsTotal(res.data),
+        };
+      },
+      enabled: !!productId,
+      retry: false,
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+    })),
+  });
+
+  const ratingByProductId = useMemo(() => {
+    const map = new Map<string, { value: number; count: number }>();
+
+    for (const query of ratingQueries) {
+      if (query.data?.productId) {
+        map.set(query.data.productId, {
+          value: Number(query.data.averageRating ?? 0),
+          count: Number(query.data.reviewsCount ?? 0),
+        });
+      }
+    }
+
+    return map;
+  }, [ratingQueries]);
+
+  const promoPreview = useMemo<PreviewItem[]>(
+    () =>
+      promoBasePreview.map((item) => {
+        const summary = ratingByProductId.get(item.id);
+
+        return {
+          ...item,
+          ratingValue: summary?.value ?? item.ratingValue ?? 0,
+          ratingCount: summary?.count ?? item.ratingCount ?? 0,
+        };
+      }),
+    [promoBasePreview, ratingByProductId]
+  );
+
+  const newestPreview = useMemo<PreviewItem[]>(
+    () =>
+      newestBasePreview.map((item) => {
+        const summary = ratingByProductId.get(item.id);
+
+        return {
+          ...item,
+          ratingValue: summary?.value ?? item.ratingValue ?? 0,
+          ratingCount: summary?.count ?? item.ratingCount ?? 0,
+        };
+      }),
+    [newestBasePreview, ratingByProductId]
+  );
 
   const goToBuy = useCallback(
     (params?: Record<string, any>) => {
@@ -474,7 +978,8 @@ export function OwnerHomeScreen() {
   const isLoading =
     meQ.isLoading || bannersQ.isLoading || productsQ.isLoading || promosQ.isLoading;
 
-  const isError = meQ.isError || bannersQ.isError || productsQ.isError || promosQ.isError;
+  const isError =
+    meQ.isError || bannersQ.isError || productsQ.isError || promosQ.isError;
 
   return (
     <Screen>
@@ -505,7 +1010,10 @@ export function OwnerHomeScreen() {
             data={[]}
             keyExtractor={(_, idx) => String(idx)}
             renderItem={() => null}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: tabBarHeight + 14 },
+            ]}
             ListHeaderComponent={
               <View style={styles.stack}>
                 {banners.length > 0 ? (
@@ -534,6 +1042,7 @@ export function OwnerHomeScreen() {
                     <PreviewGrid
                       data={promoPreview}
                       onPressItem={(id) => goToProductDetails(id)}
+                      onAddToCart={handleAddToCart}
                     />
 
                     <View style={{ height: 6 }} />
@@ -552,6 +1061,7 @@ export function OwnerHomeScreen() {
                   <PreviewGrid
                     data={newestPreview}
                     onPressItem={(id) => goToProductDetails(id)}
+                    onAddToCart={handleAddToCart}
                   />
                 )}
               </View>
@@ -571,6 +1081,40 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
+  cardTopRightAction: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 3,
+  },
+
+  cardBottomRightAction: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    zIndex: 3,
+  },
+
+  cardCartButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cardCartButtonSelected: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+
+  cardActionButtonPressed: {
+    opacity: 0.7,
+  },
+
   gridContent: {
     paddingTop: 6,
     paddingHorizontal: 2,
@@ -582,19 +1126,69 @@ const styles = StyleSheet.create({
 
   cardWrap: {},
 
-  cardPrice: {
-    color: "rgba(0,0,0,0.78)",
-    fontSize: 13.2,
-    fontWeight: "900",
-    lineHeight: 20,
-  },
-
   bgLayer: {
     ...StyleSheet.absoluteFillObject,
   },
 
   bgBase: {
     ...StyleSheet.absoluteFillObject,
+  },
+
+  cardRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    minHeight: 16,
+  },
+
+  cardStarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+
+  cardRatingSpacer: {
+    height: 16,
+    marginTop: 4,
+  },
+
+  cardPriceBlock: {
+    marginTop: 6,
+    alignItems: "flex-start",
+  },
+
+  cardPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "nowrap",
+    gap: 6,
+  },
+
+  cardPrice: {
+    color: "rgba(0,0,0,0.78)",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 17,
+    flexShrink: 0,
+  },
+
+  cardOldPriceInline: {
+    color: "rgba(0,0,0,0.42)",
+    fontSize: 10,
+    fontWeight: "700",
+    textDecorationLine: "line-through",
+    flexShrink: 1,
+  },
+
+  cardRatingStar: {
+    marginRight: 1,
+  },
+
+  cardRatingText: {
+    marginLeft: 6,
+    color: "rgba(0,0,0,0.55)",
+    fontSize: 10.5,
+    fontWeight: "700",
   },
 
   blobTopLeft: {
@@ -700,10 +1294,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(92, 89, 81, 0.35)",
     backgroundColor: "transparent",
     overflow: "hidden",
+    minHeight: 270,
   },
 
   cardImageWrap: {
-    height: 170,
+    height: 155,
     paddingTop: 1,
     paddingHorizontal: 1,
     justifyContent: "center",
@@ -729,11 +1324,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingTop: 8,
     paddingBottom: 10,
+    minHeight: 92,
+    justifyContent: "space-between",
   },
 
   cardName: {
     color: "#000",
-    fontSize: 11.5,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
+    lineHeight: 15,
+    minHeight: 30,
   },
 });

@@ -1,0 +1,5 @@
+{
+  "sdkEnabled": true,
+  "logLevel": "warning",
+  "trackAirbridgeDeeplinkOnlyEnabled": true
+}

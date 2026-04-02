@@ -19,6 +19,7 @@ import { Container } from "../../ui/components/Container";
 import { useAuthStore } from "../../stores/auth.store";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
+import { getBiometricStatus } from "../../core/security/keychain";
 
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
@@ -28,7 +29,9 @@ function isEmail(v: string) {
 export function LoginScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
+
   const login = useAuthStore((s) => s.login);
+  const loginWithBiometrics = useAuthStore((s) => s.loginWithBiometrics);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,9 +41,13 @@ export function LoginScreen() {
   const [focused, setFocused] = useState({ email: false, password: false });
 
   const [loading, setLoading] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
 
   const submittingRef = useRef(false);
+  const biometricSubmittingRef = useRef(false);
 
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
   const [now, setNow] = useState(Date.now());
@@ -50,6 +57,25 @@ export function LoginScreen() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [cooldownUntil]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const status = await getBiometricStatus();
+        if (!mounted) return;
+        setBiometricEnabled(!!status.enabled);
+      } catch {
+        if (!mounted) return;
+        setBiometricEnabled(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function showError(v: { title: string; message: string }) {
     setAlert(v);
@@ -80,8 +106,8 @@ export function LoginScreen() {
   const passOk = password.trim().length >= 6;
 
   const can = useMemo(
-    () => emailOk && passOk && !loading && !inCooldown,
-    [emailOk, passOk, loading, inCooldown]
+    () => emailOk && passOk && !loading && !inCooldown && !biometricLoading,
+    [emailOk, passOk, loading, inCooldown, biometricLoading]
   );
 
   const left = secondsLeft();
@@ -117,6 +143,22 @@ export function LoginScreen() {
     } finally {
       setLoading(false);
       submittingRef.current = false;
+    }
+  }
+
+  async function onBiometricLogin() {
+    if (biometricSubmittingRef.current) return;
+
+    try {
+      biometricSubmittingRef.current = true;
+      setBiometricLoading(true);
+
+      await loginWithBiometrics();
+    } catch (e: any) {
+      showError(friendlyError(e));
+    } finally {
+      setBiometricLoading(false);
+      biometricSubmittingRef.current = false;
     }
   }
 
@@ -305,6 +347,27 @@ export function LoginScreen() {
           >
             <Text style={styles.ctaText}>{btnText}</Text>
           </Pressable>
+
+          {biometricEnabled ? (
+            <Pressable
+              disabled={biometricLoading || loading}
+              onPress={onBiometricLogin}
+              style={({ pressed }) => [
+                styles.bioBtn,
+                (biometricLoading || loading) && styles.bioBtnDisabled,
+                pressed && !(biometricLoading || loading) ? styles.bioBtnPressed : null,
+              ]}
+            >
+              <Ionicons
+                name={Platform.OS === "ios" ? "scan-outline" : "finger-print-outline"}
+                size={20}
+                color={COLORS.primary}
+              />
+              <Text style={styles.bioBtnText}>
+                {biometricLoading ? "Verificando..." : "Entrar com biometria"}
+              </Text>
+            </Pressable>
+          ) : null}
 
           <View style={styles.bottomLine}>
             <Text style={styles.bottomText}>Não tem conta? </Text>
@@ -540,6 +603,35 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 16,
     color: COLORS.primaryText,
+    fontWeight: "900",
+    letterSpacing: -0.1,
+  },
+
+  bioBtn: {
+    marginTop: 10,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: COLORS.primary,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  bioBtnPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
+  },
+
+  bioBtnDisabled: {
+    opacity: 0.6,
+  },
+
+  bioBtnText: {
+    fontSize: 15,
+    color: COLORS.primary,
     fontWeight: "900",
     letterSpacing: -0.1,
   },

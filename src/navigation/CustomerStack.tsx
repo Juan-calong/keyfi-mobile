@@ -12,6 +12,10 @@ import { CustomerBoletoWebViewScreen } from "../screens/customer/CustomerBoletoW
 import { CustomerProductDetailsScreen } from "../screens/customer/CustomerProductDetailsScreen";
 import { CardTokenizeWebViewScreen } from "../screens/payments/CardTokenizeWebViewScreen";
 import { CustomerProfileMeScreen } from "../screens/customer/CustomerProfileMeScreen";
+import { CustomerShippingMethodScreen } from "../screens/customer/CustomerShippingMethodScreen";
+import { CustomerCheckoutAddressScreen } from "../screens/customer/CustomerCheckoutAddressScreen";
+
+
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
@@ -62,6 +66,15 @@ export function CustomerStack() {
         name={CUSTOMER_SCREENS.ProductDetails}
         component={CustomerProductDetailsScreen}
       />
+      <Stack.Screen
+  name={CUSTOMER_SCREENS.CheckoutAddress}
+  component={CustomerCheckoutAddressScreen}
+/>
+
+<Stack.Screen
+  name={CUSTOMER_SCREENS.ShippingMethod}
+  component={CustomerShippingMethodScreen}
+/>
     </Stack.Navigator>
   );
 }

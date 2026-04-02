@@ -6,7 +6,6 @@ type CartMap = Record<string, number>;
 type DraftMap = Record<string, number>;
 export type CartItem = { productId: string; qty: number };
 
-// ====== Coupons/Pricing (server-driven) ======
 export type CouponServer = { code: string; type: "PCT" | "FIXED"; value: string };
 
 export type CartPricing = {

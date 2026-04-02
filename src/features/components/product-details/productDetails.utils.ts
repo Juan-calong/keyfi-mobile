@@ -42,16 +42,77 @@ export function getEffectivePrice(p: any) {
   return p?.effectivePrice ?? p?.customerPrice ?? p?.price;
 }
 
+function getNumericOrder(value: unknown, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function sortByDisplayOrder<T extends { isPrimary?: boolean | null; sort?: number | null; sortOrder?: number | null }>(
+  items: T[]
+): T[] {
+  return [...items]
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const aPrimary = a.item?.isPrimary === true ? 1 : 0;
+      const bPrimary = b.item?.isPrimary === true ? 1 : 0;
+
+      if (aPrimary !== bPrimary) {
+        return bPrimary - aPrimary;
+      }
+
+      const aSort = getNumericOrder(a.item?.sort ?? a.item?.sortOrder, Number.MAX_SAFE_INTEGER);
+      const bSort = getNumericOrder(b.item?.sort ?? b.item?.sortOrder, Number.MAX_SAFE_INTEGER);
+
+      if (aSort !== bSort) {
+        return aSort - bSort;
+      }
+
+      return a.index - b.index;
+    })
+    .map(({ item }) => item);
+}
+
+function normalizeImageMediaFromProduct(product?: Product | null): ProductMedia[] {
+  if (!product) return [];
+
+  const apiMedia = Array.isArray(product.media) ? product.media : [];
+  if (apiMedia.length > 0) {
+    return sortByDisplayOrder(
+      apiMedia.filter((item) => item?.type === "image" && !!item?.url)
+    ).map((item, index) => ({
+      id: String(item.id ?? `media-image-${index}`),
+      type: "image",
+      url: item.url,
+      thumbnailUrl: item.thumbnailUrl ?? item.url,
+      sort: getNumericOrder(item.sort, index),
+      isPrimary: Boolean(item.isPrimary),
+      title: item.title ?? null,
+      description: item.description ?? null,
+    }));
+  }
+
+  const fallbackImages = Array.isArray(product.images) ? product.images : [];
+  return sortByDisplayOrder(
+    fallbackImages.filter((img) => !!img?.url)
+  ).map((img, index) => ({
+    id: String(img.id ?? `img-${index}`),
+    type: "image",
+    url: img.url,
+    thumbnailUrl: img.url,
+    sort: getNumericOrder(img.sort, index),
+    isPrimary: Boolean(img.isPrimary),
+  }));
+}
+
 export function getPrimaryProductImage(product?: Product | null) {
   if (!product) return null;
 
-  return (
-    product.primaryImageUrl ||
-    product.images?.find((item) => item?.isPrimary)?.url ||
-    product.images?.[0]?.url ||
-    getProductImageUrl(product as any) ||
-    null
-  );
+  const orderedImages = normalizeImageMediaFromProduct(product);
+  if (orderedImages.length > 0) {
+    return orderedImages[0]?.thumbnailUrl || orderedImages[0]?.url || null;
+  }
+
+  return product.primaryImageUrl || getProductImageUrl(product as any) || null;
 }
 
 export function getProductDescription(product?: Product | null) {
@@ -83,57 +144,47 @@ export function normalizeGalleryMedia(
 
   const allowVideos = options?.allowVideos ?? true;
 
+  const normalizedImages = normalizeImageMediaFromProduct(product);
+
   const apiMedia = Array.isArray(product.media) ? product.media : [];
-  if (apiMedia.length > 0) {
-    const images = apiMedia
-      .filter((item) => item?.type === "image")
-      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  const normalizedApiVideos: ProductMedia[] = allowVideos
+    ? sortByDisplayOrder(
+        apiMedia.filter((item) => item?.type === "video" && !!item?.url)
+      ).map((item, index) => ({
+        id: String(item.id ?? `media-video-${index}`),
+        type: "video",
+        url: item.url,
+        thumbnailUrl: item.thumbnailUrl ?? null,
+        sort: getNumericOrder(item.sort, index),
+        isPrimary: Boolean(item.isPrimary),
+        title: item.title ?? null,
+        description: item.description ?? null,
+      }))
+    : [];
 
-    const videos = allowVideos
-      ? apiMedia
-          .filter((item) => item?.type === "video")
-          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+  const normalizedFallbackVideos: ProductMedia[] =
+    allowVideos && normalizedApiVideos.length === 0 && Array.isArray(product.videos)
+      ? sortByDisplayOrder(
+          product.videos.filter((v) => !!v?.videoUrl)
+        ).map((video, index) => ({
+          id: String(video.id ?? `video-${index}`),
+          type: "video",
+          url: video.videoUrl,
+          thumbnailUrl: video.thumbnailUrl ?? null,
+          sort: getNumericOrder(video.sortOrder, index),
+          title: video.title ?? null,
+          description: video.description ?? null,
+        }))
       : [];
 
-    const grouped = [...images, ...videos];
-
-    if (grouped.length > 0) return grouped;
-  }
-
-  const fallbackImages = Array.isArray(product.images) ? product.images : [];
-  const normalizedImages: ProductMedia[] = fallbackImages
-    .filter((img) => !!img?.url)
-    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map((img, index) => ({
-      id: String(img.id ?? `img-${index}`),
-      type: "image",
-      url: img.url,
-      thumbnailUrl: img.url,
-      sort: img.sort ?? index,
-      isPrimary: Boolean(img.isPrimary),
-    }));
-
-  const normalizedVideos: ProductMedia[] =
-    allowVideos && Array.isArray(product.videos)
-      ? [...product.videos]
-          .filter((v) => !!v?.videoUrl)
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-          .map((video, index) => ({
-            id: String(video.id ?? `video-${index}`),
-            type: "video",
-            url: video.videoUrl,
-            thumbnailUrl: video.thumbnailUrl ?? null,
-            sort: video.sortOrder ?? index,
-            title: video.title ?? null,
-            description: video.description ?? null,
-          }))
-      : [];
+  const normalizedVideos =
+    normalizedApiVideos.length > 0 ? normalizedApiVideos : normalizedFallbackVideos;
 
   if (normalizedImages.length > 0 || normalizedVideos.length > 0) {
     return [...normalizedImages, ...normalizedVideos];
   }
 
-  const fallbackSingle = getPrimaryProductImage(product);
+  const fallbackSingle = product.primaryImageUrl || getProductImageUrl(product as any);
   if (!fallbackSingle) return [];
 
   return [

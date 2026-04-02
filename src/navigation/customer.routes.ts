@@ -26,14 +26,25 @@ export const CUSTOMER_SCREENS = {
   ProductDetails: "CustomerProductDetails",
   ProductComments: "CustomerProductComments",
 
+  CheckoutAddress: "CustomerCheckoutAddress",
+  ShippingMethod: "CustomerShippingMethod",
 } as const;
+
+export type CheckoutAddressPayload = {
+  zipCode: string;
+  streetName: string;
+  streetNumber: string;
+  neighborhood: string;
+  city: string;
+  federalUnit: string;
+  complement?: string;
+};
 
 export type CustomerStackParamList = {
   [CUSTOMER_SCREENS.Root]: undefined;
   [CUSTOMER_SCREENS.Tabs]: undefined;
 
   [CUSTOMER_SCREENS.Home]: undefined;
-
   [CUSTOMER_SCREENS.Buy]:
     | { highlightProductId?: string; addProductId?: string; showPromos?: boolean }
     | undefined;
@@ -48,6 +59,17 @@ export type CustomerStackParamList = {
   [CUSTOMER_SCREENS.Notifications]: undefined;
 
   [CUSTOMER_SCREENS.OrderDetails]: { orderId: string };
+
+  [CUSTOMER_SCREENS.CheckoutAddress]: {
+    items: { productId: string; qty: number }[];
+    couponCode?: string;
+  };
+
+  [CUSTOMER_SCREENS.ShippingMethod]: {
+    items: { productId: string; qty: number }[];
+    couponCode?: string;
+    deliveryAddress: CheckoutAddressPayload;
+  };
 
   [CUSTOMER_SCREENS.PixPayment]:
     | { orderId: string; amount?: number }

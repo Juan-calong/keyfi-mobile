@@ -33,7 +33,7 @@ export function HomeHeroCarousel({
 
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const bannerWidth = useMemo(() => width - 40, [width]);
+  const bannerWidth = useMemo(() => width, [width]);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -164,14 +164,14 @@ export function HomeHeroCarousel({
 
 const styles = StyleSheet.create({
   singleWrap: {
-    height: 180,
-    borderRadius: 18,
+    height: 210,
+    borderRadius: 5,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",
   },
   slideWrap: {
-    height: 180,
-    borderRadius: 18,
+    height: 210,
+    borderRadius: 5,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",
   },

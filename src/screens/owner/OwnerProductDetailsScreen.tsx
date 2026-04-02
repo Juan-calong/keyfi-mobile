@@ -7,7 +7,10 @@ import { endpoints } from "../../core/api/endpoints";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 import { useCartStore } from "../../stores/cart.store";
 
-import type { Product, RelatedProduct } from "../../features/components/product-details/productDetails.types";
+import type {
+  Product,
+  RelatedProduct,
+} from "../../features/components/product-details/productDetails.types";
 import { SharedProductDetails } from "../../features/components/product-details/SharedProductDetails";
 
 export function OwnerProductDetailsScreen() {
@@ -16,13 +19,15 @@ export function OwnerProductDetailsScreen() {
 
   const qtyById = useCartStore((state) => state.qtyById);
   const cartInc = useCartStore((state) => state.inc);
+  const cartRemove = useCartStore((state) => state.remove);
 
   const productId = route.params?.productId as string | undefined;
 
   const q = useQuery({
     queryKey: ["owner-product", productId],
     enabled: !!productId,
-    queryFn: async () => (await api.get<Product>(endpoints.products.byId(productId!))).data,
+    queryFn: async () =>
+      (await api.get<Product>(endpoints.products.byId(productId!))).data,
     retry: false,
   });
 
@@ -30,10 +35,9 @@ export function OwnerProductDetailsScreen() {
     queryKey: ["owner-product-related", productId],
     enabled: !!productId,
     queryFn: async () => {
-      const res = await api.get<any>(
-        endpoints.products.related(productId!),
-        { params: { take: 6 } }
-      );
+      const res = await api.get<any>(endpoints.products.related(productId!), {
+        params: { take: 6 },
+      });
 
       if (Array.isArray(res.data)) return res.data as RelatedProduct[];
       if (Array.isArray(res.data?.items)) return res.data.items as RelatedProduct[];
@@ -64,6 +68,7 @@ export function OwnerProductDetailsScreen() {
       allowVideos={true}
       onBack={() => nav.goBack()}
       onAddToCart={(id) => cartInc(id, 1)}
+      onRemoveFromCart={(id) => cartRemove(id)}
       onGoToCart={() => {
         nav.dispatch(
           CommonActions.navigate({

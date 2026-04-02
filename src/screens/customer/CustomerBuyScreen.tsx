@@ -25,6 +25,10 @@ import { endpoints } from "../../core/api/endpoints";
 import { useCartStore } from "../../stores/cart.store";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { getProductImageUrl } from "../../core/utils/productImage";
+import Icon from "react-native-vector-icons/Ionicons";
+
+// ajuste o caminho abaixo se o seu ProductFavoriteButton estiver em outra pasta
+import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton.tsx";
 
 type Product = {
   id: string;
@@ -33,6 +37,9 @@ type Product = {
   price: string;
   customerPrice?: string | null;
   effectivePrice?: string | number;
+  isFavorite?: boolean;
+  favorited?: boolean;
+  productId?: string | null;
   stock?: number | null;
   active: boolean;
   categoryId?: string | null;
@@ -44,6 +51,13 @@ type Product = {
   categoryIds?: string[] | null;
   categories?: { id: string; name: string; active?: boolean }[] | null;
   categoryLinks?: { category?: { id: string; name: string; active?: boolean } }[] | null;
+
+  averageRating?: number | null;
+  ratingAverage?: number | null;
+  avgRating?: number | null;
+  reviewsCount?: number | null;
+  ratingsCount?: number | null;
+  commentsCount?: number | null;
 };
 
 type Category = { id: string; name: string; active?: boolean };
@@ -74,6 +88,31 @@ function asItems<T>(v: any): T[] {
   if (Array.isArray(v?.items)) return v.items;
   if (Array.isArray(v?.data?.items)) return v.data.items;
   return [];
+}
+
+function getEntityId(item: any) {
+  return String(item?.id ?? item?.productId ?? "").trim();
+}
+
+function buildFavoriteIds(data: any) {
+  const ids = new Set<string>();
+
+  for (const item of asItems<any>(data)) {
+    const id = getEntityId(item);
+    if (id) ids.add(id);
+  }
+
+  return ids;
+}
+
+function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
+  const id = getEntityId(item);
+
+  if (id && favoriteIds.has(id)) return true;
+  if (typeof item?.isFavorite === "boolean") return item.isFavorite;
+  if (typeof item?.favorited === "boolean") return item.favorited;
+
+  return false;
 }
 
 function toNumberBR(v: string | number | null | undefined) {
@@ -138,6 +177,57 @@ function getEffectivePrice(p: any) {
   return p?.effectivePrice ?? p?.customerPrice ?? p?.price;
 }
 
+function getProductRating(item: any) {
+  const n = Number(
+    item?.averageRating ??
+      item?.ratingAverage ??
+      item?.avgRating ??
+      0
+  );
+
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return 0;
+  if (n > 5) return 5;
+  return n;
+}
+
+function getProductReviewsCount(item: any) {
+  const n = Number(
+    item?.reviewsCount ??
+      item?.ratingsCount ??
+      item?.commentsCount ??
+      0
+  );
+
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+function RatingStars({
+  value,
+  size = 12,
+}: {
+  value: number;
+  size?: number;
+}) {
+  return (
+    <View style={styles.ratingRow}>
+      {Array.from({ length: 5 }).map((_, index) => {
+        const filled = index < Math.round(value);
+
+        return (
+          <Icon
+            key={`star-${index}`}
+            name={filled ? "star" : "star-outline"}
+            size={size}
+            color="#C69214"
+          />
+        );
+      })}
+    </View>
+  );
+}
+
 const ALL = "ALL" as const;
 const PROMOS = "PROMOS" as const;
 
@@ -175,6 +265,12 @@ export function CustomerBuyScreen() {
   const { width } = useWindowDimensions();
 
   const isTablet = width >= 768;
+
+  const numColumns = 2;
+  const horizontalListPadding = 4;
+  const gridGap = 4;
+
+  const cardWidth = Math.floor((width - horizontalListPadding * 2 - gridGap) / 2);
 
   const cartCount = useCartStore((s) => s.cartItemsCount());
   const qtyById = useCartStore((s) => s.qtyById);
@@ -247,9 +343,21 @@ export function CustomerBuyScreen() {
     retry: false,
   });
 
+  const favoritesQ = useQuery({
+    queryKey: ["customer-favorites"],
+    queryFn: async () =>
+      (
+        await api.get<ListResp<Product>>(endpoints.products.favorites, {
+          params: { take: 500 },
+        })
+      ).data,
+    retry: false,
+  });
+
   const categories = asItems<Category>(categoriesQ.data);
   const productsAll = asItems<Product>(productsQ.data);
   const promoRows = asItems<PromoRow>(promosQ.data);
+  const favoriteIds = useMemo(() => buildFavoriteIds(favoritesQ.data), [favoritesQ.data]);
 
   const promoByProductId = useMemo(() => {
     const map = new Map<string, PromoDTO>();
@@ -261,7 +369,10 @@ export function CustomerBuyScreen() {
     return map;
   }, [promoRows]);
 
-  const promoIds = useMemo(() => new Set(Array.from(promoByProductId.keys())), [promoByProductId]);
+  const promoIds = useMemo(
+    () => new Set(Array.from(promoByProductId.keys())),
+    [promoByProductId]
+  );
 
   useEffect(() => {
     const key = JSON.stringify({
@@ -304,24 +415,34 @@ export function CustomerBuyScreen() {
   const products = useMemo(() => {
     const qq = q.trim().toLowerCase();
 
-    let filtered = productsAll.filter((p) => {
-      const hiddenByStock = isOutOfStock(p);
-      if (hiddenByStock) return false;
+    let filtered = productsAll
+      .filter((p) => {
+        const hiddenByStock = isOutOfStock(p);
+        if (hiddenByStock) return false;
 
-      const okCat =
-        selectedCat === ALL
-          ? true
-          : selectedCat === PROMOS
+        const okCat =
+          selectedCat === ALL
+            ? true
+            : selectedCat === PROMOS
             ? promoIds.has(p.id)
             : productHasCategory(p, selectedCat);
 
-      const okQ =
-        !qq ||
-        String(p.name || "").toLowerCase().includes(qq) ||
-        String(p.sku || "").toLowerCase().includes(qq);
+        const okQ =
+          !qq ||
+          String(p.name || "").toLowerCase().includes(qq) ||
+          String(p.sku || "").toLowerCase().includes(qq);
 
-      return okCat && okQ;
-    });
+        return okCat && okQ;
+      })
+      .map((p) => {
+        const favorited = resolveFavoriteFlag(p, favoriteIds);
+
+        return {
+          ...p,
+          isFavorite: favorited,
+          favorited,
+        };
+      });
 
     if (sortMode === "newest") {
       filtered = [...filtered].sort((a, b) => {
@@ -332,7 +453,7 @@ export function CustomerBuyScreen() {
     }
 
     return filtered;
-  }, [productsAll, q, selectedCat, promoIds, sortMode]);
+  }, [productsAll, q, selectedCat, promoIds, sortMode, favoriteIds]);
 
   const indexById = useMemo(() => {
     const map = new Map<string, number>();
@@ -364,15 +485,16 @@ export function CustomerBuyScreen() {
     const alreadyInCart = (qtyById?.[addProductId] ?? 0) > 0;
     if (!alreadyInCart) {
       cartInc(addProductId, 1);
-      showBanner("Adicionado", "Produto adicionado ao carrinho.");
-    } else {
-      showBanner("Tudo certo", "Esse produto já está no carrinho.");
     }
 
     setTimeout(() => {
       const idx = indexById.get(addProductId);
       if (idx !== undefined) {
-        listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.15 });
+        listRef.current?.scrollToIndex({
+          index: idx,
+          animated: true,
+          viewPosition: 0.15,
+        });
         setHighlightId(addProductId);
         setTimeout(() => setHighlightId(null), 1600);
       }
@@ -417,7 +539,11 @@ export function CustomerBuyScreen() {
     return () => clearTimeout(t1);
   }, [highlightProductId, productsAll, indexById, showPromos, initialCategoryId]);
 
-  const isLoading = productsQ.isLoading || categoriesQ.isLoading || promosQ.isLoading;
+  const isLoading =
+    productsQ.isLoading ||
+    categoriesQ.isLoading ||
+    promosQ.isLoading ||
+    favoritesQ.isLoading;
   const isError = productsQ.isError || categoriesQ.isError || promosQ.isError;
 
   const openDetails = (productId: string) =>
@@ -520,16 +646,18 @@ export function CustomerBuyScreen() {
                 categoriesQ.refetch();
                 productsQ.refetch();
                 promosQ.refetch();
+                favoritesQ.refetch();
               }}
             />
           ) : (
             <FlatList
               ref={listRef}
               data={products}
-              numColumns={1}
+              key="customer-grid-2"
+              numColumns={numColumns}
               keyExtractor={(i) => i.id}
               contentContainerStyle={styles.listContent}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              columnWrapperStyle={styles.columnWrap}
               onScrollToIndexFailed={(info) => {
                 const offset = Math.max(0, info.averageItemLength * info.index);
                 listRef.current?.scrollToOffset({ offset, animated: true });
@@ -549,14 +677,18 @@ export function CustomerBuyScreen() {
                 </View>
               }
               refreshing={
-                productsQ.isRefetching || categoriesQ.isRefetching || promosQ.isRefetching
+                productsQ.isRefetching ||
+                categoriesQ.isRefetching ||
+                promosQ.isRefetching ||
+                favoritesQ.isRefetching
               }
               onRefresh={() => {
                 categoriesQ.refetch();
                 productsQ.refetch();
                 promosQ.refetch();
+                favoritesQ.refetch();
               }}
-              renderItem={({ item }) => {
+              renderItem={({ item, index }) => {
                 const inCartQty = qtyById?.[item.id] ?? 0;
                 const inCart = inCartQty > 0;
 
@@ -569,9 +701,20 @@ export function CustomerBuyScreen() {
                 const final = promo ? applyPromo(base, promo) : base;
 
                 const hasDiscount = promo ? final < base : false;
-                const promoBadge = promo && hasDiscount ? badgeText(promo, base, final) : null;
+                const promoBadgeRaw = promo && hasDiscount ? badgeText(promo, base, final) : null;
+
+                const promoBadgeLabel =
+                  promoBadgeRaw === null
+                    ? null
+                    : promoBadgeRaw === "PROMO"
+                    ? "OFF"
+                    : `${promoBadgeRaw.replace("-", "")} OFF`;
 
                 const img = getProductImageUrl(item);
+                const isLeft = index % 2 === 0;
+
+                const ratingValue = getProductRating(item);
+                const reviewsCount = getProductReviewsCount(item);
 
                 const onPressToggle = (e?: GestureResponderEvent) => {
                   stop(e);
@@ -582,7 +725,6 @@ export function CustomerBuyScreen() {
                   try {
                     if (inCart) {
                       cartRemove(item.id);
-                      showBanner("Removido", "Produto removido do carrinho.");
                       return;
                     }
 
@@ -592,7 +734,6 @@ export function CustomerBuyScreen() {
                     }
 
                     cartInc(item.id, 1);
-                    showBanner("Adicionado", "Produto adicionado ao carrinho.");
                   } finally {
                     setTimeout(() => {
                       toggleLocksRef.current[item.id] = false;
@@ -601,75 +742,96 @@ export function CustomerBuyScreen() {
                 };
 
                 return (
-                  <Pressable onPress={() => openDetails(item.id)} style={styles.rowPress}>
+                  <Pressable
+                    onPress={() => openDetails(item.id)}
+                    style={[
+                      styles.cardPress,
+                      { width: cardWidth, marginLeft: isLeft ? 0 : gridGap },
+                    ]}
+                  >
                     <View
                       style={[
-                        styles.row,
-                        isTablet && styles.rowTablet,
-                        out && !inCart ? styles.rowOut : null,
-                        isHighlighted && styles.rowHighlight,
+                        styles.card,
+                        out && !inCart ? styles.cardOut : null,
+                        isHighlighted && styles.cardHighlight,
                       ]}
                     >
-                      <View style={[styles.thumbWrap, isTablet && styles.thumbWrapTablet]}>
+                      <View style={styles.cardImageWrap}>
                         {img ? (
-                          <Image source={{ uri: img }} style={styles.thumbImg} resizeMode="cover" />
+                          <Image source={{ uri: img }} style={styles.cardImage} resizeMode="cover" />
                         ) : (
                           <Image
                             source={{
-                              uri: "https://dummyimage.com/240x240/ffffff/000000.png&text=NO+IMAGE",
+                              uri: "https://dummyimage.com/400x400/ffffff/000000.png&text=NO+IMAGE",
                             }}
-                            style={styles.thumbImg}
+                            style={styles.cardImage}
                             resizeMode="contain"
                           />
                         )}
 
-                        {!!promoBadge && !out ? (
-                          <View style={styles.promoBadge}>
-                            <Text style={styles.promoBadgeTxt}>{promoBadge}</Text>
+                        {!!promoBadgeLabel && !out ? (
+                          <View style={styles.cardPromoBadge}>
+                            <Text style={styles.cardPromoBadgeTxt}>{promoBadgeLabel}</Text>
                           </View>
                         ) : null}
+
+                        <ProductFavoriteButton
+                          productId={item.id}
+                          initialFavorited={Boolean(item.isFavorite)}
+                          containerStyle={styles.favoriteBtn}
+                          size={18}
+                          activeColor="#E11D48"
+                          inactiveColor="#2E2A29"
+                        />
+
+                        <Pressable
+                          onPress={(e) => onPressToggle(e)}
+                          hitSlop={10}
+                          style={({ pressed }) => [
+                            styles.addBtnFloating,
+                            inCart && styles.addBtnFloatingActive,
+                            pressed && styles.pressed,
+                            !inCart && out ? { opacity: 0.45 } : null,
+                          ]}
+                          disabled={!inCart && out}
+                        >
+                          <Icon
+                            name={inCart ? "bag" : "bag-outline"}
+                            size={18}
+                            color={inCart ? WHITE : BLACK}
+                          />
+                        </Pressable>
                       </View>
 
-                      <View style={styles.info}>
-                        <Text style={[styles.name, isTablet && styles.nameTablet]} numberOfLines={1}>
+                      <View style={styles.cardBody}>
+                        <Text style={styles.cardName} numberOfLines={2}>
                           {item.name}
                         </Text>
 
-                        <View style={styles.priceLine}>
-                          <Text style={[styles.price, isTablet && styles.priceTablet]}>
+                        <View style={styles.cardRatingWrap}>
+                          <RatingStars value={ratingValue} size={12} />
+                          <Text style={styles.cardRatingText}>
+                            {ratingValue > 0 ? ratingValue.toFixed(1) : "0.0"}
+                          </Text>
+                          <Text style={styles.cardRatingCount}>({reviewsCount})</Text>
+                        </View>
+
+                        <View style={styles.cardPriceWrap}>
+                          <Text style={styles.cardPrice}>
                             {formatBRL(hasDiscount ? final : base)}
                           </Text>
+
                           {hasDiscount ? (
-                            <Text style={[styles.oldPrice, isTablet && styles.oldPriceTablet]}>
+                            <Text style={styles.cardOldPrice}>
                               {formatBRL(base)}
                             </Text>
                           ) : null}
-                          {out && !inCart ? <Text style={styles.oosInline}>Sem estoque</Text> : null}
                         </View>
-                      </View>
 
-                      <Pressable
-                        onPress={(e) => onPressToggle(e)}
-                        hitSlop={10}
-                        style={({ pressed }) => [
-                          styles.buyBtn,
-                          isTablet && styles.buyBtnTablet,
-                          inCart && styles.buyBtnActive,
-                          pressed && styles.pressed,
-                          !inCart && out ? { opacity: 0.45 } : null,
-                        ]}
-                        disabled={!inCart && out}
-                      >
-                        <Text
-                          style={[
-                            styles.buyText,
-                            isTablet && styles.buyTextTablet,
-                            inCart && styles.buyTextActive,
-                          ]}
-                        >
-                          {inCart ? "✓" : "+"}
-                        </Text>
-                      </Pressable>
+                        {out && !inCart ? (
+                          <Text style={styles.cardOutText}>Sem estoque</Text>
+                        ) : null}
+                      </View>
                     </View>
                   </Pressable>
                 );
@@ -705,7 +867,6 @@ const BLACK = "#000000";
 const WHITE = "#FFFFFF";
 const FILTER_LINE = "rgba(255,255,255,0.10)";
 const CHIP_DARK = "#151515";
-const PRODUCTS_LINE = "#ECECEC";
 const GOLD_DARK = "#8B6A1E";
 const GOLD_DARK_2 = "#6F5418";
 const GOLD_SOFT_TEXT = "#FFF4D4";
@@ -783,165 +944,162 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
     backgroundColor: WHITE,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     overflow: "hidden",
   },
 
   listContent: {
     paddingTop: 6,
+    paddingLeft: 4,
+    paddingRight: 4,
     paddingBottom: 140,
     backgroundColor: WHITE,
   },
 
-  separator: {
-    height: 1,
-    backgroundColor: PRODUCTS_LINE,
-    marginLeft: 98,
+  columnWrap: {
+    marginBottom: 4,
   },
 
-  rowPress: {
+  cardPress: {
     backgroundColor: WHITE,
   },
 
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    gap: 14,
+  card: {
     backgroundColor: WHITE,
-  },
-  rowTablet: {
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    gap: 18,
+    overflow: "hidden",
   },
 
-  rowOut: {
+  cardOut: {
     opacity: 0.6,
   },
 
-  rowHighlight: {
+  cardHighlight: {
     backgroundColor: "#FAFAFA",
   },
 
-  thumbWrap: {
-    width: 74,
-    height: 74,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
-    backgroundColor: "#FAFAFA",
+  cardImageWrap: {
+    width: "100%",
+    aspectRatio: 1,
+    backgroundColor: "#F7F4F3",
     overflow: "hidden",
     position: "relative",
   },
-  thumbWrapTablet: {
-    width: 92,
-    height: 92,
-    borderRadius: 14,
-  },
-  thumbImg: {
+
+  cardImage: {
     width: "100%",
     height: "100%",
   },
 
-  promoBadge: {
+  cardPromoBadge: {
     position: "absolute",
-    top: 6,
-    left: 6,
+    top: 8,
+    left: 8,
+    backgroundColor: "#5D5351",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: "rgba(0,0,0,0.82)",
-  },
-  promoBadgeTxt: {
-    color: "#fff",
-    fontWeight: "900",
-    fontSize: 11,
   },
 
-  info: {
-    flex: 1,
-    gap: 6,
-    minWidth: 0,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#000",
-  },
-  nameTablet: {
-    fontSize: 20,
+  cardPromoBadgeTxt: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
 
-  priceLine: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000",
-    opacity: 0.92,
-  },
-  priceTablet: {
-    fontSize: 18,
-  },
-  oldPrice: {
-    color: "rgba(0,0,0,0.45)",
-    fontWeight: "600",
-    textDecorationLine: "line-through",
-    fontSize: 13,
-  },
-  oldPriceTablet: {
-    fontSize: 14,
-  },
-  oosInline: {
-    color: "rgba(0,0,0,0.72)",
-    fontWeight: "700",
-    fontSize: 12,
+  favoriteBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
   },
 
-  buyBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    backgroundColor: WHITE,
-    borderWidth: 1,
-    borderColor: BLACK,
+  addBtnFloating: {
+    position: "absolute",
+    right: 8,
+    bottom: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
   },
 
-  buyBtnTablet: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-  },
-  buyBtnActive: {
+  addBtnFloatingActive: {
     backgroundColor: BLACK,
     borderColor: BLACK,
   },
-  buyText: {
-    fontSize: 26,
-    lineHeight: 26,
-    fontWeight: "500",
-    color: BLACK,
-    marginTop: Platform.OS === "android" ? -1 : -2,
+
+  cardBody: {
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 10,
+    minHeight: 90,
   },
-  buyTextTablet: {
-    fontSize: 28,
-    lineHeight: 28,
+
+  cardName: {
+    fontSize: 13,
+    lineHeight: 17,
+    color: "#1F1A19",
+    fontWeight: "600",
+    minHeight: 34,
   },
-  buyTextActive: {
-    color: WHITE,
-    fontSize: 20,
-    lineHeight: 20,
+
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 1,
+  },
+
+  cardRatingWrap: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexWrap: "wrap",
+  },
+
+  cardRatingText: {
+    fontSize: 11,
+    color: "#1F1A19",
+    fontWeight: "700",
+  },
+
+  cardRatingCount: {
+    fontSize: 10,
+    color: "rgba(0,0,0,0.45)",
+    fontWeight: "600",
+  },
+
+  cardPriceWrap: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+
+  cardPrice: {
+    fontSize: 14,
+    color: "#1F1A19",
     fontWeight: "800",
-    marginTop: 0,
+  },
+
+  cardOldPrice: {
+    fontSize: 11,
+    color: "rgba(0,0,0,0.42)",
+    textDecorationLine: "line-through",
+    fontWeight: "600",
+  },
+
+  cardOutText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#7B6F6C",
+    fontWeight: "700",
   },
 
   emptyWrap: {

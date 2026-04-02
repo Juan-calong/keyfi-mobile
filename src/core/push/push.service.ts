@@ -1,5 +1,6 @@
 import { PermissionsAndroid, Platform } from "react-native";
 import messaging from "@react-native-firebase/messaging";
+import notifee, { AndroidImportance } from "@notifee/react-native";
 
 import { api } from "../api/client";
 import { apiLog } from "../api/logger";
@@ -32,17 +33,83 @@ async function requestIosNotificationPermission() {
   return enabled;
 }
 
+async function requestLocalNotificationPermission() {
+  try {
+    const settings = await notifee.requestPermission();
+
+    apiLog("[PUSH][LOCAL_PERMISSION]", {
+      authorizationStatus: settings.authorizationStatus,
+    });
+
+    return true;
+  } catch (error) {
+    console.log("[PUSH][LOCAL_PERMISSION][ERROR]", error);
+    return false;
+  }
+}
+
+async function ensureAndroidChannel() {
+  if (Platform.OS !== "android") return "default";
+
+  const channelId = await notifee.createChannel({
+    id: "default",
+    name: "Notificações",
+    importance: AndroidImportance.HIGH,
+  });
+
+  apiLog("[PUSH][CHANNEL_READY]", { channelId });
+
+  return channelId;
+}
+
+async function displayForegroundNotification(remoteMessage: any) {
+  try {
+    const channelId = await ensureAndroidChannel();
+
+    const title =
+      remoteMessage?.notification?.title ||
+      remoteMessage?.data?.title ||
+      "Nova notificação";
+
+    const body =
+      remoteMessage?.notification?.body ||
+      remoteMessage?.data?.body ||
+      "";
+
+    await notifee.displayNotification({
+      title,
+      body,
+      android: {
+        channelId,
+        pressAction: {
+          id: "default",
+        },
+      },
+    });
+
+    apiLog("[PUSH][FOREGROUND_DISPLAYED]", {
+      title,
+      hasBody: !!body,
+      data: remoteMessage?.data ?? null,
+    });
+  } catch (error) {
+    console.log("[PUSH][FOREGROUND_DISPLAY][ERROR]", error);
+  }
+}
+
 export async function ensurePushPermission() {
   const androidOk = await requestAndroidNotificationPermission();
   const iosOk = await requestIosNotificationPermission();
+  const localOk = await requestLocalNotificationPermission();
 
   apiLog("[PUSH][PERMISSION]", {
     androidOk,
     iosOk,
+    localOk,
     platform: Platform.OS,
   });
 
-  return androidOk && iosOk;
+  return androidOk && iosOk && localOk;
 }
 
 export async function registerPushTokenWithBackend() {
@@ -53,6 +120,7 @@ export async function registerPushTokenWithBackend() {
   }
 
   await messaging().registerDeviceForRemoteMessages();
+  await ensureAndroidChannel();
 
   const token = await messaging().getToken();
 
@@ -66,6 +134,12 @@ export async function registerPushTokenWithBackend() {
 
   await api.post("/devices/push-token", {
     token,
+    platform: getPlatform(),
+  });
+
+  apiLog("[PUSH][TOKEN][REGISTERED_BACKEND]", {
+    hasToken: !!token,
+    tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
     platform: getPlatform(),
   });
 
@@ -102,6 +176,11 @@ export function bindPushTokenRefresh() {
         token,
         platform: getPlatform(),
       });
+
+      apiLog("[PUSH][TOKEN][REFRESH][REGISTERED_BACKEND]", {
+        hasToken: !!token,
+        tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
+      });
     } catch (error) {
       console.log("[PUSH][TOKEN][REFRESH][ERROR]", error);
     }
@@ -111,6 +190,7 @@ export function bindPushTokenRefresh() {
 export function bindForegroundPushListener() {
   return messaging().onMessage(async (remoteMessage) => {
     console.log("[PUSH][FOREGROUND_MESSAGE]", remoteMessage);
+    await displayForegroundNotification(remoteMessage);
   });
 }
 

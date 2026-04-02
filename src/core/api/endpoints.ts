@@ -38,7 +38,12 @@ products: {
   favorites: "/products/favorites",
 
   comments: (id: string) => `/products/${id}/comments`,
+  commentsMe: (id: string) => `/products/${id}/comments/me`,
 },
+
+  shipping: {
+    quote: "/shipping/quote",
+  },
 
   cart: {
     preview: "/cart/preview",
@@ -131,5 +136,9 @@ products: {
   devices: {
   registerPushToken: "/devices/push-token",
   removePushToken: "/devices/push-token/remove",
+},
+
+salon: {
+  inviteLink: "/salon/invite-link",
 },
 } as const;

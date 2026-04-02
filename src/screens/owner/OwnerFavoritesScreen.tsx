@@ -16,8 +16,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
-import { OWNER_SCREENS, OwnerStackParamList } from "../../navigation/owner.routes";
+import {
+  OWNER_SCREENS,
+  OwnerStackParamList,
+} from "../../navigation/owner.routes";
 import { Loading, ErrorState } from "../../ui/components/State";
+import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton";
 
 const GOLD = "#B8943C";
 const BG = "#FCF9F3";
@@ -73,15 +77,6 @@ function getFavoritePrice(item: FavoriteItem) {
   if (typeof item.activePromo?.promoPrice === "number") {
     return item.activePromo.promoPrice;
   }
-  if (typeof item.effectivePrice === "number") {
-    return item.effectivePrice;
-  }
-  if (typeof item.customerPrice === "number") {
-    return item.customerPrice;
-  }
-  if (typeof item.price === "number") {
-    return item.price;
-  }
   return null;
 }
 
@@ -119,9 +114,14 @@ export function OwnerFavoritesScreen() {
             </View>
           )}
 
-          <View style={s.heartBadge}>
-            <Icon name="heart" size={16} color="#E11D48" />
-          </View>
+          <ProductFavoriteButton
+            productId={item.id}
+            initialFavorited={true}
+            containerStyle={s.heartBadge}
+            size={16}
+            activeColor="#E11D48"
+            inactiveColor="#2E2A29"
+          />
         </View>
 
         <View style={s.cardBody}>
@@ -131,10 +131,16 @@ export function OwnerFavoritesScreen() {
 
           {!!item.brand && <Text style={s.metaText}>Marca: {item.brand}</Text>}
           {!!item.line && <Text style={s.metaText}>Linha: {item.line}</Text>}
-          {!!item.volume && <Text style={s.metaText}>Volume: {item.volume}</Text>}
+          {!!item.volume && (
+            <Text style={s.metaText}>Volume: {item.volume}</Text>
+          )}
 
           <View style={s.bottomRow}>
-            <Text style={s.price}>{formatBRL(price)}</Text>
+            {price != null ? (
+              <Text style={s.price}>{formatBRL(price)}</Text>
+            ) : (
+              <Text style={s.noPromoText}>Sem promoção ativa</Text>
+            )}
 
             <View style={s.arrowBtn}>
               <Icon name="chevron-forward" size={16} color="#000" />
@@ -153,9 +159,6 @@ export function OwnerFavoritesScreen() {
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-
-      <View style={s.bgBlobTop} />
-      <View style={s.bgBlobBottom} />
 
       <View style={s.header}>
         <Text style={s.title}>Seus Favoritos</Text>
@@ -207,28 +210,6 @@ const s = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: BG,
-  },
-
-  bgBlobTop: {
-    position: "absolute",
-    top: -40,
-    right: -60,
-    width: 220,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: "rgba(184,148,60,0.08)",
-    transform: [{ rotate: "14deg" }],
-  },
-
-  bgBlobBottom: {
-    position: "absolute",
-    bottom: 80,
-    left: -70,
-    width: 220,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: "rgba(184,148,60,0.05)",
-    transform: [{ rotate: "-10deg" }],
   },
 
   header: {
@@ -333,12 +314,21 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
 
   price: {
     fontSize: 14,
     color: "#000",
     fontWeight: "900",
+    flex: 1,
+  },
+
+  noPromoText: {
+    fontSize: 12,
+    color: "#7D6B43",
+    fontWeight: "800",
+    flex: 1,
   },
 
   arrowBtn: {

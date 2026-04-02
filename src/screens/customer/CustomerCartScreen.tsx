@@ -151,28 +151,35 @@ export function CustomerCartScreen() {
   };
 
   const onCheckoutPix = async () => {
-    const typed = promoInput.trim().toUpperCase();
-    const hasTypedButNotApplied = !!typed && typed !== (appliedCoupon || "");
+  const typed = promoInput.trim().toUpperCase();
+  const hasTypedButNotApplied = !!typed && typed !== (appliedCoupon || "");
 
-    if (hasTypedButNotApplied) {
-      setConfirm({
-        title: "Aplicar cupom?",
-        message: "Você digitou um cupom, mas ainda não clicou em Apply. Quer validar antes de finalizar?",
-        actions: [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Validar", onPress: () => applyCouponMut.mutate(typed) },
-          {
-            text: "Continuar sem cupom",
-            style: "destructive",
-            onPress: () => finishCreateOrder(),
-          },
-        ],
-      });
-      return;
-    }
+  if (hasTypedButNotApplied) {
+    setConfirm({
+      title: "Aplicar cupom?",
+      message: "Você digitou um cupom, mas ainda não clicou em Apply. Quer validar antes de finalizar?",
+      actions: [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Validar", onPress: () => applyCouponMut.mutate(typed) },
+        {
+          text: "Continuar sem cupom",
+          style: "destructive",
+          onPress: () =>
+            nav.navigate(CUSTOMER_SCREENS.CheckoutAddress, {
+              items: itemsPayload,
+              couponCode: appliedCoupon || undefined,
+            }),
+        },
+      ],
+    });
+    return;
+  }
 
-    await finishCreateOrder();
-  };
+  nav.navigate(CUSTOMER_SCREENS.CheckoutAddress, {
+    items: itemsPayload,
+    couponCode: appliedCoupon || undefined,
+  });
+};
 
   const unavailableKey = useMemo(() => {
     const arr = preview?.unavailable ?? [];

@@ -57,8 +57,8 @@ export function HomeView({
 
       <View style={s.group}>
         <RowItem
-          title="Meu token"
-          subtitle="Copie e envie para o salão"
+          title="Meu token e link"
+          subtitle="Copie ou compartilhe seu convite"
           rightText={referralToken ? "ATIVO" : "FALTA"}
           onPress={onOpenToken}
         />

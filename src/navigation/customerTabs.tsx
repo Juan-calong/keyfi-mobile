@@ -17,16 +17,13 @@ import { CUSTOMER_SCREENS } from "./customer.routes";
 import { CustomerHomeScreen } from "../screens/customer/CustomerHomeScreen";
 import { CustomerBuyScreen } from "../screens/customer/CustomerBuyScreen";
 import { CustomerCartScreen } from "../screens/customer/CustomerCartScreen";
-import { CustomerProfileMe } from "../screens/customer/CustomerProfileMe";
 import { CustomerFavoritesScreen } from "../screens/customer/CustomerFavoritesScreen";
 
 import homeIcon from "../assets/icons/home.png";
 import cartIcon from "../assets/icons/cart.png";
-import profileIcon from "../assets/icons/profile.png";
 
 import homeIconBlack from "../assets/icons/casa-black.png";
 import cartIconBlack from "../assets/icons/carrinho-black.png";
-import profileIconBlack from "../assets/icons/person-black.png";
 
 const Tab = createBottomTabNavigator();
 const GOLD = "#B8943C";
@@ -83,7 +80,7 @@ function TabItem({
         style={[
           s.tabIcon,
           !focused && s.tabIconOff,
-          focused && { transform: [{ scale: 1.12 }] },
+          focused && { transform: [{ scale: 1.08 }] },
         ]}
       />
       <Text style={[s.label, focused ? s.labelOn : s.labelOff]}>{title}</Text>
@@ -96,9 +93,9 @@ function ShopTabItem({ focused }: { focused: boolean }) {
     <View style={s.item}>
       <Icon
         name={focused ? "bag" : "bag-outline"}
-        size={24}
+        size={22}
         color={focused ? "#000" : GOLD}
-        style={focused ? { transform: [{ scale: 1.12 }] } : undefined}
+        style={focused ? { transform: [{ scale: 1.08 }] } : undefined}
       />
       <Text style={[s.label, focused ? s.labelOn : s.labelOff]}>Shop</Text>
     </View>
@@ -110,9 +107,9 @@ function FavoritesTabItem({ focused }: { focused: boolean }) {
     <View style={s.item}>
       <Icon
         name={focused ? "heart" : "heart-outline"}
-        size={24}
+        size={22}
         color={focused ? "#000" : GOLD}
-        style={focused ? { transform: [{ scale: 1.12 }] } : undefined}
+        style={focused ? { transform: [{ scale: 1.08 }] } : undefined}
       />
       <Text style={[s.label, focused ? s.labelOn : s.labelOff]}>Favs</Text>
     </View>
@@ -121,7 +118,8 @@ function FavoritesTabItem({ focused }: { focused: boolean }) {
 
 export function CustomerTabs() {
   const insets = useSafeAreaInsets();
-  const extraBottom = Math.max(insets.bottom, 8);
+  const safeBottom = Math.max(insets.bottom, 10);
+  const tabBarHeight = 68 + safeBottom;
 
   return (
     <Tab.Navigator
@@ -131,6 +129,7 @@ export function CustomerTabs() {
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
         tabBarBackground: () => <TabBarBg />,
+        tabBarItemStyle: s.tabBarItem,
         tabBarStyle: [
           s.tabBar,
           {
@@ -138,8 +137,10 @@ export function CustomerTabs() {
             left: 0,
             right: 0,
             bottom: 0,
-            height: 66 + extraBottom,
-            paddingBottom: 10 + extraBottom,
+            height: tabBarHeight,
+            paddingTop: 8,
+            paddingBottom: safeBottom,
+            paddingHorizontal: 10,
           },
         ],
       }}
@@ -187,20 +188,6 @@ export function CustomerTabs() {
           ),
         }}
       />
-
-      <Tab.Screen
-        name={CUSTOMER_SCREENS.Me}
-        component={CustomerProfileMe}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabItem
-              focused={focused}
-              icon={focused ? profileIconBlack : profileIcon}
-              title="Profile"
-            />
-          ),
-        }}
-      />
     </Tab.Navigator>
   );
 }
@@ -210,8 +197,6 @@ const s = StyleSheet.create({
     backgroundColor: "transparent",
     borderTopColor: GOLD,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    paddingHorizontal: 8,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     overflow: "hidden",
@@ -223,6 +208,11 @@ const s = StyleSheet.create({
           shadowOffset: { width: 0, height: 0 },
         }
       : { elevation: 0 }),
+  },
+
+  tabBarItem: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   tabBlobLeft: {
@@ -248,15 +238,15 @@ const s = StyleSheet.create({
   item: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 3,
     width: 64,
-    height: 52,
+    height: 44,
     backgroundColor: "transparent",
   },
 
   tabIcon: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
   },
 
   tabIconOff: {
@@ -270,7 +260,7 @@ const s = StyleSheet.create({
 
   labelOn: {
     color: "#000",
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: "900",
   },
 

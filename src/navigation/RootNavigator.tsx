@@ -8,15 +8,27 @@ import { OwnerStack } from "./OwnerStack";
 import { SellerStack } from "./SellerStack";
 import { SellerPendingStack } from "./SellerPendingStack";
 import { CustomerStack } from "./CustomerStack";
+import { BiometricSetupScreen } from "../screens/auth/BiometricSetupScreen";
 
 export function RootNavigator() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.activeRole);
   const needsOnboarding = useAuthStore((s) => s.needsOnboarding);
+  const needsBiometricSetup = useAuthStore((s) => s.needsBiometricSetup);
+
+  console.log("[ROOT]", {
+    hydrated,
+    hasToken: !!token,
+    role,
+    needsOnboarding,
+    needsBiometricSetup,
+  });
 
   if (!hydrated) return null;
   if (!token) return <AuthStack />;
+
+  if (needsBiometricSetup) return <BiometricSetupScreen />;
 
   if (needsOnboarding) return <ChooseRoleScreen />;
 

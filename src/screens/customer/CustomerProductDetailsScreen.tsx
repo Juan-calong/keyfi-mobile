@@ -7,7 +7,10 @@ import { endpoints } from "../../core/api/endpoints";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { useCartStore } from "../../stores/cart.store";
 
-import type { Product, RelatedProduct } from "../../features/components/product-details/productDetails.types";
+import type {
+  Product,
+  RelatedProduct,
+} from "../../features/components/product-details/productDetails.types";
 import { SharedProductDetails } from "../../features/components/product-details/SharedProductDetails";
 
 export function CustomerProductDetailsScreen() {
@@ -16,13 +19,15 @@ export function CustomerProductDetailsScreen() {
 
   const qtyById = useCartStore((state) => state.qtyById);
   const cartInc = useCartStore((state) => state.inc);
+  const cartRemove = useCartStore((state) => state.remove);
 
   const productId = route.params?.productId as string | undefined;
 
   const q = useQuery({
     queryKey: ["customer-product", productId],
     enabled: !!productId,
-    queryFn: async () => (await api.get<Product>(endpoints.products.byId(productId!))).data,
+    queryFn: async () =>
+      (await api.get<Product>(endpoints.products.byId(productId!))).data,
     retry: false,
   });
 
@@ -30,10 +35,9 @@ export function CustomerProductDetailsScreen() {
     queryKey: ["customer-product-related", productId],
     enabled: !!productId,
     queryFn: async () => {
-      const res = await api.get<any>(
-        endpoints.products.related(productId!),
-        { params: { take: 6 } }
-      );
+      const res = await api.get<any>(endpoints.products.related(productId!), {
+        params: { take: 6 },
+      });
 
       if (Array.isArray(res.data)) return res.data as RelatedProduct[];
       if (Array.isArray(res.data?.items)) return res.data.items as RelatedProduct[];
@@ -62,8 +66,10 @@ export function CustomerProductDetailsScreen() {
       relatedItems={relatedQ.data ?? []}
       qtyInCart={qtyInCart}
       allowVideos={false}
+      viewerMode="CUSTOMER"
       onBack={() => nav.goBack()}
       onAddToCart={(id) => cartInc(id, 1)}
+      onRemoveFromCart={(id) => cartRemove(id)}
       onGoToCart={() => {
         nav.dispatch(
           CommonActions.navigate({
@@ -77,7 +83,9 @@ export function CustomerProductDetailsScreen() {
       }}
       onOpenRelatedProduct={(nextProductId) => {
         if (!nextProductId) return;
-        nav.navigate(CUSTOMER_SCREENS.ProductDetails, { productId: nextProductId });
+        nav.navigate(CUSTOMER_SCREENS.ProductDetails, {
+          productId: nextProductId,
+        });
       }}
     />
   );

@@ -195,8 +195,9 @@ function InputRow({
 export function RegisterCustomerScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
-  const login = useAuthStore((s) => s.login);
-  const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+const login = useAuthStore((s) => s.login);
+const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
+const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -448,10 +449,11 @@ const canStep2 =
         phone: phoneDigits,
       });
 
-      await login(email.trim(), password);
-      setNeedsOnboarding(false);
+const normalizedEmail = email.trim().toLowerCase();
 
-      showModal("Sucesso", "Conta criada e login efetuado!");
+await login(normalizedEmail, password);
+setNeedsOnboarding(false);
+await queueBiometricSetup(normalizedEmail);
     } catch (e: any) {
       handleCooldownFromError(e);
 

@@ -384,13 +384,6 @@ export function ProfileMeScreen() {
                 }
               />
 
-              <RowItem
-  title="Token do salão"
-  onPress={() =>
-    nav.navigate(OWNER_SCREENS.SalonToken, { token: String(salonToken ?? "") })
-  }
-/>
-
 <RowItem
   title="Quem usou meu token"
   subtitle="Ver clientes e salões vinculados"

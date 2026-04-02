@@ -20,6 +20,9 @@ export const OWNER_SCREENS = {
   BoletoPayerForm: "OwnerBoletoPayerForm",
   BoletoWebView: "OwnerBoletoWebView",
 
+  CheckoutAddress: "OwnerCheckoutAddress",
+  ShippingMethod: "OwnerShippingMethod",
+
   OwnerSellers: "OwnerSellers",
   DebugCreate: "DebugCreate",
   ApplyReferral: "ApplyReferral",
@@ -33,6 +36,16 @@ export const OWNER_SCREENS = {
   CartRequests: "OwnerCartRequests",
   CartRequestDetails: "OwnerCartRequestDetails",
 } as const;
+
+export type CheckoutAddressPayload = {
+  zipCode: string;
+  streetName: string;
+  streetNumber: string;
+  neighborhood: string;
+  city: string;
+  federalUnit: string;
+  complement?: string;
+};
 
 export type OwnerStackParamList = {
   [OWNER_SCREENS.Root]: undefined;
@@ -48,6 +61,17 @@ export type OwnerStackParamList = {
   [OWNER_SCREENS.Notifications]: undefined;
 
   [OWNER_SCREENS.OrderDetails]: { orderId: string };
+
+  [OWNER_SCREENS.CheckoutAddress]: {
+    items: { productId: string; qty: number }[];
+    couponCode?: string;
+  };
+
+  [OWNER_SCREENS.ShippingMethod]: {
+    items: { productId: string; qty: number }[];
+    couponCode?: string;
+    deliveryAddress: CheckoutAddressPayload;
+  };
 
   [OWNER_SCREENS.PixPayment]:
     | { orderId: string; amount?: number }

@@ -6,6 +6,7 @@ export type SecurityPrefs = {
   biometricEnabled: boolean;
   biometricOwnerUserId: string | null;
 
+  // legado: mantido só para não quebrar partes antigas do app
   pinEnabled: boolean;
   pinSalt: string | null;
   pinHash: string | null;
@@ -32,57 +33,76 @@ export const DEFAULT_PREFS: SecurityPrefs = {
   lastBackgroundAt: null,
 };
 
+function normalizeSecurityPrefs(raw: any): SecurityPrefs {
+  return {
+    biometricEnabled: !!raw?.biometricEnabled,
+    biometricOwnerUserId:
+      typeof raw?.biometricOwnerUserId === "string" &&
+      raw.biometricOwnerUserId.trim().length > 0
+        ? raw.biometricOwnerUserId
+        : null,
+
+    // PIN desativado de propósito
+    pinEnabled: false,
+    pinSalt: null,
+    pinHash: null,
+    pinOwnerUserId: null,
+
+    relockOnBackground:
+      typeof raw?.relockOnBackground === "boolean"
+        ? raw.relockOnBackground
+        : DEFAULT_PREFS.relockOnBackground,
+
+    relockAfterMs:
+      typeof raw?.relockAfterMs === "number" &&
+      Number.isFinite(raw.relockAfterMs) &&
+      raw.relockAfterMs >= 0
+        ? raw.relockAfterMs
+        : DEFAULT_PREFS.relockAfterMs,
+
+    lastBackgroundAt:
+      typeof raw?.lastBackgroundAt === "number" &&
+      Number.isFinite(raw.lastBackgroundAt)
+        ? raw.lastBackgroundAt
+        : null,
+  };
+}
+
 export async function loadSecurityPrefs(): Promise<SecurityPrefs> {
   try {
     const creds = await Keychain.getGenericPassword({ service: SERVICE });
 
-    if (creds === false) {
-      return DEFAULT_PREFS;
-    }
-
-    if (!creds.password) {
+    if (!creds || !creds.password) {
       return DEFAULT_PREFS;
     }
 
     const parsed = JSON.parse(creds.password);
-
-    return {
-      biometricEnabled: !!parsed?.biometricEnabled,
-      biometricOwnerUserId:
-        typeof parsed?.biometricOwnerUserId === "string"
-          ? parsed.biometricOwnerUserId
-          : null,
-
-      pinEnabled: !!parsed?.pinEnabled,
-      pinSalt: typeof parsed?.pinSalt === "string" ? parsed.pinSalt : null,
-      pinHash: typeof parsed?.pinHash === "string" ? parsed.pinHash : null,
-      pinOwnerUserId:
-        typeof parsed?.pinOwnerUserId === "string" ? parsed.pinOwnerUserId : null,
-
-      relockOnBackground:
-        typeof parsed?.relockOnBackground === "boolean"
-          ? parsed.relockOnBackground
-          : DEFAULT_PREFS.relockOnBackground,
-
-      relockAfterMs:
-        typeof parsed?.relockAfterMs === "number"
-          ? parsed.relockAfterMs
-          : DEFAULT_PREFS.relockAfterMs,
-
-      lastBackgroundAt:
-        typeof parsed?.lastBackgroundAt === "number"
-          ? parsed.lastBackgroundAt
-          : null,
-    };
+    return normalizeSecurityPrefs(parsed);
   } catch {
     return DEFAULT_PREFS;
   }
 }
 
 export async function saveSecurityPrefs(next: SecurityPrefs) {
-  await Keychain.setGenericPassword("security", JSON.stringify(next), {
+  const safePrefs = normalizeSecurityPrefs(next);
+
+  await Keychain.setGenericPassword("security", JSON.stringify(safePrefs), {
     service: SERVICE,
+    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
+}
+
+export async function updateSecurityPrefs(
+  patch: Partial<SecurityPrefs>
+): Promise<SecurityPrefs> {
+  const current = await loadSecurityPrefs();
+  const next = normalizeSecurityPrefs({
+    ...current,
+    ...patch,
+  });
+
+  await saveSecurityPrefs(next);
+  return next;
 }
 
 export async function clearSecurityPrefs() {

@@ -1,7 +1,11 @@
 import React, { useCallback, useState } from "react";
+import { Share } from "react-native";
+import Clipboard from "@react-native-clipboard/clipboard";
+import axios from "axios";
 import type { IosConfirmAction } from "../../ui/components/IosConfirm";
 
 import { useAuthStore } from "../../stores/auth.store";
+import Config from "react-native-config";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -26,6 +30,11 @@ import { PixView } from "../../features/components/seller-profile/components/Pix
 import { BeneficiaryView } from "../../features/components/seller-profile/components/BeneficiaryView";
 import { ReferralLinksView } from "../../features/components/seller-profile/components/ReferralLinksView";
 
+// ajuste aqui se você já tiver um client api central
+const api = axios.create({
+  baseURL: Config.API_BASE_URL,
+});
+
 type ConfirmState =
   | null
   | {
@@ -36,11 +45,14 @@ type ConfirmState =
 
 export function SellerProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
+  const token = useAuthStore((s) => s.token);
 
   const [view, setView] = useState<ViewMode>("HOME");
   const [salonId, setSalonId] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [inviteUrl, setInviteUrl] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const {
     meQ,
@@ -64,12 +76,56 @@ export function SellerProfileScreen() {
 
   const {
     copyText,
-    shareToken,
     savePixMut,
     saveBeneficiaryMut,
     deleteBeneficiaryMut,
     requestPermMut,
   } = useSellerProfileActions(setModal);
+
+  const loadInviteLink = useCallback(async () => {
+    try {
+      setInviteLoading(true);
+      console.log("[INVITE][LOAD][START]", {
+  baseURL: Config.API_BASE_URL,
+  hasToken: !!token,
+});
+
+      const res = await api.get("/seller/invite-link", {
+        headers: token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : undefined,
+      });
+      console.log("[INVITE][LOAD][RESPONSE]", res?.data);
+
+      const url = String(res.data?.url || "").trim();
+
+      if (!url) {
+        throw new Error("INVITE_URL_EMPTY");
+      }
+
+      setInviteUrl(url);
+      return url;
+    } catch (err: any) {
+      console.log("[INVITE][LOAD][ERROR]", {
+  message: err?.message,
+  status: err?.response?.status,
+  data: err?.response?.data,
+});
+      setModal({
+        title: "Erro ao carregar link",
+        message:
+          err?.response?.data?.error ||
+          err?.message ||
+          "Não foi possível gerar seu link de convite.",
+          
+      });
+      return "";
+    } finally {
+      setInviteLoading(false);
+    }
+  }, [token]);
 
   const copyToken = useCallback(() => {
     if (!referralToken) {
@@ -82,6 +138,41 @@ export function SellerProfileScreen() {
 
     copyText(referralToken, "Token copiado");
   }, [referralToken, copyText]);
+
+  const copyInviteLink = useCallback(() => {
+    if (!inviteUrl) {
+      setModal({
+        title: "Sem link",
+        message: "Seu link ainda não foi carregado.",
+      });
+      return;
+    }
+
+    Clipboard.setString(inviteUrl);
+    setModal({
+      title: "Link copiado",
+      message: "O link do convite foi copiado.",
+    });
+  }, [inviteUrl]);
+
+  const shareInviteLink = useCallback(async () => {
+    if (!inviteUrl) {
+      setModal({
+        title: "Sem link",
+        message: "Seu link ainda não foi carregado.",
+      });
+      return;
+    }
+
+    await Share.share({
+      message: inviteUrl,
+    });
+  }, [inviteUrl]);
+
+  const refreshTokenArea = useCallback(async () => {
+    await meQ.refetch();
+    await loadInviteLink();
+  }, [meQ, loadInviteLink]);
 
   return (
     <Screen>
@@ -104,7 +195,17 @@ export function SellerProfileScreen() {
             hasBeneficiary={hasBeneficiary}
             isBlocked={isBlocked}
             onOpenDetails={() => setView("DETAILS")}
-            onOpenToken={() => setView("TOKEN")}
+            onOpenToken={async () => {
+                console.log("[INVITE][UI][OPEN_TOKEN]", {
+    inviteUrl,
+    inviteLoading,
+    referralToken,
+  });
+              setView("TOKEN");
+              if (!inviteUrl && !inviteLoading) {
+                await loadInviteLink();
+              }
+            }}
             onOpenReferrals={() => setView("REFERRALS")}
             onOpenPix={() => setView("PIX")}
             onOpenBeneficiary={() => setView("BENEFICIARY")}
@@ -123,10 +224,12 @@ export function SellerProfileScreen() {
         ) : view === "TOKEN" ? (
           <TokenView
             referralToken={referralToken}
+            inviteUrl={inviteUrl}
             onBack={() => setView("HOME")}
-            onCopy={copyToken}
-            onShare={() => shareToken(referralToken)}
-            onRefresh={() => meQ.refetch()}
+            onCopyToken={copyToken}
+            onCopyLink={copyInviteLink}
+            onShareLink={shareInviteLink}
+            onRefresh={refreshTokenArea}
           />
         ) : view === "DETAILS" ? (
           <DetailsView

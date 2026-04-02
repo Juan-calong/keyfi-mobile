@@ -33,6 +33,14 @@ import { IosAlert } from "../../ui/components/IosAlert";
 
 type Step = 1 | 2;
 
+type CompanyInfo = {
+  companyName: string;
+  tradeName: string;
+  status: string;
+  cnae: string;
+  secondaryCnaes: string[];
+};
+
 const TOKEN_RE = /^[A-HJ-NP-Z2-9]{8}$/;
 
 const COLORS = {
@@ -51,24 +59,30 @@ const COLORS = {
   errorBg: "#FFF7F7",
   primaryA: "#2E6BFF",
   primaryB: "#1F4FDB",
+  successBg: "#F8FAFC",
 };
 
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
   return s.includes("@") && s.includes(".");
 }
+
 function onlyDigits(v: string) {
   return String(v ?? "").replace(/\D+/g, "");
 }
+
 function normalizeToken(v: string) {
   return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
+
 function normalizeCEP(v: string) {
   return onlyDigits(v).slice(0, 8);
 }
+
 function normalizeUF(v: string) {
   return String(v ?? "").trim().toUpperCase().slice(0, 2);
 }
+
 function maskCNPJ(digits: string) {
   const d = digits.slice(0, 14);
   const p1 = d.slice(0, 2);
@@ -109,6 +123,7 @@ type InputRowProps = {
   focused?: boolean;
   inputRef?: React.RefObject<TextInput | null>;
   right?: React.ReactNode;
+  editable?: boolean;
 } & Pick<
   TextInputProps,
   | "keyboardType"
@@ -139,6 +154,7 @@ function InputRow({
   onSubmitEditing,
   autoComplete,
   textContentType,
+  editable = true,
 }: InputRowProps) {
   return (
     <View
@@ -146,6 +162,7 @@ function InputRow({
         styles.inputWrap,
         focused && styles.inputWrapFocused,
         error && styles.inputWrapError,
+        !editable && styles.inputWrapReadonly,
       ]}
     >
       <TextInput
@@ -167,8 +184,19 @@ function InputRow({
         autoComplete={autoComplete}
         textContentType={textContentType}
         underlineColorAndroid="transparent"
+        editable={editable}
       />
       {right}
+    </View>
+  );
+}
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  if (!value?.trim()) return null;
+  return (
+    <View style={styles.infoItem}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -177,8 +205,9 @@ export function RegisterSalonScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const login = useAuthStore((s) => s.login);
-  const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+const login = useAuthStore((s) => s.login);
+const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
+const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -241,7 +270,6 @@ export function RegisterSalonScreen() {
   const salonNameRef = useRef<TextInput>(null);
   const salonEmailRef = useRef<TextInput>(null);
   const cnpjRef = useRef<TextInput>(null);
-  const cnaesRef = useRef<TextInput>(null);
   const cepRef = useRef<TextInput>(null);
   const streetRef = useRef<TextInput>(null);
   const numberRef = useRef<TextInput>(null);
@@ -258,7 +286,6 @@ export function RegisterSalonScreen() {
     salonName: false,
     salonEmail: false,
     cnpj: false,
-    cnaes: false,
     cep: false,
     street: false,
     number: false,
@@ -269,17 +296,14 @@ export function RegisterSalonScreen() {
     referralToken: false,
   });
 
-  // Step 1
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [ownerSecure, setOwnerSecure] = useState(true);
 
-  // Step 2
   const [salonName, setSalonName] = useState("");
   const [salonEmail, setSalonEmail] = useState("");
   const [cnpjMasked, setCnpjMasked] = useState("");
-  const [cnaes, setCnaes] = useState("");
 
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -290,12 +314,16 @@ export function RegisterSalonScreen() {
   const [complement, setComplement] = useState("");
 
   const [referralToken, setReferralToken] = useState("");
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
 
   const lastCepFetchedRef = useRef("");
   const lastCnpjFetchedRef = useRef("");
   const addressManuallyEditedRef = useRef(false);
   const salonNameManuallyEditedRef = useRef(false);
-  const cnaesManuallyEditedRef = useRef(false);
+
+  function markAddressEdited() {
+    addressManuallyEditedRef.current = true;
+  }
 
   async function fillAddressFromCep(rawCep: string) {
     const cleanCep = onlyDigits(rawCep);
@@ -329,17 +357,26 @@ export function RegisterSalonScreen() {
       const data = await fetchCompanyByCnpj(cleanCnpj);
 
       const tradeName = String(data.tradeName ?? "").trim();
+      const companyName = String(data.companyName ?? "").trim();
+      const mainCnae = String(data.cnae ?? "").trim();
+      const secondary = Array.isArray(data.secondaryCnaes)
+        ? data.secondaryCnaes.map((item) => String(item).trim()).filter(Boolean)
+        : [];
 
       setCnpjMasked(maskCNPJ(data.cnpj || cleanCnpj));
+      setCompanyInfo({
+        companyName,
+        tradeName,
+        status: String(data.status ?? "").trim(),
+        cnae: mainCnae,
+        secondaryCnaes: secondary,
+      });
 
       if (!salonNameManuallyEditedRef.current && !salonName.trim()) {
-        if (tradeName.length >= 2) {
-          setSalonName(tradeName);
+        const preferredName = tradeName || companyName;
+        if (preferredName.length >= 2) {
+          setSalonName(preferredName);
         }
-      }
-
-      if (!cnaesManuallyEditedRef.current && !cnaes.trim()) {
-        setCnaes(String(data.cnae ?? "").trim());
       }
 
       const canHydrateAddress = !addressManuallyEditedRef.current;
@@ -357,13 +394,16 @@ export function RegisterSalonScreen() {
       lastCnpjFetchedRef.current = cleanCnpj;
 
       const shouldFallbackToCep =
-        canHydrateAddress && !!data.zipcode && (!data.street || !data.city || !data.state);
+        canHydrateAddress &&
+        !!data.zipcode &&
+        (!data.street || !data.city || !data.state);
 
       if (shouldFallbackToCep) {
         await fillAddressFromCep(data.zipcode);
       }
     } catch (e: any) {
       lastCnpjFetchedRef.current = "";
+      setCompanyInfo(null);
       showModal("CNPJ", e?.response?.data?.message || "Não foi possível consultar o CNPJ.");
     }
   }
@@ -372,7 +412,6 @@ export function RegisterSalonScreen() {
     const masked = formatCep(text);
     const cleanCep = onlyDigits(masked);
 
-    addressManuallyEditedRef.current = true;
     setCep(masked);
 
     if (cleanCep.length < 8) {
@@ -388,6 +427,7 @@ export function RegisterSalonScreen() {
 
     if (cleanCnpj.length < 14) {
       lastCnpjFetchedRef.current = "";
+      setCompanyInfo(null);
     }
   }
 
@@ -415,7 +455,6 @@ export function RegisterSalonScreen() {
     salonName: false,
     salonEmail: false,
     cnpj: false,
-    cnaes: false,
 
     cep: false,
     street: false,
@@ -439,8 +478,6 @@ export function RegisterSalonScreen() {
   const cnpjDigits = useMemo(() => onlyDigits(cnpjMasked).slice(0, 14), [cnpjMasked]);
   const cnpjOk = cnpjDigits.length === 14 && cnpjValidator.isValid(cnpjDigits);
 
-  const cnaesOk = cnaes.trim().length >= 1;
-
   const cepDigits = useMemo(() => normalizeCEP(cep), [cep]);
   const cepOk = cepDigits.length === 8;
   const streetOk = street.trim().length >= 2;
@@ -457,7 +494,6 @@ export function RegisterSalonScreen() {
     salonNameOk &&
     salonEmailOk &&
     cnpjOk &&
-    cnaesOk &&
     cepOk &&
     streetOk &&
     numberOk &&
@@ -487,7 +523,6 @@ export function RegisterSalonScreen() {
       salonName: true,
       salonEmail: true,
       cnpj: true,
-      cnaes: true,
       cep: true,
       street: true,
       number: true,
@@ -532,7 +567,6 @@ export function RegisterSalonScreen() {
         salon: {
           name: salonName.trim(),
           cnpj: cnpjDigits,
-          cnaes: cnaes.trim(),
           email: salonEmail.trim().toLowerCase(),
           cep: cepDigits,
           street: street.trim(),
@@ -545,16 +579,20 @@ export function RegisterSalonScreen() {
         referralToken: tokenNorm ? tokenNorm : undefined,
       });
 
-      await login(ownerEmail.trim(), ownerPassword);
-      setNeedsOnboarding(false);
+const normalizedEmail = ownerEmail.trim().toLowerCase();
 
-      showModal("Sucesso", "Salão criado e login efetuado!");
+await login(normalizedEmail, ownerPassword);
+setNeedsOnboarding(false);
+await queueBiometricSetup(normalizedEmail);
     } catch (e: any) {
       handleCooldownFromError(e);
 
       const retry = Number(e?.response?.data?.retryAfterSec);
       if (e?.response?.status === 429 && Number.isFinite(retry) && retry > 0) {
-        showModal("Aguarde um pouco", `Muitas tentativas. Tente novamente em ${formatLeft(Math.ceil(retry))}.`);
+        showModal(
+          "Aguarde um pouco",
+          `Muitas tentativas. Tente novamente em ${formatLeft(Math.ceil(retry))}.`
+        );
       } else {
         const fe = friendlyError(e);
         showModal(fe.title, fe.message);
@@ -574,7 +612,6 @@ export function RegisterSalonScreen() {
   const showSalonNameErr = touched.salonName && !salonNameOk;
   const showSalonEmailErr = touched.salonEmail && !salonEmailOk;
   const showCnpjErr = touched.cnpj && !cnpjOk;
-  const showCnaesErr = touched.cnaes && !cnaesOk;
   const showCepErr = touched.cep && !cepOk;
   const showStreetErr = touched.street && !streetOk;
   const showNumberErr = touched.number && !numberOk;
@@ -643,385 +680,401 @@ export function RegisterSalonScreen() {
               <View style={styles.header}>
                 <Text style={styles.h1}>Salão</Text>
                 <Text style={styles.sub}>
-                  {step === 1 ? "Dados do responsável" : "Dados do salão"}
+                  Preencha os dados abaixo para criar sua conta
                 </Text>
               </View>
 
-              {step === 1 ? (
-                <View style={styles.formCard}>
-                  <Text style={styles.sectionTitle}>Responsável (login)</Text>
+              <View style={styles.formCard}>
+                {step === 1 ? (
+                  <>
+                    <Text style={styles.sectionTitle}>Responsável</Text>
 
-                  <FieldLabel icon="person-outline" label="Nome" />
-                  <InputRow
-                    inputRef={ownerNameRef}
-                    value={ownerName}
-                    onChangeText={setOwnerName}
-                    onFocus={() => setFocused((s) => ({ ...s, ownerName: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, ownerName: false }));
-                      setTouched((s) => ({ ...s, ownerName: true }));
-                    }}
-                    placeholder="Seu nome"
-                    error={showOwnerNameErr}
-                    focused={focused.ownerName}
-                    returnKeyType="next"
-                    onSubmitEditing={() => ownerEmailRef.current?.focus()}
-                    autoCorrect={false}
-                  />
-                  <ErrorText show={showOwnerNameErr} text="Nome muito curto." />
+                    <FieldLabel icon="person-outline" label="Nome do responsável" />
+                    <InputRow
+                      inputRef={ownerNameRef}
+                      value={ownerName}
+                      onChangeText={setOwnerName}
+                      onFocus={() => setFocused((s) => ({ ...s, ownerName: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, ownerName: false }));
+                        setTouched((s) => ({ ...s, ownerName: true }));
+                      }}
+                      placeholder="Nome completo"
+                      error={showOwnerNameErr}
+                      focused={focused.ownerName}
+                      returnKeyType="next"
+                      onSubmitEditing={() => ownerEmailRef.current?.focus()}
+                      autoCorrect={false}
+                    />
+                    <ErrorText show={showOwnerNameErr} text="Nome muito curto." />
 
-                  <View style={styles.gap} />
+                    <View style={styles.gap} />
 
-                  <FieldLabel icon="mail-outline" label="Email" />
-                  <InputRow
-                    inputRef={ownerEmailRef}
-                    value={ownerEmail}
-                    onChangeText={setOwnerEmail}
-                    onFocus={() => setFocused((s) => ({ ...s, ownerEmail: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, ownerEmail: false }));
-                      setTouched((s) => ({ ...s, ownerEmail: true }));
-                    }}
-                    placeholder="dono@exemplo.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    error={showOwnerEmailErr}
-                    focused={focused.ownerEmail}
-                    returnKeyType="next"
-                    onSubmitEditing={() => ownerPasswordRef.current?.focus()}
-                  />
-                  <ErrorText show={showOwnerEmailErr} text="Email inválido." />
+                    <FieldLabel icon="mail-outline" label="Email" />
+                    <InputRow
+                      inputRef={ownerEmailRef}
+                      value={ownerEmail}
+                      onChangeText={setOwnerEmail}
+                      onFocus={() => setFocused((s) => ({ ...s, ownerEmail: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, ownerEmail: false }));
+                        setTouched((s) => ({ ...s, ownerEmail: true }));
+                      }}
+                      placeholder="email@exemplo.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      error={showOwnerEmailErr}
+                      focused={focused.ownerEmail}
+                      returnKeyType="next"
+                      onSubmitEditing={() => ownerPasswordRef.current?.focus()}
+                    />
+                    <ErrorText show={showOwnerEmailErr} text="Email inválido." />
 
-                  <View style={styles.gap} />
+                    <View style={styles.gap} />
 
-                  <FieldLabel icon="lock-closed-outline" label="Senha" />
-                  <InputRow
-                    inputRef={ownerPasswordRef}
-                    value={ownerPassword}
-                    onChangeText={setOwnerPassword}
-                    onFocus={() => setFocused((s) => ({ ...s, ownerPassword: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, ownerPassword: false }));
-                      setTouched((s) => ({ ...s, ownerPassword: true }));
-                    }}
-                    placeholder="Crie uma senha"
-                    secureTextEntry={ownerSecure}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="password"
-                    textContentType="newPassword"
-                    error={showOwnerPassErr}
-                    focused={focused.ownerPassword}
-                    returnKeyType="done"
-                    onSubmitEditing={next}
-                    right={
-                      <Pressable
-                        onPress={() => setOwnerSecure((s) => !s)}
-                        hitSlop={10}
-                        style={({ pressed }) => [styles.rightBtn, pressed && styles.pressed]}
-                      >
-                        <Ionicons
-                          name={ownerSecure ? "eye-outline" : "eye-off-outline"}
-                          size={18}
-                          color={COLORS.sub}
-                        />
-                      </Pressable>
-                    }
-                  />
-                  <ErrorText show={showOwnerPassErr} text="Mínimo de 8 caracteres." />
-                </View>
-              ) : (
-                <View style={styles.formCard}>
-                  <Text style={styles.sectionTitle}>Dados do salão</Text>
+                    <FieldLabel icon="lock-closed-outline" label="Senha" />
+                    <InputRow
+                      inputRef={ownerPasswordRef}
+                      value={ownerPassword}
+                      onChangeText={setOwnerPassword}
+                      onFocus={() => setFocused((s) => ({ ...s, ownerPassword: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, ownerPassword: false }));
+                        setTouched((s) => ({ ...s, ownerPassword: true }));
+                      }}
+                      placeholder="Crie uma senha"
+                      secureTextEntry={ownerSecure}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="password"
+                      textContentType="newPassword"
+                      error={showOwnerPassErr}
+                      focused={focused.ownerPassword}
+                      right={
+                        <Pressable
+                          onPress={() => setOwnerSecure((s) => !s)}
+                          hitSlop={10}
+                          style={({ pressed }) => [styles.rightBtn, pressed && styles.pressed]}
+                        >
+                          <Ionicons
+                            name={ownerSecure ? "eye-outline" : "eye-off-outline"}
+                            size={18}
+                            color={COLORS.sub}
+                          />
+                        </Pressable>
+                      }
+                      returnKeyType="done"
+                      onSubmitEditing={next}
+                    />
+                    <ErrorText show={showOwnerPassErr} text="Mínimo de 8 caracteres." />
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.sectionTitle}>Dados do salão</Text>
 
-                  <FieldLabel icon="storefront-outline" label="Nome do salão" />
-                  <InputRow
-                    inputRef={salonNameRef}
-                    value={salonName}
-                    onChangeText={(text) => {
-                      salonNameManuallyEditedRef.current = true;
-                      setSalonName(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, salonName: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, salonName: false }));
-                      setTouched((s) => ({ ...s, salonName: true }));
-                    }}
-                    placeholder="Nome do salão"
-                    error={showSalonNameErr}
-                    focused={focused.salonName}
-                    returnKeyType="next"
-                    onSubmitEditing={() => salonEmailRef.current?.focus()}
-                  />
-                  <ErrorText show={showSalonNameErr} text="Nome muito curto." />
+                    <FieldLabel icon="storefront-outline" label="Nome do salão" />
+                    <InputRow
+                      inputRef={salonNameRef}
+                      value={salonName}
+                      onChangeText={(text) => {
+                        salonNameManuallyEditedRef.current = true;
+                        setSalonName(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, salonName: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, salonName: false }));
+                        setTouched((s) => ({ ...s, salonName: true }));
+                      }}
+                      placeholder="Nome do salão"
+                      error={showSalonNameErr}
+                      focused={focused.salonName}
+                      returnKeyType="next"
+                      onSubmitEditing={() => salonEmailRef.current?.focus()}
+                    />
+                    <ErrorText show={showSalonNameErr} text="Nome muito curto." />
 
-                  <View style={styles.gap} />
+                    <View style={styles.gap} />
 
-                  <FieldLabel icon="mail-outline" label="Email do salão" />
-                  <InputRow
-                    inputRef={salonEmailRef}
-                    value={salonEmail}
-                    onChangeText={setSalonEmail}
-                    onFocus={() => setFocused((s) => ({ ...s, salonEmail: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, salonEmail: false }));
-                      setTouched((s) => ({ ...s, salonEmail: true }));
-                    }}
-                    placeholder="salao@exemplo.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    autoComplete="email"
-                    textContentType="emailAddress"
-                    error={showSalonEmailErr}
-                    focused={focused.salonEmail}
-                    returnKeyType="next"
-                    onSubmitEditing={() => cnpjRef.current?.focus()}
-                  />
-                  <ErrorText show={showSalonEmailErr} text="Email inválido." />
+                    <FieldLabel icon="mail-outline" label="Email do salão" />
+                    <InputRow
+                      inputRef={salonEmailRef}
+                      value={salonEmail}
+                      onChangeText={setSalonEmail}
+                      onFocus={() => setFocused((s) => ({ ...s, salonEmail: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, salonEmail: false }));
+                        setTouched((s) => ({ ...s, salonEmail: true }));
+                      }}
+                      placeholder="salao@exemplo.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      error={showSalonEmailErr}
+                      focused={focused.salonEmail}
+                      returnKeyType="next"
+                      onSubmitEditing={() => cnpjRef.current?.focus()}
+                    />
+                    <ErrorText show={showSalonEmailErr} text="Email inválido." />
 
-                  <View style={styles.gap} />
+                    <View style={styles.gap} />
 
-                  <FieldLabel icon="briefcase-outline" label="CNPJ" />
-                  <InputRow
-                    inputRef={cnpjRef}
-                    value={cnpjMasked}
-                    onChangeText={handleCnpjChange}
-                    onFocus={() => setFocused((s) => ({ ...s, cnpj: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, cnpj: false }));
-                      setTouched((s) => ({ ...s, cnpj: true }));
-                    }}
-                    placeholder="00.000.000/0000-00"
-                    keyboardType="numeric"
-                    error={showCnpjErr}
-                    focused={focused.cnpj}
-                    returnKeyType="next"
-                    onSubmitEditing={() => cnaesRef.current?.focus()}
-                  />
-                  <ErrorText show={showCnpjErr} text="CNPJ inválido." />
+                    <FieldLabel icon="briefcase-outline" label="CNPJ" />
+                    <InputRow
+                      inputRef={cnpjRef}
+                      value={cnpjMasked}
+                      onChangeText={handleCnpjChange}
+                      onFocus={() => setFocused((s) => ({ ...s, cnpj: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, cnpj: false }));
+                        setTouched((s) => ({ ...s, cnpj: true }));
+                      }}
+                      placeholder="00.000.000/0000-00"
+                      keyboardType="numeric"
+                      error={showCnpjErr}
+                      focused={focused.cnpj}
+                      returnKeyType="next"
+                      onSubmitEditing={() => cepRef.current?.focus()}
+                    />
+                    <ErrorText show={showCnpjErr} text="CNPJ inválido." />
 
-                  <View style={styles.gap} />
+                    {companyInfo ? (
+                      <>
+                        <View style={styles.gap} />
+                        <View style={styles.infoCard}>
+                          <Text style={styles.infoCardTitle}>Dados encontrados do CNPJ</Text>
 
-                  <FieldLabel icon="document-text-outline" label="CNAES" />
-                  <InputRow
-                    inputRef={cnaesRef}
-                    value={cnaes}
-                    onChangeText={(text) => {
-                      cnaesManuallyEditedRef.current = true;
-                      setCnaes(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, cnaes: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, cnaes: false }));
-                      setTouched((s) => ({ ...s, cnaes: true }));
-                    }}
-                    placeholder="Ex: 9602501"
-                    keyboardType="numeric"
-                    error={showCnaesErr}
-                    focused={focused.cnaes}
-                    returnKeyType="next"
-                    onSubmitEditing={() => cepRef.current?.focus()}
-                  />
-                  <ErrorText show={showCnaesErr} text="CNAES inválido." />
+                          <InfoItem
+                            label="Razão social"
+                            value={companyInfo.companyName}
+                          />
+                          <InfoItem
+                            label="Nome fantasia"
+                            value={companyInfo.tradeName}
+                          />
+                          <InfoItem
+                            label="Situação"
+                            value={companyInfo.status}
+                          />
+                          <InfoItem
+                            label="CNAE principal"
+                            value={companyInfo.cnae}
+                          />
+                          <InfoItem
+                            label="CNAEs secundários"
+                            value={companyInfo.secondaryCnaes.join(", ")}
+                          />
 
-                  <View style={styles.divider} />
+                          <Text style={styles.infoHelp}>
+                            Os CNAEs são apenas informativos aqui. A validação real
+                            acontece no backend a partir do CNPJ.
+                          </Text>
+                        </View>
+                      </>
+                    ) : null}
 
-                  <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Endereço</Text>
+                    <View style={styles.divider} />
 
-                  <FieldLabel icon="location-outline" label="CEP" />
-                  <InputRow
-                    inputRef={cepRef}
-                    value={cep}
-                    onChangeText={handleCepChange}
-                    onFocus={() => setFocused((s) => ({ ...s, cep: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, cep: false }));
-                      setTouched((s) => ({ ...s, cep: true }));
-                    }}
-                    placeholder="00000-000"
-                    keyboardType="numeric"
-                    error={showCepErr}
-                    focused={focused.cep}
-                    returnKeyType="next"
-                    onSubmitEditing={() => streetRef.current?.focus()}
-                  />
-                  <ErrorText show={showCepErr} text="CEP deve ter 8 dígitos." />
+                    <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Endereço</Text>
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="location-outline" label="CEP" />
+                    <InputRow
+                      inputRef={cepRef}
+                      value={cep}
+                      onChangeText={handleCepChange}
+                      onFocus={() => setFocused((s) => ({ ...s, cep: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, cep: false }));
+                        setTouched((s) => ({ ...s, cep: true }));
+                      }}
+                      placeholder="00000-000"
+                      keyboardType="numeric"
+                      error={showCepErr}
+                      focused={focused.cep}
+                      returnKeyType="next"
+                      onSubmitEditing={() => streetRef.current?.focus()}
+                    />
+                    <ErrorText show={showCepErr} text="CEP inválido." />
 
-                  <FieldLabel icon="map-outline" label="Rua" />
-                  <InputRow
-                    inputRef={streetRef}
-                    value={street}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setStreet(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, street: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, street: false }));
-                      setTouched((s) => ({ ...s, street: true }));
-                    }}
-                    placeholder="Ex: Av. Brasil"
-                    error={showStreetErr}
-                    focused={focused.street}
-                    returnKeyType="next"
-                    onSubmitEditing={() => numberRef.current?.focus()}
-                  />
-                  <ErrorText show={showStreetErr} text="Informe a rua." />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="map-outline" label="Rua" />
+                    <InputRow
+                      inputRef={streetRef}
+                      value={street}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setStreet(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, street: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, street: false }));
+                        setTouched((s) => ({ ...s, street: true }));
+                      }}
+                      placeholder="Rua"
+                      error={showStreetErr}
+                      focused={focused.street}
+                      returnKeyType="next"
+                      onSubmitEditing={() => numberRef.current?.focus()}
+                    />
+                    <ErrorText show={showStreetErr} text="Rua muito curta." />
 
-                  <FieldLabel icon="home-outline" label="Número" />
-                  <InputRow
-                    inputRef={numberRef}
-                    value={number}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setNumber(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, number: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, number: false }));
-                      setTouched((s) => ({ ...s, number: true }));
-                    }}
-                    placeholder="Ex: 123"
-                    keyboardType="numeric"
-                    error={showNumberErr}
-                    focused={focused.number}
-                    returnKeyType="next"
-                    onSubmitEditing={() => districtRef.current?.focus()}
-                  />
-                  <ErrorText show={showNumberErr} text="Informe o número." />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="home-outline" label="Número" />
+                    <InputRow
+                      inputRef={numberRef}
+                      value={number}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setNumber(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, number: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, number: false }));
+                        setTouched((s) => ({ ...s, number: true }));
+                      }}
+                      placeholder="Número"
+                      error={showNumberErr}
+                      focused={focused.number}
+                      returnKeyType="next"
+                      onSubmitEditing={() => districtRef.current?.focus()}
+                    />
+                    <ErrorText show={showNumberErr} text="Informe o número." />
 
-                  <FieldLabel icon="business-outline" label="Bairro" />
-                  <InputRow
-                    inputRef={districtRef}
-                    value={district}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setDistrict(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, district: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, district: false }));
-                      setTouched((s) => ({ ...s, district: true }));
-                    }}
-                    placeholder="Ex: Centro"
-                    error={showDistrictErr}
-                    focused={focused.district}
-                    returnKeyType="next"
-                    onSubmitEditing={() => cityRef.current?.focus()}
-                  />
-                  <ErrorText show={showDistrictErr} text="Informe o bairro." />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="business-outline" label="Bairro" />
+                    <InputRow
+                      inputRef={districtRef}
+                      value={district}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setDistrict(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, district: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, district: false }));
+                        setTouched((s) => ({ ...s, district: true }));
+                      }}
+                      placeholder="Bairro"
+                      error={showDistrictErr}
+                      focused={focused.district}
+                      returnKeyType="next"
+                      onSubmitEditing={() => cityRef.current?.focus()}
+                    />
+                    <ErrorText show={showDistrictErr} text="Bairro muito curto." />
 
-                  <FieldLabel icon="navigate-outline" label="Cidade" />
-                  <InputRow
-                    inputRef={cityRef}
-                    value={city}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setCity(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, city: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, city: false }));
-                      setTouched((s) => ({ ...s, city: true }));
-                    }}
-                    placeholder="Ex: Campinas"
-                    error={showCityErr}
-                    focused={focused.city}
-                    returnKeyType="next"
-                    onSubmitEditing={() => stateRef.current?.focus()}
-                  />
-                  <ErrorText show={showCityErr} text="Informe a cidade." />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="location-outline" label="Cidade" />
+                    <InputRow
+                      inputRef={cityRef}
+                      value={city}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setCity(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, city: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, city: false }));
+                        setTouched((s) => ({ ...s, city: true }));
+                      }}
+                      placeholder="Cidade"
+                      error={showCityErr}
+                      focused={focused.city}
+                      returnKeyType="next"
+                      onSubmitEditing={() => stateRef.current?.focus()}
+                    />
+                    <ErrorText show={showCityErr} text="Cidade muito curta." />
 
-                  <FieldLabel icon="flag-outline" label="UF" />
-                  <InputRow
-                    inputRef={stateRef}
-                    value={state}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setState(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, state: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, state: false }));
-                      setTouched((s) => ({ ...s, state: true }));
-                    }}
-                    placeholder="SP"
-                    autoCapitalize="characters"
-                    error={showStateErr}
-                    focused={focused.state}
-                    returnKeyType="next"
-                    onSubmitEditing={() => complementRef.current?.focus()}
-                  />
-                  <ErrorText show={showStateErr} text="UF deve ter 2 letras." />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="flag-outline" label="UF" />
+                    <InputRow
+                      inputRef={stateRef}
+                      value={state}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setState(normalizeUF(text));
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, state: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, state: false }));
+                        setTouched((s) => ({ ...s, state: true }));
+                      }}
+                      placeholder="SP"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      error={showStateErr}
+                      focused={focused.state}
+                      returnKeyType="next"
+                      onSubmitEditing={() => complementRef.current?.focus()}
+                    />
+                    <ErrorText show={showStateErr} text="UF inválida." />
 
-                  <FieldLabel icon="albums-outline" label="Complemento (opcional)" />
-                  <InputRow
-                    inputRef={complementRef}
-                    value={complement}
-                    onChangeText={(text) => {
-                      addressManuallyEditedRef.current = true;
-                      setComplement(text);
-                    }}
-                    onFocus={() => setFocused((s) => ({ ...s, complement: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, complement: false }));
-                      setTouched((s) => ({ ...s, complement: true }));
-                    }}
-                    placeholder="Ex: Sala 12"
-                    focused={focused.complement}
-                    returnKeyType="next"
-                    onSubmitEditing={() => referralRef.current?.focus()}
-                  />
+                    <View style={styles.gap} />
 
-                  <View style={styles.gap} />
+                    <FieldLabel icon="layers-outline" label="Complemento" />
+                    <InputRow
+                      inputRef={complementRef}
+                      value={complement}
+                      onChangeText={(text) => {
+                        markAddressEdited();
+                        setComplement(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, complement: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, complement: false }));
+                        setTouched((s) => ({ ...s, complement: true }));
+                      }}
+                      placeholder="Complemento (opcional)"
+                      focused={focused.complement}
+                      returnKeyType="next"
+                      onSubmitEditing={() => referralRef.current?.focus()}
+                    />
 
-                  <FieldLabel icon="ticket-outline" label="Código de indicação (opcional)" />
-                  <InputRow
-                    inputRef={referralRef}
-                    value={referralToken}
-                    onChangeText={setReferralToken}
-                    onFocus={() => setFocused((s) => ({ ...s, referralToken: true }))}
-                    onBlur={() => {
-                      setFocused((s) => ({ ...s, referralToken: false }));
-                      setTouched((s) => ({ ...s, referralToken: true }));
-                    }}
-                    placeholder="Ex: XA84XW8P"
-                    autoCapitalize="characters"
-                    error={showTokenErr}
-                    focused={focused.referralToken}
-                    returnKeyType="done"
-                    onSubmitEditing={submit}
-                  />
-                  <ErrorText
-                    show={showTokenErr}
-                    text="Código inválido. Use 8 caracteres (ex: XA84XW8P)."
-                  />
-                </View>
-              )}
+                    <View style={styles.divider} />
+
+                    <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Indicação</Text>
+
+                    <FieldLabel icon="gift-outline" label="Código de indicação" />
+                    <InputRow
+                      inputRef={referralRef}
+                      value={referralToken}
+                      onChangeText={(text) => setReferralToken(normalizeToken(text))}
+                      onFocus={() => setFocused((s) => ({ ...s, referralToken: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, referralToken: false }));
+                        setTouched((s) => ({ ...s, referralToken: true }));
+                      }}
+                      placeholder="Opcional"
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      error={showTokenErr}
+                      focused={focused.referralToken}
+                      returnKeyType="done"
+                      onSubmitEditing={submit}
+                    />
+                    <ErrorText
+                      show={showTokenErr}
+                      text="Código inválido. Use 8 caracteres válidos."
+                    />
+                  </>
+                )}
+              </View>
             </Container>
           </ScrollView>
 
           <View
             style={[
               styles.cta,
+              { paddingBottom: Math.max(insets.bottom, 12) },
               keyboardOpen && styles.ctaKeyboardOpen,
-              { paddingBottom: Math.max(insets.bottom, keyboardOpen ? 8 : 14) },
             ]}
           >
             <Pressable
@@ -1030,40 +1083,34 @@ export function RegisterSalonScreen() {
               style={({ pressed }) => [
                 styles.btn,
                 ctaDisabled && styles.btnDisabled,
-                pressed && !ctaDisabled ? styles.btnPressed : null,
+                pressed && !ctaDisabled && styles.btnPressed,
               ]}
             >
               <LinearGradient
                 colors={[COLORS.primaryA, COLORS.primaryB]}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
               />
               <Text style={styles.btnText}>{ctaText}</Text>
             </Pressable>
 
-            {!keyboardOpen ? (
-              <View style={styles.bottomLine}>
-                <Text style={styles.bottomText}>Já tem conta? </Text>
-                <Pressable
-                  onPress={goLogin}
-                  hitSlop={10}
-                  style={({ pressed }) => pressed && styles.pressed}
-                >
-                  <Text style={styles.bottomLink}>Entrar</Text>
-                </Pressable>
-              </View>
-            ) : null}
+            <View style={styles.bottomLine}>
+              <Text style={styles.bottomText}>Já tem conta? </Text>
+              <Pressable onPress={goLogin} hitSlop={10}>
+                <Text style={styles.bottomLink}>Entrar</Text>
+              </Pressable>
+            </View>
           </View>
-
-          <IosAlert
-            visible={!!alert}
-            title={alert?.title}
-            message={alert?.message}
-            onClose={() => setAlert(null)}
-          />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
+
+      <IosAlert
+        visible={!!alert}
+        title={alert?.title || ""}
+        message={alert?.message || ""}
+        onClose={() => setAlert(null)}
+      />
     </Screen>
   );
 }
@@ -1071,130 +1118,133 @@ export function RegisterSalonScreen() {
 const styles = StyleSheet.create({
   navbar: {
     backgroundColor: COLORS.bg,
-    paddingHorizontal: 14,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
 
   navRow: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
   backBtn: {
-    width: 78,
-    minHeight: 40,
+    minWidth: 64,
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
 
   backText: {
-    marginLeft: 2,
-    fontSize: 13,
-    fontWeight: "800",
     color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
   },
 
   navTitle: {
     flex: 1,
     textAlign: "center",
-    fontSize: 15,
-    fontWeight: "800",
     color: COLORS.text,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+    marginHorizontal: 12,
   },
 
   navRight: {
-    width: 78,
-    minHeight: 40,
+    minWidth: 64,
     alignItems: "flex-end",
-    justifyContent: "center",
   },
 
   stepBadge: {
-    minWidth: 38,
-    height: 24,
-    paddingHorizontal: 8,
-    borderRadius: 999,
-    backgroundColor: "#EFF6FF",
-    color: COLORS.primaryA,
-    textAlign: "center",
-    lineHeight: 24,
     fontSize: 12,
     fontWeight: "900",
+    color: COLORS.primaryA,
+    backgroundColor: "#EEF4FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
 
   hairline: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: COLORS.border,
   },
 
   scrollContent: {
-    flexGrow: 1,
+    paddingTop: 18,
   },
 
   header: {
-    alignItems: "center",
-    paddingTop: 18,
-    paddingBottom: 14,
+    marginBottom: 18,
   },
 
   h1: {
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: "900",
-    letterSpacing: -0.7,
     color: COLORS.text,
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -0.8,
   },
 
   sub: {
     marginTop: 6,
-    fontSize: 14,
-    fontWeight: "600",
     color: COLORS.sub,
-    textAlign: "center",
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   formCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 20,
-    paddingTop: 4,
-    paddingBottom: 8,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    marginBottom: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
 
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: "900",
     color: COLORS.text,
-    marginBottom: 8,
-    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 14,
+    letterSpacing: -0.4,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginTop: 16,
+    marginBottom: 2,
   },
 
   fieldLabelRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 8,
-    marginBottom: 7,
+    marginBottom: 8,
   },
 
   label: {
+    color: COLORS.text,
     fontSize: 13,
     fontWeight: "800",
-    color: COLORS.text,
-    letterSpacing: -0.1,
   },
 
   inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
+    minHeight: 54,
+    borderRadius: 16,
+    backgroundColor: COLORS.inputBg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
-    minHeight: 50,
   },
 
   inputWrapFocused: {
@@ -1207,15 +1257,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.errorBg,
   },
 
+  inputWrapReadonly: {
+    opacity: 0.9,
+  },
+
   input: {
     flex: 1,
-    height: 50,
-    fontSize: 15,
     color: COLORS.text,
-    paddingVertical: 0,
-    backgroundColor: "transparent",
-    includeFontPadding: false,
-    textAlignVertical: "center",
+    fontSize: 15,
+    fontWeight: "600",
+    paddingVertical: 14,
   },
 
   inputWithRightButton: {
@@ -1224,10 +1275,10 @@ const styles = StyleSheet.create({
 
   rightBtn: {
     position: "absolute",
-    right: 8,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    right: 12,
+    top: 0,
+    bottom: 0,
+    width: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1243,11 +1294,43 @@ const styles = StyleSheet.create({
     height: 10,
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginTop: 16,
+  infoCard: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.successBg,
+    borderRadius: 16,
+    padding: 14,
+  },
+
+  infoCardTitle: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: 10,
+  },
+
+  infoItem: {
+    marginBottom: 8,
+  },
+
+  infoLabel: {
+    color: COLORS.sub,
+    fontSize: 12,
+    fontWeight: "700",
     marginBottom: 2,
+  },
+
+  infoValue: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  infoHelp: {
+    marginTop: 8,
+    color: COLORS.sub,
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   cta: {
