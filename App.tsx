@@ -45,8 +45,31 @@ async function handleInviteUrl(url: string) {
   const invite = parseInviteFromUrl(safeUrl);
 
   if (invite) {
+    const { hydrated, token } = useAuthStore.getState();
+
     await savePendingInvite(invite);
-    console.log("[AIRBRIDGE][INVITE][SAVED]", invite);
+
+    console.log("[AIRBRIDGE][INVITE][SAVED]", {
+      inviteType: invite.inviteType,
+      tokenPreview: `${invite.token.slice(0, 6)}...`,
+      receivedAt: invite.receivedAt,
+      hydrated,
+      hasAuthToken: !!token,
+    });
+
+    if (hydrated && token) {
+      try {
+        const result = await applyPendingInvite();
+        console.log("[AIRBRIDGE][INVITE][APPLY_IMMEDIATE_RESULT]", result);
+      } catch (e) {
+        console.log("[AIRBRIDGE][INVITE][APPLY_IMMEDIATE_ERROR]", e);
+      }
+    } else {
+      console.log("[AIRBRIDGE][INVITE][DEFERRED_UNTIL_AUTH]", {
+        hydrated,
+        hasAuthToken: !!token,
+      });
+    }
   } else {
     console.log("[AIRBRIDGE][INVITE][IGNORED_URL]", safeUrl);
   }
@@ -87,31 +110,31 @@ export default function App() {
     return () => sub.remove();
   }, []);
 
-useEffect(() => {
-  if (!hydrated || !token) return;
+  useEffect(() => {
+    if (!hydrated || !token) return;
 
-  registerPushTokenWithBackend().catch((e) => {
-    console.log("[PUSH][REGISTER][ERROR]", e);
-  });
+    registerPushTokenWithBackend().catch((e) => {
+      console.log("[PUSH][REGISTER][ERROR]", e);
+    });
 
-  applyPendingInvite().catch((e) => {
-    console.log("[REFERRAL][APPLY_PENDING][ERROR]", e);
-  });
+    applyPendingInvite().catch((e) => {
+      console.log("[REFERRAL][APPLY_PENDING][ERROR]", e);
+    });
 
-  const unsubTokenRefresh = bindPushTokenRefresh();
-  const unsubForeground = bindForegroundPushListener();
-  const unsubOpen = bindPushOpenListener();
+    const unsubTokenRefresh = bindPushTokenRefresh();
+    const unsubForeground = bindForegroundPushListener();
+    const unsubOpen = bindPushOpenListener();
 
-  handleInitialPushOpen().catch((e) => {
-    console.log("[PUSH][INITIAL_OPEN][ERROR]", e);
-  });
+    handleInitialPushOpen().catch((e) => {
+      console.log("[PUSH][INITIAL_OPEN][ERROR]", e);
+    });
 
-  return () => {
-    unsubTokenRefresh();
-    unsubForeground();
-    unsubOpen();
-  };
-}, [hydrated, token]);
+    return () => {
+      unsubTokenRefresh();
+      unsubForeground();
+      unsubOpen();
+    };
+  }, [hydrated, token]);
 
   if (!hydrated) {
     return (

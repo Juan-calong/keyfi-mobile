@@ -120,6 +120,35 @@ function getProductFavorited(p: any) {
   return Boolean(p?.isFavorite ?? p?.favorited ?? false);
 }
 
+function getEntityId(item: any) {
+  return String(item?.id ?? item?.productId ?? "").trim();
+}
+
+function asItems<T>(v: any): T[] {
+  if (Array.isArray(v)) return v;
+  if (Array.isArray(v?.items)) return v.items;
+  if (Array.isArray(v?.data?.items)) return v.data.items;
+  return [];
+}
+
+function buildFavoriteIds(data: any) {
+  const ids = new Set<string>();
+
+  for (const item of asItems<any>(data)) {
+    const id = getEntityId(item);
+    if (id) ids.add(id);
+  }
+
+  return ids;
+}
+
+function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
+  const id = getEntityId(item);
+
+  if (id && favoriteIds.has(id)) return true;
+  return getProductFavorited(item);
+}
+
 function toNumberBR(v: string | number | null | undefined) {
   const n = Number(String(v ?? "0").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
@@ -752,6 +781,17 @@ export function OwnerHomeScreen() {
     retry: false,
   });
 
+    const favoritesQ = useQuery({
+    queryKey: ["owner-favorites"],
+    queryFn: async () => {
+      const res = await api.get(endpoints.products.favorites, {
+        params: { take: 500 },
+      });
+      return res.data;
+    },
+    retry: false,
+  });
+
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
       .filter((b) => b?.active !== false && !!b?.imageUrl)
@@ -774,6 +814,8 @@ export function OwnerHomeScreen() {
     return map;
   }, [promoProducts]);
 
+  const favoriteIds = useMemo(() => buildFavoriteIds(favoritesQ.data), [favoritesQ.data]);
+
   const promoBasePreview = useMemo<PreviewItem[]>(
     () =>
       promoProducts.slice(0, 10).map((p) => {
@@ -788,10 +830,10 @@ export function OwnerHomeScreen() {
           hasDiscount: priceData.hasDiscount,
           ratingValue: getProductRatingValue(p),
           ratingCount: getProductRatingCount(p),
-          isFavorite: getProductFavorited(p),
+          isFavorite: resolveFavoriteFlag(p, favoriteIds),
         };
       }),
-    [promoProducts]
+    [promoProducts, favoriteIds]
   );
 
   const handleAddToCart = useCallback(
@@ -835,10 +877,10 @@ export function OwnerHomeScreen() {
         hasDiscount: priceData.hasDiscount,
         ratingValue: getProductRatingValue(merged),
         ratingCount: getProductRatingCount(merged),
-        isFavorite: getProductFavorited(merged),
+        isFavorite: resolveFavoriteFlag(merged, favoriteIds),
       };
     });
-  }, [products, promoProductById]);
+  }, [products, promoProductById, favoriteIds]);
 
   const previewProductIds = useMemo(
     () =>
@@ -976,10 +1018,18 @@ export function OwnerHomeScreen() {
   );
 
   const isLoading =
-    meQ.isLoading || bannersQ.isLoading || productsQ.isLoading || promosQ.isLoading;
+    meQ.isLoading ||
+    bannersQ.isLoading ||
+    productsQ.isLoading ||
+    promosQ.isLoading ||
+    favoritesQ.isLoading;
 
   const isError =
-    meQ.isError || bannersQ.isError || productsQ.isError || promosQ.isError;
+    meQ.isError ||
+    bannersQ.isError ||
+    productsQ.isError ||
+    promosQ.isError ||
+    favoritesQ.isError;
 
   return (
     <Screen>
@@ -1003,6 +1053,7 @@ export function OwnerHomeScreen() {
               bannersQ.refetch();
               productsQ.refetch();
               promosQ.refetch();
+              favoritesQ.refetch();
             }}
           />
         ) : (

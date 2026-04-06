@@ -229,6 +229,13 @@ export function ProductFavoriteButton({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["customer-favorites"] }),
         queryClient.invalidateQueries({ queryKey: ["owner-favorites"] }),
+        queryClient.invalidateQueries({ queryKey: ["customer-home-products"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-home-products"] }),
+        queryClient.invalidateQueries({ queryKey: ["customer-home-promos-preview"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-home-promos-preview"] }),
+        queryClient.invalidateQueries({ queryKey: ["customer-products"] }),
+        queryClient.invalidateQueries({ queryKey: ["owner-products"] }),
+        queryClient.invalidateQueries({ queryKey: ["product"] }),
       ]);
     },
 

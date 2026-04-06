@@ -189,30 +189,6 @@ function stop(e?: GestureResponderEvent) {
   e?.stopPropagation?.();
 }
 
-function normalizeAudience(value: unknown) {
-  return String(value ?? "").trim().toUpperCase();
-}
-
-function canViewerSeeProduct(item: any, viewerMode: ViewerMode) {
-  if (!item) return false;
-  if (item?.active === false) return false;
-
-  const audience = normalizeAudience(
-    item?.audience ??
-      item?.targetAudience ??
-      item?.viewerAudience ??
-      item?.appliesTo
-  );
-
-  if (!audience) return true;
-
-  if (viewerMode === "CUSTOMER") {
-    return ["ALL", "BOTH", "CUSTOMER", "CUSTOMER_SALON"].includes(audience);
-  }
-
-  return ["ALL", "BOTH", "SALON", "SALON_OWNER", "OWNER"].includes(audience);
-}
-
 function getBasePrice(item: any, viewerMode: ViewerMode) {
   const customerPrice = toNullableNumber(item?.customerPrice);
   const ownerPrice = toNullableNumber(item?.price);
@@ -579,15 +555,7 @@ export function SharedProductDetails({
     [product, viewerMode]
   );
 
-  const safeRelatedItems = useMemo(
-    () => relatedItems.filter((item) => canViewerSeeProduct(item, viewerMode)),
-    [relatedItems, viewerMode]
-  );
-
-  const canSeeCurrentProduct = useMemo(
-    () => (product ? canViewerSeeProduct(product, viewerMode) : true),
-    [product, viewerMode]
-  );
+  const safeRelatedItems = useMemo(() => relatedItems, [relatedItems]);
 
   const favoritesQ = useQuery({
     queryKey:
@@ -874,13 +842,7 @@ export function SharedProductDetails({
               Produto não encontrado.
             </Text>
           </View>
-        ) : !canSeeCurrentProduct ? (
-          <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-            <Text style={{ color: COLORS.text, fontWeight: "800" }}>
-              Produto indisponível para este perfil.
-            </Text>
-          </View>
-        ) : (
+          ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={s.scrollContent}

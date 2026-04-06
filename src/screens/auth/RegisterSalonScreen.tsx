@@ -30,6 +30,10 @@ import { endpoints } from "../../core/api/endpoints";
 import { useAuthStore } from "../../stores/auth.store";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
+import {
+  clearPendingInvite,
+  getPendingInvite,
+} from "../../core/airbridge/invite-link.service";
 
 type Step = 1 | 2;
 
@@ -205,9 +209,9 @@ export function RegisterSalonScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-const login = useAuthStore((s) => s.login);
-const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
-const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+  const login = useAuthStore((s) => s.login);
+  const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
+  const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -218,6 +222,7 @@ const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
   }
 
   const submittingRef = useRef(false);
+  const pendingInvitePrefilledRef = useRef(false);
 
   const [cooldownUntil, setCooldownUntil] = useState<number>(0);
   const [now, setNow] = useState(Date.now());
@@ -241,6 +246,38 @@ const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [cooldownUntil]);
+
+  useEffect(() => {
+    if (pendingInvitePrefilledRef.current) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const invite = await getPendingInvite();
+        if (cancelled || !invite) return;
+
+        if (invite.inviteType === "SELLER" || invite.inviteType === "SALON") {
+          const normalized = normalizeToken(invite.token);
+          if (normalized) {
+            setReferralToken((prev) => prev || normalized);
+            console.log("[REGISTER_SALON][PREFILL_REFERRAL]", {
+              inviteType: invite.inviteType,
+              tokenPreview: `${normalized.slice(0, 6)}...`,
+            });
+          }
+        }
+      } catch (e) {
+        console.log("[REGISTER_SALON][PREFILL_REFERRAL][ERROR]", e);
+      } finally {
+        pendingInvitePrefilledRef.current = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const inCooldown = cooldownUntil > now;
 
@@ -579,11 +616,13 @@ const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
         referralToken: tokenNorm ? tokenNorm : undefined,
       });
 
-const normalizedEmail = ownerEmail.trim().toLowerCase();
+      await clearPendingInvite();
 
-await login(normalizedEmail, ownerPassword);
-setNeedsOnboarding(false);
-await queueBiometricSetup(normalizedEmail);
+      const normalizedEmail = ownerEmail.trim().toLowerCase();
+
+      await login(normalizedEmail, ownerPassword);
+      setNeedsOnboarding(false);
+      await queueBiometricSetup(normalizedEmail);
     } catch (e: any) {
       handleCooldownFromError(e);
 
@@ -721,13 +760,13 @@ await queueBiometricSetup(normalizedEmail);
                         setTouched((s) => ({ ...s, ownerEmail: true }));
                       }}
                       placeholder="email@exemplo.com"
+                      error={showOwnerEmailErr}
+                      focused={focused.ownerEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
                       textContentType="emailAddress"
-                      error={showOwnerEmailErr}
-                      focused={focused.ownerEmail}
                       returnKeyType="next"
                       onSubmitEditing={() => ownerPasswordRef.current?.focus()}
                     />
@@ -746,16 +785,18 @@ await queueBiometricSetup(normalizedEmail);
                         setTouched((s) => ({ ...s, ownerPassword: true }));
                       }}
                       placeholder="Crie uma senha"
-                      secureTextEntry={ownerSecure}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="password"
-                      textContentType="newPassword"
                       error={showOwnerPassErr}
                       focused={focused.ownerPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      secureTextEntry={ownerSecure}
+                      autoComplete="password"
+                      textContentType="newPassword"
+                      returnKeyType="done"
+                      onSubmitEditing={next}
                       right={
                         <Pressable
-                          onPress={() => setOwnerSecure((s) => !s)}
+                          onPress={() => setOwnerSecure((v) => !v)}
                           hitSlop={10}
                           style={({ pressed }) => [styles.rightBtn, pressed && styles.pressed]}
                         >
@@ -766,16 +807,14 @@ await queueBiometricSetup(normalizedEmail);
                           />
                         </Pressable>
                       }
-                      returnKeyType="done"
-                      onSubmitEditing={next}
                     />
                     <ErrorText show={showOwnerPassErr} text="Mínimo de 8 caracteres." />
                   </>
                 ) : (
                   <>
-                    <Text style={styles.sectionTitle}>Dados do salão</Text>
+                    <Text style={styles.sectionTitle}>Salão</Text>
 
-                    <FieldLabel icon="storefront-outline" label="Nome do salão" />
+                    <FieldLabel icon="business-outline" label="Nome do salão" />
                     <InputRow
                       inputRef={salonNameRef}
                       value={salonName}
@@ -808,14 +847,12 @@ await queueBiometricSetup(normalizedEmail);
                         setFocused((s) => ({ ...s, salonEmail: false }));
                         setTouched((s) => ({ ...s, salonEmail: true }));
                       }}
-                      placeholder="salao@exemplo.com"
+                      placeholder="salon@exemplo.com"
+                      error={showSalonEmailErr}
+                      focused={focused.salonEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
-                      autoComplete="email"
-                      textContentType="emailAddress"
-                      error={showSalonEmailErr}
-                      focused={focused.salonEmail}
                       returnKeyType="next"
                       onSubmitEditing={() => cnpjRef.current?.focus()}
                     />
@@ -834,9 +871,9 @@ await queueBiometricSetup(normalizedEmail);
                         setTouched((s) => ({ ...s, cnpj: true }));
                       }}
                       placeholder="00.000.000/0000-00"
-                      keyboardType="numeric"
                       error={showCnpjErr}
                       focused={focused.cnpj}
+                      keyboardType="numeric"
                       returnKeyType="next"
                       onSubmitEditing={() => cepRef.current?.focus()}
                     />
@@ -846,32 +883,14 @@ await queueBiometricSetup(normalizedEmail);
                       <>
                         <View style={styles.gap} />
                         <View style={styles.infoCard}>
-                          <Text style={styles.infoCardTitle}>Dados encontrados do CNPJ</Text>
-
-                          <InfoItem
-                            label="Razão social"
-                            value={companyInfo.companyName}
-                          />
-                          <InfoItem
-                            label="Nome fantasia"
-                            value={companyInfo.tradeName}
-                          />
-                          <InfoItem
-                            label="Situação"
-                            value={companyInfo.status}
-                          />
-                          <InfoItem
-                            label="CNAE principal"
-                            value={companyInfo.cnae}
-                          />
-                          <InfoItem
-                            label="CNAEs secundários"
-                            value={companyInfo.secondaryCnaes.join(", ")}
-                          />
-
+                          <Text style={styles.infoCardTitle}>Dados encontrados</Text>
+                          <InfoItem label="Razão social" value={companyInfo.companyName} />
+                          <InfoItem label="Nome fantasia" value={companyInfo.tradeName} />
+                          <InfoItem label="Status" value={companyInfo.status} />
+                          <InfoItem label="CNAE principal" value={companyInfo.cnae} />
                           <Text style={styles.infoHelp}>
-                            Os CNAEs são apenas informativos aqui. A validação real
-                            acontece no backend a partir do CNPJ.
+                            Se o nome do salão ou endereço vierem errados, você pode ajustar
+                            manualmente abaixo.
                           </Text>
                         </View>
                       </>
@@ -879,7 +898,7 @@ await queueBiometricSetup(normalizedEmail);
 
                     <View style={styles.divider} />
 
-                    <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Endereço</Text>
+                    <Text style={styles.sectionTitle}>Endereço</Text>
 
                     <FieldLabel icon="location-outline" label="CEP" />
                     <InputRow
@@ -892,9 +911,9 @@ await queueBiometricSetup(normalizedEmail);
                         setTouched((s) => ({ ...s, cep: true }));
                       }}
                       placeholder="00000-000"
-                      keyboardType="numeric"
                       error={showCepErr}
                       focused={focused.cep}
+                      keyboardType="numeric"
                       returnKeyType="next"
                       onSubmitEditing={() => streetRef.current?.focus()}
                     />
@@ -915,7 +934,7 @@ await queueBiometricSetup(normalizedEmail);
                         setFocused((s) => ({ ...s, street: false }));
                         setTouched((s) => ({ ...s, street: true }));
                       }}
-                      placeholder="Rua"
+                      placeholder="Rua / Avenida"
                       error={showStreetErr}
                       focused={focused.street}
                       returnKeyType="next"
@@ -925,7 +944,7 @@ await queueBiometricSetup(normalizedEmail);
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="home-outline" label="Número" />
+                    <FieldLabel icon="pin-outline" label="Número" />
                     <InputRow
                       inputRef={numberRef}
                       value={number}
@@ -948,7 +967,7 @@ await queueBiometricSetup(normalizedEmail);
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="business-outline" label="Bairro" />
+                    <FieldLabel icon="home-outline" label="Bairro" />
                     <InputRow
                       inputRef={districtRef}
                       value={district}
@@ -971,7 +990,7 @@ await queueBiometricSetup(normalizedEmail);
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="location-outline" label="Cidade" />
+                    <FieldLabel icon="business-outline" label="Cidade" />
                     <InputRow
                       inputRef={cityRef}
                       value={city}
@@ -1007,11 +1026,11 @@ await queueBiometricSetup(normalizedEmail);
                         setFocused((s) => ({ ...s, state: false }));
                         setTouched((s) => ({ ...s, state: true }));
                       }}
-                      placeholder="SP"
-                      autoCapitalize="characters"
-                      autoCorrect={false}
+                      placeholder="UF"
                       error={showStateErr}
                       focused={focused.state}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
                       returnKeyType="next"
                       onSubmitEditing={() => complementRef.current?.focus()}
                     />
@@ -1131,89 +1150,95 @@ const styles = StyleSheet.create({
 
   backBtn: {
     minWidth: 64,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
   },
 
   backText: {
+    marginLeft: 2,
+    fontSize: 13,
+    fontWeight: "800",
     color: COLORS.text,
-    fontSize: 15,
-    fontWeight: "700",
   },
 
   navTitle: {
     flex: 1,
     textAlign: "center",
+    fontSize: 15,
+    fontWeight: "800",
     color: COLORS.text,
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: -0.3,
-    marginHorizontal: 12,
+    letterSpacing: -0.2,
   },
 
   navRight: {
-    minWidth: 64,
+    width: 64,
+    minHeight: 40,
     alignItems: "flex-end",
+    justifyContent: "center",
   },
 
   stepBadge: {
+    minWidth: 40,
+    paddingHorizontal: 10,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: COLORS.inputBg,
+    color: COLORS.text,
     fontSize: 12,
     fontWeight: "900",
-    color: COLORS.primaryA,
-    backgroundColor: "#EEF4FF",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    textAlign: "center",
+    textAlignVertical: "center",
+    overflow: "hidden",
+    includeFontPadding: false,
+    lineHeight: 28,
   },
 
   hairline: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: COLORS.border,
   },
 
   scrollContent: {
-    paddingTop: 18,
+    flexGrow: 1,
   },
 
   header: {
-    marginBottom: 18,
+    alignItems: "center",
+    paddingTop: 18,
+    paddingBottom: 14,
   },
 
   h1: {
-    color: COLORS.text,
-    fontSize: 28,
+    fontSize: 34,
+    lineHeight: 38,
     fontWeight: "900",
-    letterSpacing: -0.8,
+    letterSpacing: -0.7,
+    color: COLORS.text,
   },
 
   sub: {
     marginTop: 6,
-    color: COLORS.sub,
     fontSize: 14,
-    lineHeight: 20,
+    fontWeight: "600",
+    color: COLORS.sub,
+    textAlign: "center",
   },
 
   formCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 1,
+    borderRadius: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
 
   sectionTitle: {
-    color: COLORS.text,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
-    marginBottom: 14,
-    letterSpacing: -0.4,
+    color: COLORS.text,
+    marginTop: 8,
+    marginBottom: 6,
+    letterSpacing: -0.2,
   },
 
   divider: {
@@ -1227,24 +1252,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 7,
   },
 
   label: {
-    color: COLORS.text,
     fontSize: 13,
     fontWeight: "800",
+    color: COLORS.text,
+    letterSpacing: -0.1,
   },
 
   inputWrap: {
-    minHeight: 54,
-    borderRadius: 16,
-    backgroundColor: COLORS.inputBg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     flexDirection: "row",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 14,
     paddingHorizontal: 14,
+    minHeight: 50,
   },
 
   inputWrapFocused: {
@@ -1258,15 +1285,18 @@ const styles = StyleSheet.create({
   },
 
   inputWrapReadonly: {
-    opacity: 0.9,
+    opacity: 0.72,
   },
 
   input: {
     flex: 1,
-    color: COLORS.text,
+    height: 50,
     fontSize: 15,
-    fontWeight: "600",
-    paddingVertical: 14,
+    color: COLORS.text,
+    paddingVertical: 0,
+    backgroundColor: "transparent",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
   inputWithRightButton: {
@@ -1275,10 +1305,10 @@ const styles = StyleSheet.create({
 
   rightBtn: {
     position: "absolute",
-    right: 12,
-    top: 0,
-    bottom: 0,
-    width: 32,
+    right: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
