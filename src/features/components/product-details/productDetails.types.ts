@@ -98,15 +98,41 @@ export type BasicQueryState = {
 
 
 export type ProductCommentUser = {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
+};
+
+export type ProductCommentAdminResponse = {
+  id?: string;
+  message?: string;
+  createdAt?: string;
+  adminName?: string;
+  admin?: {
+    id?: string;
+    name?: string;
+  } | null;
+  active?: boolean;
 };
 
 export type ProductComment = {
   id: string;
   comment: string;
   createdAt: string;
-  user: ProductCommentUser;
+  user?: ProductCommentUser;
+  rating?: number | null;
+  stars?: number | null;
+  score?: number | null;
+  adminResponse?: ProductCommentAdminResponse | null;
+};
+
+export type MyProductCommentStatusResponse = {
+  canReview?: boolean;
+  canCreate?: boolean;
+  canEdit?: boolean;
+  hasComment?: boolean;
+  nextAllowedEditAt?: string | null;
+  message?: string;
+  item?: ProductComment | null;
 };
 
 export type ProductCommentsResponse = {

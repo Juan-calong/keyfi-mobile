@@ -29,6 +29,10 @@ import type {
   RelatedProduct,
   ProductMedia,
   BasicQueryState,
+  ProductComment,
+  ProductCommentAdminResponse,
+  ProductCommentsResponse,
+  MyProductCommentStatusResponse,
 } from "./productDetails.types";
 import {
   COLORS,
@@ -70,6 +74,7 @@ type ReviewItem = {
   rating?: number | null;
   stars?: number | null;
   score?: number | null;
+  adminResponse?: ProductCommentAdminResponse | null;
 };
 
 const FAVORITE_CACHE_ROOTS = new Set([
@@ -322,6 +327,28 @@ function extractCommentsItems(data: any): ReviewItem[] {
   if (Array.isArray(data?.data?.items)) return data.data.items as ReviewItem[];
   return [];
 }
+
+function getActiveAdminResponse(item?: ReviewItem | ProductComment | null) {
+  const response = item?.adminResponse;
+  if (!response) return null;
+  if (response.active === false) return null;
+
+  const message = String(response.message ?? "").trim();
+  if (!message) return null;
+
+  return response;
+}
+
+function getAdminDisplayName(response?: ProductCommentAdminResponse | null) {
+  const directName = String(response?.adminName ?? "").trim();
+  if (directName) return directName;
+
+  const nestedName = String(response?.admin?.name ?? "").trim();
+  if (nestedName) return nestedName;
+
+  return "";
+}
+
 
 function sortReviews(items: ReviewItem[], sort: ReviewSort) {
   const cloned = [...items];
@@ -580,9 +607,12 @@ export function SharedProductDetails({
     queryKey: ["product-comments", product?.id],
     enabled: !!product?.id,
     queryFn: async () => {
-      const res = await api.get<any>(endpoints.products.comments(product!.id), {
+      const res = await api.get<ProductCommentsResponse>(
+        endpoints.products.comments(product!.id),
+        {
         params: { page: 1, limit: 20 },
-      });
+        }
+      );
       return res.data;
     },
     retry: false,
@@ -592,7 +622,9 @@ export function SharedProductDetails({
     queryKey: ["product-comments-me", product?.id],
     enabled: !!product?.id,
     queryFn: async () => {
-      const res = await api.get<any>(endpoints.products.commentsMe(product!.id));
+      const res = await api.get<MyProductCommentStatusResponse>(
+        endpoints.products.commentsMe(product!.id)
+      );
       return res.data;
     },
     retry: false,
@@ -610,7 +642,7 @@ export function SharedProductDetails({
       return api.post(endpoints.products.comments(product.id), payload);
     },
     onSuccess: async (res: any) => {
-      const msg = res?.data?.message || "Avaliação enviada para moderação.";
+      const msg = res?.data?.message || "Avaliação enviada com sucesso.";
       const mode = res?.data?.mode === "updated" ? "updated" : "created";
 
       setCommentSuccessMessage(String(msg));
@@ -640,12 +672,13 @@ export function SharedProductDetails({
       return;
     }
 
-    if (data.canCreate) {
+    if (data.canCreate || !data.item) {
       setDraftComment("");
       setDraftRating(0);
     }
   }, [
     product?.id,
+    myCommentStatusQ.data,
     myCommentStatusQ.data?.hasComment,
     myCommentStatusQ.data?.canEdit,
     myCommentStatusQ.data?.canCreate,
@@ -653,6 +686,10 @@ export function SharedProductDetails({
   ]);
 
   const reviewStatus = myCommentStatusQ.data;
+    const reviewItem = reviewStatus?.item;
+  const hasVisibleMyComment = Boolean(
+    reviewItem?.id && String(reviewItem?.comment ?? "").trim()
+  );
   const canCreateReview = !!reviewStatus?.canCreate;
   const canEditReview = !!reviewStatus?.canEdit;
   const canWriteReview = canCreateReview || canEditReview;
@@ -662,8 +699,8 @@ export function SharedProductDetails({
     : "Escreva sua avaliação";
 
   const reviewCardSubtitle = canEditReview
-    ? "Sua atualização será enviada novamente para moderação."
-    : "Sua avaliação será enviada para moderação.";
+    ? "Sua atualização ficará pública automaticamente."
+    : "Sua avaliação ficará pública automaticamente.";
 
   const reviewSubmitLabel = canEditReview
     ? "Atualizar avaliação"
@@ -1398,7 +1435,7 @@ export function SharedProductDetails({
                     </View>
                   </View>
 
-                  {reviewStatus?.hasComment && !reviewStatus?.canEdit ? (
+                  {hasVisibleMyComment && !reviewStatus?.canEdit ? (
                     <View
                       style={{
                         marginTop: 6,
@@ -1422,7 +1459,7 @@ export function SharedProductDetails({
                       </Text>
 
                       <RatingStars
-                        value={Number(reviewStatus?.item?.rating ?? 0)}
+                       value={Number(reviewItem?.rating ?? 0)}
                         size={14}
                       />
 
@@ -1434,7 +1471,7 @@ export function SharedProductDetails({
                           fontWeight: "500",
                         }}
                       >
-                        {String(reviewStatus?.item?.comment ?? "")}
+                        {String(reviewItem?.comment ?? "")}
                       </Text>
 
                       <Text
@@ -1444,8 +1481,12 @@ export function SharedProductDetails({
                           fontWeight: "700",
                         }}
                       >
-                        Você poderá editar novamente em{" "}
-                        {formatReviewDateTime(reviewStatus?.nextAllowedEditAt)}
+                        {reviewStatus?.nextAllowedEditAt
+                          ? `Você poderá editar novamente em ${formatReviewDateTime(
+                              reviewStatus?.nextAllowedEditAt
+                            )}`
+                          : reviewStatus?.message ||
+                            "Sua avaliação não pode ser editada no momento."}
                       </Text>
                     </View>
                   ) : null}
@@ -1627,6 +1668,31 @@ export function SharedProductDetails({
                       </View>
                     </View>
                   ) : null}
+                  
+                  {!canWriteReview && !hasVisibleMyComment && reviewStatus?.message ? (
+                    <View
+                      style={{
+                        marginTop: 10,
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        backgroundColor: "#F8F4EF",
+                        borderWidth: 1,
+                        borderColor: "#E9DED4",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: COLORS.textMuted,
+                          fontWeight: "700",
+                          fontSize: 12,
+                          lineHeight: 18,
+                        }}
+                      >
+                        {reviewStatus.message}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               )}
 
@@ -1727,6 +1793,9 @@ export function SharedProductDetails({
                 <View style={{ gap: 12 }}>
                   {visibleReviews.map((item) => {
                     const rating = getReviewRating(item);
+                    const adminResponse = getActiveAdminResponse(item);
+                    const adminName = getAdminDisplayName(adminResponse);
+                    const adminDate = formatReviewDate(adminResponse?.createdAt);
 
                     return (
                       <View
@@ -1791,6 +1860,50 @@ export function SharedProductDetails({
                         <View style={{ marginTop: 10 }}>
                           <RatingStars value={rating} size={14} />
                         </View>
+                        
+                        {adminResponse ? (
+                          <View
+                            style={{
+                              marginTop: 12,
+                              borderWidth: 1,
+                              borderColor: "#E8DED5",
+                              backgroundColor: "#FCFAF8",
+                              padding: 12,
+                              gap: 6,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: COLORS.text,
+                                fontSize: 12,
+                                fontWeight: "900",
+                              }}
+                            >
+                              Resposta da loja
+                            </Text>
+                            <Text
+                              style={{
+                                color: COLORS.textSoft,
+                                fontSize: 13,
+                                lineHeight: 20,
+                                fontWeight: "500",
+                              }}
+                            >
+                              {String(adminResponse.message ?? "")}
+                            </Text>
+                            {adminName || adminDate ? (
+                              <Text
+                                style={{
+                                  color: COLORS.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: "700",
+                                }}
+                              >
+                                {[adminName, adminDate].filter(Boolean).join(" • ")}
+                              </Text>
+                            ) : null}
+                          </View>
+                        ) : null}
                       </View>
                     );
                   })}

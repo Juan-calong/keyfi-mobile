@@ -1,4 +1,3 @@
-// screens/owner/OwnerPixPaymentScreen.tsx (SEM MP, BB + CIELO)
 import React, { useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Platform, StatusBar, ScrollView, Image } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -25,9 +24,19 @@ import { friendlyError } from "../../core/errors/friendlyError";
 
 type Method = "PIX" | "BOLETO" | "CARD";
 
+function normalizeUrl(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(raw)) return `https://${raw}`;
+  return null;
+}
+
 function StatusCard({ env, onRefresh }: { env: any; onRefresh: () => void }) {
-  const method = String(env?.method ?? "").toUpperCase();
-  const status = String(env?.status ?? "").toUpperCase();
+  const payment = env?.payment ?? null;
+  const method = String(payment?.method ?? "").toUpperCase();
+  const status = String(payment?.status ?? "").toUpperCase();
+  const message = String(env?.ui?.message || "Aguardando atualização…");
 
   const tone =
     status === "PAID" || status === "APPROVED"
@@ -41,7 +50,7 @@ function StatusCard({ env, onRefresh }: { env: any; onRefresh: () => void }) {
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>Status do pagamento</Text>
-          <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 6 }}>Aguardando atualização…</Text>
+          <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 6 }}>{message}</Text>
         </View>
 
         <View style={{ alignItems: "flex-end", gap: 8 }}>
@@ -164,16 +173,25 @@ export function OwnerPixPaymentScreen({ route }: any) {
     refetchInterval: (q) => {
       const env = q.state.data as any;
       if (!env) return false;
-      const status = String(env?.status ?? "").toUpperCase();
+
+      const status = String(env?.payment?.status ?? "").toUpperCase();
       const finalStatuses = ["PAID", "APPROVED", "REJECTED", "FAILED", "CANCELED", "CANCELLED", "EXPIRED"];
+
       if (finalStatuses.includes(status)) return false;
-      return 2500;
+      return env?.flags?.shouldPoll ? 2500 : false;
     },
   });
 
   const env = activeQ.data;
-  const hasPayment = !!env?.paymentIntentId || !!env?.method;
-  const method = String(env?.method ?? "").toUpperCase();
+  const payment = env?.payment ?? null;
+
+  const hasPayment =
+    !!payment?.id ||
+    !!payment?.externalId ||
+    !!payment?.method ||
+    !!env?.nextAction;
+
+  const method = String(payment?.method ?? "").toUpperCase();
 
   const createPixMut = useMutation({
     mutationFn: async () => (await api.post(endpoints.payments.intent(orderId), { method: "PIX" })).data,
@@ -204,7 +222,6 @@ export function OwnerPixPaymentScreen({ route }: any) {
         return;
       }
 
-      // ✅ CARD → SOP
       navigation.navigate(OWNER_SCREENS.CardTokenize, {
         orderId,
         amount,
@@ -217,10 +234,13 @@ export function OwnerPixPaymentScreen({ route }: any) {
     }
   };
 
+  const headerSubtitle = useMemo(() => {
+    return env?.ui?.message ? String(env.ui.message) : "";
+  }, [env?.ui?.message]);
+
   const boletoUrl = useMemo(() => {
     const na = env?.nextAction;
-    const url = na?.ticketUrl || na?.url || na?.ticket_url;
-    return url ? String(url) : null;
+    return normalizeUrl(na?.ticketUrl || na?.url || na?.ticket_url || null);
   }, [env?.nextAction]);
 
   return (
@@ -231,6 +251,7 @@ export function OwnerPixPaymentScreen({ route }: any) {
         <View style={m.header}>
           <View style={{ flex: 1 }}>
             <Text style={m.h1}>Métodos de pagamento</Text>
+            {headerSubtitle ? <Text style={m.sub}>{headerSubtitle}</Text> : null}
           </View>
 
           <Pressable onPress={() => activeQ.refetch()} hitSlop={12} style={({ pressed }) => [m.refreshBtn, pressed && { opacity: 0.85 }]}>
@@ -332,11 +353,11 @@ export function OwnerPixPaymentScreen({ route }: any) {
                 <Card style={{ padding: 14, borderRadius: 18 }}>
                   <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>Pagamento ativo</Text>
                   <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 8 }}>
-                    Método: {String(env?.method)} • Status: {String(env?.status)}
+                    Método: {String(payment?.method ?? "—")} • Status: {String(payment?.status ?? "—")}
                   </Text>
-                  {env?.expiresAt ? (
+                  {payment?.expiresAt ? (
                     <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 6 }}>
-                      Expira em: {new Date(env.expiresAt).toLocaleString("pt-BR")}
+                      Expira em: {new Date(payment.expiresAt).toLocaleString("pt-BR")}
                     </Text>
                   ) : null}
                 </Card>
@@ -354,6 +375,7 @@ export function OwnerPixPaymentScreen({ route }: any) {
 const m = StyleSheet.create({
   header: { paddingHorizontal: 2, paddingTop: 8, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
   h1: { color: "#000", fontSize: 28, fontWeight: "900", letterSpacing: -0.6 },
+  sub: { marginTop: 8, color: "#000", fontSize: 14, fontWeight: "600", opacity: 0.7, lineHeight: 18 },
   refreshBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.18)", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
   refreshTxt: { color: "#000", fontSize: 16, fontWeight: "800" },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.10)", width: "100%" },

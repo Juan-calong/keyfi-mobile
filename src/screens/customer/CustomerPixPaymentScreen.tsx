@@ -162,24 +162,34 @@ export function CustomerPixPaymentScreen({ route }: any) {
     );
   }
 
-  const activeQ = useQuery({
-    queryKey: ["customer-pay-active", orderId],
-    queryFn: async () => (await api.get(endpoints.payments.active(orderId))).data,
-    retry: false,
-    staleTime: 0,
-    refetchInterval: (q) => {
-      const env = q.state.data as any;
-      if (!env) return false;
-     const status = String(env?.status ?? "").toUpperCase();
-      const finalStatuses = ["PAID", "APPROVED", "REJECTED", "FAILED", "CANCELED", "CANCELLED", "EXPIRED"];
-      if (finalStatuses.includes(status)) return false;
-      return env?.flags?.shouldPoll ? 2500 : false;
-    },
-  });
+const activeQ = useQuery({
+  queryKey: ["customer-pay-active", orderId],
+  queryFn: async () => (await api.get(endpoints.payments.active(orderId))).data,
+  retry: false,
+  staleTime: 0,
+  refetchInterval: (q) => {
+    const env = q.state.data as any;
+    if (!env) return false;
 
-  const env = activeQ.data;
-  const hasPayment = !!env?.paymentIntentId; // ou simplesmente !!env?.method
-const method = String(env?.method ?? "").toUpperCase();
+    const status = String(env?.payment?.status ?? "").toUpperCase();
+    const finalStatuses = ["PAID", "APPROVED", "REJECTED", "FAILED", "CANCELED", "CANCELLED", "EXPIRED"];
+
+    if (finalStatuses.includes(status)) return false;
+    return env?.flags?.shouldPoll ? 2500 : false;
+  },
+});
+
+const env = activeQ.data;
+const payment = env?.payment ?? null;
+
+const hasPayment =
+  !!payment?.id ||
+  !!payment?.paymentIntentId ||
+  !!payment?.providerPaymentId ||
+  !!payment?.method ||
+  !!env?.nextAction;
+
+const method = String(payment?.method ?? "").toUpperCase();
 
   const createPixMut = useMutation({
     mutationFn: async () => (await api.post(endpoints.payments.intent(orderId), { method: "PIX" })).data,
