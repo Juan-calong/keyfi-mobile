@@ -4,7 +4,7 @@ import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../se
 import { normalizeWalletPixKey } from "../sellerProfile.utils";
 
 export function useWalletPixForm(destination: DestinationDTO | null): WalletPixFormState {
-  const [pixKeyType, setPixKeyType] = useState<WalletPixKeyType>("EMAIL");
+  const [pixKeyType, setPixKeyType] = useState<WalletPixKeyType>("CPF");
   const [pixKey, setPixKey] = useState("");
   const [holderName, setHolderName] = useState("");
   const [holderDoc, setHolderDoc] = useState("");
@@ -13,7 +13,7 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
 
   useEffect(() => {
     if (!destination) {
-      setPixKeyType("EMAIL");
+      setPixKeyType("CPF");
       setPixKey("");
       setHolderName("");
       setHolderDoc("");
@@ -22,13 +22,13 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
       return;
     }
 
-    setPixKeyType(destination.pixKeyType ?? "EMAIL");
+    setPixKeyType(destination.pixKeyType === "CPF" || destination.pixKeyType === "CNPJ" ? destination.pixKeyType : "CPF");
     setPixKey(destination.pixKey ?? "");
     setHolderName(destination.holderName ?? "");
     setHolderDoc(destination.holderDoc ?? "");
     setBankName(destination.bankName ?? "");
     setNotes(destination.notes ?? "");
-  }, [destination?.id]);
+  }, [destination]);
 
   const normalizedPixKey = useMemo(
     () => normalizeWalletPixKey(pixKeyType, pixKey),

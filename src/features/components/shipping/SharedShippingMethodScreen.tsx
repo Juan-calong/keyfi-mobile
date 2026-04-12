@@ -51,7 +51,6 @@ type Props = {
 
   deliveryAddress?: DeliveryAddressInput | null;
 
-  // aceita os dois formatos para não quebrar a navegação
   zipcode?: string;
   zipCode?: string;
 
@@ -129,19 +128,25 @@ function pickPayerDoc(me: any, role: "CUSTOMER" | "SALON_OWNER") {
   );
 }
 
-
-
 function maskCep(value: string) {
   const d = onlyDigits(value).slice(0, 8);
   if (d.length <= 5) return d;
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+function formatMaybeBRL(value: string | number | null | undefined) {
+  return formatBRL(toNumberBR(value ?? 0));
+}
+
 function normalizeLabel(opt: ShippingQuoteOption) {
   const carrier = String(opt.carrier || "").toUpperCase();
 
   if (opt.label) return opt.label;
-  if (carrier === "CORREIOS" && String(opt.serviceCode).toUpperCase().includes("SEDEX")) {
+  if (carrier === "LOCAL_DELIVERY") return "Entrega local";
+  if (
+    carrier === "CORREIOS" &&
+    String(opt.serviceCode).toUpperCase().includes("SEDEX")
+  ) {
     return "Entrega rápida";
   }
   if (carrier === "CORREIOS") return "Entrega econômica";
@@ -157,6 +162,42 @@ function normalizeDescription(opt: ShippingQuoteOption) {
   return opt.serviceName || "Opção de entrega";
 }
 
+function isLocalDeliveryOption(option: ShippingQuoteOption) {
+  const raw = [
+    option.carrier,
+    option.serviceCode,
+    option.serviceName,
+    option.label,
+    option.description,
+    option.deliveryMode,
+    option?.meta?.type,
+    option?.meta?.method,
+  ]
+    .map((v) => String(v ?? "").toUpperCase())
+    .join(" ");
+
+  if (option.isLocalDelivery === true) return true;
+  if (option?.meta?.isLocalDelivery === true) return true;
+  if (option.deliveryMode === "LOCAL_DELIVERY") return true;
+  if (option?.meta?.deliveryMode === "LOCAL_DELIVERY") return true;
+  if (option?.meta?.deliveryType === "LOCAL") return true;
+
+  return raw.includes("LOCAL");
+}
+
+function resolveLocalDeliveryCountdownLabel(option: ShippingQuoteOption) {
+  const backendLabel = String(option.deliveryCountdownLabel ?? "").trim();
+  if (backendLabel) return backendLabel;
+
+  const days = Number(option.nextDeliveryInDays);
+  if (!Number.isFinite(days) || days < 0) return null;
+
+  if (days === 0) return "Entrega hoje";
+  if (days === 1) return "Entrega em 1 dia";
+
+  return `Entrega em ${days} dias`;
+}
+
 function normalizeDeliveryAddress(
   address?: DeliveryAddressInput | null,
   fallbackZipcode?: string
@@ -164,10 +205,14 @@ function normalizeDeliveryAddress(
   if (!address && !fallbackZipcode) return null;
 
   return {
-    zipCode: onlyDigits(address?.zipCode || address?.zipcode || fallbackZipcode || ""),
+    zipCode: onlyDigits(
+      address?.zipCode || address?.zipcode || fallbackZipcode || ""
+    ),
     streetName: String(address?.streetName || address?.street || "").trim(),
     streetNumber: String(address?.streetNumber || address?.number || "").trim(),
-    neighborhood: String(address?.neighborhood || address?.district || "").trim(),
+    neighborhood: String(
+      address?.neighborhood || address?.district || ""
+    ).trim(),
     city: String(address?.city || "").trim(),
     federalUnit: String(address?.federalUnit || address?.state || "").trim(),
     complement:
@@ -175,6 +220,160 @@ function normalizeDeliveryAddress(
         ? null
         : String(address.complement).trim(),
   };
+}
+
+function resolveOptionQuoteId(option: ShippingQuoteOption | null | undefined) {
+  return String(option?.quoteId || option?.id || "").trim() || null;
+}
+
+function resolveOptionSelectionKey(option: ShippingQuoteOption | null | undefined) {
+  if (!option) return null;
+
+  const quoteId = resolveOptionQuoteId(option);
+  if (quoteId) return `quote:${quoteId}`;
+
+  return `svc:${String(option.carrier)}:${String(option.serviceCode)}`;
+}
+
+function buildPreviewPayload(params: {
+  items: { productId: string; qty: number }[];
+  couponCode?: string;
+  selected: ShippingQuoteOption | null;
+  cleanZipcode: string;
+}) {
+  const { items, couponCode, selected, cleanZipcode } = params;
+
+  const payload: any = {
+    items,
+    couponCode: couponCode || undefined,
+  };
+
+  const quoteId = resolveOptionQuoteId(selected);
+  if (quoteId) {
+    payload.shippingQuoteId = quoteId;
+    payload.zipcode = cleanZipcode;
+    return payload;
+  }
+
+  if (selected) {
+    payload.shippingOption = {
+      quoteId: quoteId || undefined,
+      carrier: selected.carrier,
+      serviceCode: selected.serviceCode,
+      serviceName: selected.serviceName,
+      price: Number(selected.price || 0),
+      deadlineDays: selected.deadlineDays ?? null,
+      zipcode: cleanZipcode,
+      meta: selected.meta ?? null,
+    };
+  }
+
+  return payload;
+}
+
+function buildSelectedShippingPayload(
+  selected: ShippingQuoteOption,
+  cleanZipcode: string
+): ShippingOption {
+  const quoteId = resolveOptionQuoteId(selected);
+
+  return {
+    quoteId: quoteId || undefined,
+    id: selected.id,
+    carrier: selected.carrier,
+    serviceCode: selected.serviceCode,
+    serviceName: selected.serviceName,
+    price: Number(selected.price || 0),
+    originalPrice: Number(selected.originalPrice ?? selected.meta?.originalPrice ?? selected.price ?? 0),
+    discount: Number(selected.discount ?? selected.meta?.discount ?? 0),
+    finalPrice: Number(selected.finalPrice ?? selected.meta?.finalPrice ?? selected.price ?? 0),
+    deadlineDays: selected.deadlineDays ?? null,
+    deliveryMode: selected.deliveryMode ?? selected.meta?.deliveryMode ?? undefined,
+    isLocalDelivery: Boolean(selected.isLocalDelivery ?? selected.meta?.isLocalDelivery),
+    minSubtotal: selected.minSubtotal ?? selected.meta?.minSubtotal ?? null,
+    freeShippingMinSubtotal:
+      selected.freeShippingMinSubtotal ??
+      selected.meta?.freeShippingMinSubtotal ??
+      null,
+    qualifiesMinSubtotal:
+      selected.qualifiesMinSubtotal ?? selected.meta?.qualifiesMinSubtotal ?? null,
+    qualifiesFreeShipping:
+      selected.qualifiesFreeShipping ??
+      selected.meta?.qualifiesFreeShipping ??
+      null,
+    missingSubtotalForMin:
+      selected.missingSubtotalForMin ??
+      selected.meta?.missingSubtotalForMin ??
+      null,
+    nextDeliveryInDays:
+      selected.nextDeliveryInDays ?? selected.meta?.nextDeliveryInDays ?? null,
+    deliveryCountdownLabel:
+      selected.deliveryCountdownLabel ??
+      selected.meta?.deliveryCountdownLabel ??
+      null,
+    nextDeliveryDate:
+      selected.nextDeliveryDate ?? selected.meta?.nextDeliveryDate ?? null,
+    deliveryWeekdays:
+      selected.deliveryWeekdays ?? selected.meta?.deliveryWeekdays ?? null,
+    zipcode: cleanZipcode,
+    expiresAt: selected.expiresAt ?? null,
+    meta: {
+      ...(selected.meta || {}),
+      quoteId: quoteId || undefined,
+      deliveryMode:
+        selected.deliveryMode ?? selected.meta?.deliveryMode ?? undefined,
+      isLocalDelivery: Boolean(
+        selected.isLocalDelivery ?? selected.meta?.isLocalDelivery
+      ),
+    },
+  };
+}
+
+function resolveLocalRuleText(option: ShippingQuoteOption) {
+  if (!isLocalDeliveryOption(option)) return null;
+
+  const minSubtotal =
+    option.minSubtotal ?? option.meta?.minSubtotal ?? null;
+  const freeShippingMinSubtotal =
+    option.freeShippingMinSubtotal ??
+    option.meta?.freeShippingMinSubtotal ??
+    null;
+  const qualifiesFreeShipping =
+    option.qualifiesFreeShipping ??
+    option.meta?.qualifiesFreeShipping ??
+    null;
+  const missingSubtotalForMin =
+    option.missingSubtotalForMin ??
+    option.meta?.missingSubtotalForMin ??
+    null;
+
+  if (qualifiesFreeShipping) {
+    return "Frete grátis aplicado nesta entrega local.";
+  }
+
+  if (
+    missingSubtotalForMin != null &&
+    Number(missingSubtotalForMin) > 0 &&
+    minSubtotal != null
+  ) {
+    return `Pedido mínimo para entrega local: ${formatMaybeBRL(
+      minSubtotal
+    )}. Faltam ${formatMaybeBRL(missingSubtotalForMin)}.`;
+  }
+
+  if (freeShippingMinSubtotal != null) {
+    return `Frete grátis local a partir de ${formatMaybeBRL(
+      freeShippingMinSubtotal
+    )}.`;
+  }
+
+  if (minSubtotal != null) {
+    return `Pedido mínimo para entrega local: ${formatMaybeBRL(
+      minSubtotal
+    )}.`;
+  }
+
+  return null;
 }
 
 function ShippingRow({
@@ -188,7 +387,19 @@ function ShippingRow({
 }) {
   const label = normalizeLabel(option);
   const subtitle = normalizeDescription(option);
-  const price = formatBRL(Number(option.price || 0));
+  const finalPrice = Number(option.finalPrice ?? option.meta?.finalPrice ?? option.price ?? 0);
+  const originalPrice = Number(
+    option.originalPrice ?? option.meta?.originalPrice ?? option.price ?? 0
+  );
+  const discount = Number(option.discount ?? option.meta?.discount ?? 0);
+  const price = formatBRL(finalPrice);
+
+  const localDeliveryCountdown = isLocalDeliveryOption(option)
+    ? resolveLocalDeliveryCountdownLabel(option)
+    : null;
+
+  const localRuleText = resolveLocalRuleText(option);
+  const showOldPrice = discount > 0 && originalPrice > finalPrice;
 
   return (
     <View style={{ marginTop: 14 }}>
@@ -196,7 +407,9 @@ function ShippingRow({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityState={{ selected }}
-        accessibilityLabel={`${label}, ${option.carrier}, ${subtitle}, ${price}${selected ? ", selecionado" : ""}`}
+        accessibilityLabel={`${label}, ${option.carrier}, ${subtitle}, ${price}${
+          selected ? ", selecionado" : ""
+        }`}
         style={({ pressed }) => [
           s.option,
           selected && s.optionSelected,
@@ -212,12 +425,24 @@ function ShippingRow({
             {option.carrier} • {option.serviceName}
           </Text>
 
+          {localDeliveryCountdown ? (
+            <Text style={s.localCountdownText}>{localDeliveryCountdown}</Text>
+          ) : null}
+
+          {localRuleText ? (
+            <Text style={s.localRuleText}>{localRuleText}</Text>
+          ) : null}
+
           {option.available === false && option.reason ? (
             <Text style={s.unavailableText}>{option.reason}</Text>
           ) : null}
         </View>
 
         <View style={s.rightWrap}>
+          {showOldPrice ? (
+            <Text style={s.oldPriceText}>{formatBRL(originalPrice)}</Text>
+          ) : null}
+
           <Text style={s.priceText}>{price}</Text>
 
           {selected ? (
@@ -260,7 +485,9 @@ export function SharedShippingMethodScreen({
   onContinue,
 }: Props) {
   const [selected, setSelected] = useState<ShippingQuoteOption | null>(null);
-  const [modal, setModal] = useState<null | { title: string; message: string }>(null);
+  const [modal, setModal] = useState<null | { title: string; message: string }>(
+    null
+  );
 
   const rawZipcode =
     zipcode ??
@@ -278,145 +505,135 @@ export function SharedShippingMethodScreen({
   );
 
   const meQ = useQuery({
-  queryKey: ["me"],
-  queryFn: async () => (await api.get(endpoints.profiles.me)).data,
-  retry: false,
-  staleTime: 60000,
-});
+    queryKey: ["me"],
+    queryFn: async () => (await api.get(endpoints.profiles.me)).data,
+    retry: false,
+    staleTime: 60000,
+  });
 
-const me = meQ.data;
+  const me = meQ.data;
 
-const payerName = useMemo(() => pickUserName(me), [me]);
-const payerEmail = useMemo(() => trim(pickEmail(me)), [me]);
-const payerDoc = useMemo(() => pickPayerDoc(me, role), [me, role]);
-const payerParsedName = useMemo(() => splitFullName(payerName), [payerName]);
+  const payerName = useMemo(() => pickUserName(me), [me]);
+  const payerEmail = useMemo(() => trim(pickEmail(me)), [me]);
+  const payerDoc = useMemo(() => pickPayerDoc(me, role), [me, role]);
+  const payerParsedName = useMemo(() => splitFullName(payerName), [payerName]);
 
   const previewQ = useQuery({
-  queryKey: [
-    "shipping-preview",
-    role,
-    cleanZipcode,
-    couponCode || "",
-    JSON.stringify(items),
-    selected
-      ? `${selected.carrier}:${selected.serviceCode}:${Number(selected.price || 0)}:${selected.deadlineDays ?? ""}`
-      : "no-shipping",
-  ],
-  enabled: items.length > 0,
-  queryFn: async () => {
-    const { data } = await api.post<CartPreviewResp>(endpoints.cart.preview, {
-      items,
-      couponCode: couponCode || undefined,
-      shippingOption: selected
-        ? {
-            carrier: selected.carrier,
-            serviceCode: selected.serviceCode,
-            serviceName: selected.serviceName,
-            price: Number(selected.price || 0),
-            deadlineDays: selected.deadlineDays ?? null,
-            zipcode: cleanZipcode,
-            meta: selected.meta ?? null,
-          }
-        : undefined,
-    });
+    queryKey: [
+      "shipping-preview",
+      role,
+      cleanZipcode,
+      couponCode || "",
+      JSON.stringify(items),
+      resolveOptionSelectionKey(selected) || "no-shipping",
+    ],
+    enabled: items.length > 0,
+    queryFn: async () => {
+      const { data } = await api.post<CartPreviewResp>(
+        endpoints.cart.preview,
+        buildPreviewPayload({
+          items,
+          couponCode,
+          selected,
+          cleanZipcode,
+        })
+      );
 
-    return data;
-  },
-  retry: false,
-  staleTime: 10000,
-  placeholderData: (prev) => prev,
-});
+      return data;
+    },
+    retry: false,
+    staleTime: 10000,
+    placeholderData: (prev) => prev,
+  });
 
-const declaredValue = useMemo(() => {
-  return toNumberBR(previewQ.data?.summary?.subtotalBase ?? "0");
-}, [previewQ.data?.summary?.subtotalBase]);
+  const declaredValue = useMemo(() => {
+    return toNumberBR(previewQ.data?.summary?.subtotalBase ?? "0");
+  }, [previewQ.data?.summary?.subtotalBase]);
 
-const quoteQ = useQuery<ShippingQuoteApiResponse>({
-  queryKey: [
-    "shipping-quote",
-    role,
-    cleanZipcode,
-    JSON.stringify(items),
-    declaredValue,
-  ],
-  enabled: items.length > 0 && hasValidZipcode && previewQ.isSuccess,
-  queryFn: async () => {
-    const data = await ShippingService.quote({
-      items,
-      zipcode: cleanZipcode,
+  const quoteQ = useQuery<ShippingQuoteApiResponse>({
+    queryKey: [
+      "shipping-quote",
+      role,
+      cleanZipcode,
+      JSON.stringify(items),
       declaredValue,
-    });
+    ],
+    enabled: items.length > 0 && hasValidZipcode && previewQ.isSuccess,
+    queryFn: async () => {
+      const data = await ShippingService.quote({
+        items,
+        zipcode: cleanZipcode,
+        declaredValue,
+      });
 
-    return data as ShippingQuoteApiResponse;
-  },
-  retry: false,
-  staleTime: 15000,
-  placeholderData: (prev) => prev,
-});
+      return data as ShippingQuoteApiResponse;
+    },
+    retry: false,
+    staleTime: 15000,
+    placeholderData: (prev) => prev,
+  });
 
   const createOrderMut = useMutation({
     mutationFn: async () => {
-  if (!selected) throw new Error("Escolha uma opção de entrega");
+      if (!selected) throw new Error("Escolha uma opção de entrega");
 
-  if (
-    !normalizedDeliveryAddress ||
-    !normalizedDeliveryAddress.zipCode ||
-    !normalizedDeliveryAddress.streetName ||
-    !normalizedDeliveryAddress.streetNumber ||
-    !normalizedDeliveryAddress.neighborhood ||
-    !normalizedDeliveryAddress.city ||
-    !normalizedDeliveryAddress.federalUnit
-  ) {
-    throw new Error("Endereço de entrega incompleto");
-  }
+      if (
+        !normalizedDeliveryAddress ||
+        !normalizedDeliveryAddress.zipCode ||
+        !normalizedDeliveryAddress.streetName ||
+        !normalizedDeliveryAddress.streetNumber ||
+        !normalizedDeliveryAddress.neighborhood ||
+        !normalizedDeliveryAddress.city ||
+        !normalizedDeliveryAddress.federalUnit
+      ) {
+        throw new Error("Endereço de entrega incompleto");
+      }
 
-  if (!payerDoc) {
-    throw new Error("Documento do pagador não encontrado no perfil");
-  }
+      if (!payerDoc) {
+        throw new Error("Documento do pagador não encontrado no perfil");
+      }
 
-  if (!payerEmail) {
-    throw new Error("E-mail do pagador não encontrado no perfil");
-  }
+      if (!payerEmail) {
+        throw new Error("E-mail do pagador não encontrado no perfil");
+      }
 
-  if (!payerParsedName.firstName || !payerParsedName.lastName) {
-    throw new Error("Nome do pagador incompleto");
-  }
+      if (!payerParsedName.firstName || !payerParsedName.lastName) {
+        throw new Error("Nome do pagador incompleto");
+      }
 
-  const payload: any = {
-    buyerType: role,
-    items,
-    deliveryAddress: normalizedDeliveryAddress,
-    payer: {
-      doc: payerDoc,
-      firstName: payerParsedName.firstName,
-      lastName: payerParsedName.lastName,
-      email: payerEmail,
+      const payload: any = {
+        buyerType: role,
+        items,
+        deliveryAddress: normalizedDeliveryAddress,
+        payer: {
+          doc: payerDoc,
+          firstName: payerParsedName.firstName,
+          lastName: payerParsedName.lastName,
+          email: payerEmail,
+        },
+      };
+
+      if (couponCode) payload.couponCode = couponCode;
+
+const selectedShipping = buildSelectedShippingPayload(selected, cleanZipcode);
+
+if (selectedShipping.quoteId) {
+  payload.shippingQuoteId = selectedShipping.quoteId;
+} else {
+  payload.shippingOption = selectedShipping;
+}
+
+      console.log(
+        "[SHARED_SHIPPING_METHOD][CREATE_ORDER_PAYLOAD]",
+        JSON.stringify(payload, null, 2)
+      );
+
+      const { data } = await api.post(endpoints.orders.create, payload, {
+        headers: { "Idempotency-Key": `order-${Date.now()}` },
+      });
+
+      return data;
     },
-  };
-
-  if (couponCode) payload.couponCode = couponCode;
-
-  payload.shippingOption = {
-    carrier: selected.carrier,
-    serviceCode: selected.serviceCode,
-    serviceName: selected.serviceName,
-    price: Number(selected.price || 0),
-    deadlineDays: selected.deadlineDays ?? null,
-    zipcode: cleanZipcode,
-    meta: selected.meta ?? null,
-  };
-
-  console.log(
-    "[SHARED_SHIPPING_METHOD][CREATE_ORDER_PAYLOAD]",
-    JSON.stringify(payload, null, 2)
-  );
-
-  const { data } = await api.post(endpoints.orders.create, payload, {
-    headers: { "Idempotency-Key": `order-${Date.now()}` },
-  });
-
-  return data;
-},
     onError: (e: any) => {
       const fe = friendlyError(e);
       setModal({
@@ -427,35 +644,30 @@ const quoteQ = useQuery<ShippingQuoteApiResponse>({
   });
 
   React.useEffect(() => {
-  const availableOptions = (quoteQ.data?.options || []).filter(
-    (opt) => opt.available !== false
-  );
-
-  setSelected((current) => {
-    if (!availableOptions.length) return null;
-
-    if (!current) {
-      return availableOptions[0];
-    }
-
-    const stillExists = availableOptions.find(
-      (opt) =>
-        opt.carrier === current.carrier &&
-        opt.serviceCode === current.serviceCode
+    const availableOptions = (quoteQ.data?.options || []).filter(
+      (opt) => opt.available !== false
     );
 
-    return stillExists ?? availableOptions[0];
-  });
-}, [quoteQ.data?.options]);
+    setSelected((current) => {
+      if (!availableOptions.length) return null;
 
+      if (!current) {
+        return availableOptions[0];
+      }
 
-const isInitialLoading =
-  meQ.isLoading ||
-  previewQ.isLoading ||
-  (hasValidZipcode && quoteQ.isLoading && !quoteQ.data);
+      const currentKey = resolveOptionSelectionKey(current);
+      const stillExists = availableOptions.find(
+        (opt) => resolveOptionSelectionKey(opt) === currentKey
+      );
 
-const isRefreshingPrices =
-  previewQ.isFetching || quoteQ.isFetching;
+      return stillExists ?? availableOptions[0];
+    });
+  }, [quoteQ.data?.options]);
+
+  const isInitialLoading =
+    meQ.isLoading ||
+    previewQ.isLoading ||
+    (hasValidZipcode && quoteQ.isLoading && !quoteQ.data);
 
   const totalAmount = useMemo(() => {
     return toNumberBR(previewQ.data?.summary?.total ?? "0");
@@ -497,15 +709,7 @@ const isRefreshingPrices =
     onContinue({
       orderId,
       amount: totalAmount,
-      shippingOption: {
-        carrier: selected.carrier,
-        serviceCode: selected.serviceCode,
-        serviceName: selected.serviceName,
-        price: Number(selected.price || 0),
-        deadlineDays: selected.deadlineDays ?? null,
-        zipcode: cleanZipcode,
-        meta: selected.meta ?? null,
-      },
+      shippingOption: buildSelectedShippingPayload(selected, cleanZipcode),
     });
   };
 
@@ -529,11 +733,11 @@ const isRefreshingPrices =
 
         <View style={s.hairline} />
 
-{isInitialLoading ? (
-  <View style={{ marginTop: 14 }}>
-    <Loading />
-  </View>
-) : quoteQ.isError ? (
+        {isInitialLoading ? (
+          <View style={{ marginTop: 14 }}>
+            <Loading />
+          </View>
+        ) : quoteQ.isError ? (
           <View style={{ marginTop: 14 }}>
             <ErrorState onRetry={() => quoteQ.refetch()} />
           </View>
@@ -562,12 +766,13 @@ const isRefreshingPrices =
               ) : (
                 quoteOptions.map((option, idx) => {
                   const key =
+                    resolveOptionQuoteId(option) ||
                     option.id ||
                     `${option.carrier}-${option.serviceCode}-${idx}`;
 
                   const isSelected =
-                    selected?.carrier === option.carrier &&
-                    selected?.serviceCode === option.serviceCode;
+                    resolveOptionSelectionKey(selected) ===
+                    resolveOptionSelectionKey(option);
 
                   return (
                     <ShippingRow
@@ -575,14 +780,14 @@ const isRefreshingPrices =
                       option={option}
                       selected={isSelected}
                       onPress={() => {
-  const isSame =
-    selected?.carrier === option.carrier &&
-    selected?.serviceCode === option.serviceCode;
+                        const isSame =
+                          resolveOptionSelectionKey(selected) ===
+                          resolveOptionSelectionKey(option);
 
-  if (!isSame) {
-    setSelected(option);
-  }
-}}
+                        if (!isSame) {
+                          setSelected(option);
+                        }
+                      }}
                     />
                   );
                 })
@@ -594,35 +799,37 @@ const isRefreshingPrices =
                 <View style={s.summaryRow}>
                   <Text style={s.summaryKey}>Subtotal</Text>
                   <Text style={s.summaryVal}>
-                    {previewQ.data?.summary?.subtotalBase ?? "0.00"}
+                    {formatMaybeBRL(previewQ.data?.summary?.subtotalBase ?? "0")}
                   </Text>
                 </View>
 
                 <View style={s.summaryRow}>
                   <Text style={s.summaryKey}>Desconto produtos</Text>
                   <Text style={s.summaryVal}>
-                    {previewQ.data?.summary?.discountProducts ?? "0.00"}
+                    {formatMaybeBRL(
+                      previewQ.data?.summary?.discountProducts ?? "0"
+                    )}
                   </Text>
                 </View>
 
                 <View style={s.summaryRow}>
                   <Text style={s.summaryKey}>Cupom</Text>
                   <Text style={s.summaryVal}>
-                    {previewQ.data?.summary?.couponDiscount ?? "0.00"}
+                    {formatMaybeBRL(previewQ.data?.summary?.couponDiscount ?? "0")}
                   </Text>
                 </View>
 
                 <View style={s.summaryRow}>
                   <Text style={s.summaryKey}>Entrega</Text>
                   <Text style={s.summaryVal}>
-                    {previewQ.data?.summary?.shipping ?? "0.00"}
+                    {formatMaybeBRL(previewQ.data?.summary?.shipping ?? "0")}
                   </Text>
                 </View>
 
                 <View style={[s.summaryRow, s.totalRow]}>
                   <Text style={s.totalKey}>Total</Text>
                   <Text style={s.totalVal}>
-                    {previewQ.data?.summary?.total ?? "0.00"}
+                    {formatMaybeBRL(previewQ.data?.summary?.total ?? "0")}
                   </Text>
                 </View>
               </View>
@@ -641,9 +848,11 @@ const isRefreshingPrices =
                   (createOrderMut.isPending || !selected) && { opacity: 0.6 },
                 ]}
               >
-<Text style={s.ctaText}>
-  {createOrderMut.isPending || meQ.isLoading ? "..." : "Continuar para pagamento"}
-</Text>
+                <Text style={s.ctaText}>
+                  {createOrderMut.isPending || meQ.isLoading
+                    ? "..."
+                    : "Continuar para pagamento"}
+                </Text>
               </Pressable>
             </View>
           </>
@@ -724,6 +933,20 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  localCountdownText: {
+    marginTop: 6,
+    color: "#1D4ED8",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  localRuleText: {
+    marginTop: 6,
+    color: "#065F46",
+    fontSize: 12,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
+
   unavailableText: {
     marginTop: 6,
     color: "#B91C1C",
@@ -731,7 +954,13 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 
-  rightWrap: { marginLeft: 12, alignItems: "flex-end", gap: 10 },
+  rightWrap: { marginLeft: 12, alignItems: "flex-end", gap: 6 },
+  oldPriceText: {
+    color: "rgba(0,0,0,0.40)",
+    fontSize: 12,
+    fontWeight: "700",
+    textDecorationLine: "line-through",
+  },
   priceText: { color: "#000", fontSize: 18, fontWeight: "900" },
 
   radioCircle: {

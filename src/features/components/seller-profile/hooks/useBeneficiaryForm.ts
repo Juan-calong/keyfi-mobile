@@ -15,7 +15,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
 
-  const [pixKeyType, setPixKeyType] = useState<BeneficiaryPixKeyType>("EMAIL");
+  const [pixKeyType, setPixKeyType] = useState<BeneficiaryPixKeyType>("CPF");
   const [pixKey, setPixKey] = useState("");
 
   const [bankCode, setBankCode] = useState("");
@@ -35,7 +35,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
       setEmail("");
       setPhone("");
       setBirthDate("");
-      setPixKeyType("EMAIL");
+      setPixKeyType("CPF");
       setPixKey("");
       setBankCode("");
       setBankName("");
@@ -54,7 +54,11 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     setEmail(beneficiary.email ?? "");
     setPhone(beneficiary.phone ?? "");
     setBirthDate(isoToDateInput(beneficiary.birthDate));
-    setPixKeyType(beneficiary.pixKeyType ?? "EMAIL");
+    setPixKeyType(
+      beneficiary.pixKeyType === "CPF" || beneficiary.pixKeyType === "CNPJ"
+        ? beneficiary.pixKeyType
+        : "CPF"
+    );
     setPixKey(beneficiary.pixKey ?? "");
     setBankCode(beneficiary.bankCode ?? "");
     setBankName(beneficiary.bankName ?? "");
@@ -65,7 +69,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     setAccountHolderName(beneficiary.accountHolderName ?? "");
     setAccountHolderDocument(beneficiary.accountHolderDocument ?? "");
     setNotes(beneficiary.notes ?? "");
-  }, [beneficiary?.id]);
+  }, [beneficiary]);
 
   const payload = useMemo(
     () =>

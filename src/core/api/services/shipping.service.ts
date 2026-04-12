@@ -14,7 +14,7 @@ type QuoteInput = {
 };
 
 export const ShippingService = {
-  async quote(input: QuoteInput) {
+  async quote(input: QuoteInput): Promise<ShippingQuoteResponse> {
     const payload = {
       ...input,
       zipcode: String(input.zipcode || "").replace(/\D/g, ""),

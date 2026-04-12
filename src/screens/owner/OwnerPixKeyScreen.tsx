@@ -25,7 +25,7 @@ import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { t } from "../../ui/tokens";
 
-type PixKeyType = "EMAIL" | "CPF" | "CNPJ" | "PHONE" | "EVP";
+type PixKeyType = "CPF" | "CNPJ";
 
 type DestinationDTO = {
   id: string;
@@ -44,33 +44,38 @@ function onlyDigits(v: string) {
   return String(v ?? "").replace(/\D+/g, "");
 }
 
+function maskCpf(value: string) {
+  const d = onlyDigits(value).slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function maskCnpj(value: string) {
+  const d = onlyDigits(value).slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
 function normalizePixKey(type: PixKeyType, key: string) {
   const raw = String(key ?? "").trim();
-  if (type === "EMAIL") return raw.toLowerCase();
-  if (type === "PHONE") return onlyDigits(raw);
   if (type === "CPF") return onlyDigits(raw);
-  if (type === "CNPJ") return onlyDigits(raw);
-  return raw.replace(/\s+/g, "");
+  return onlyDigits(raw);
 }
 
 function validatePixKey(type: PixKeyType, key: string) {
   const k = normalizePixKey(type, key);
   if (!k) return "Informe a chave PIX.";
 
-  if (type === "EMAIL") {
-    if (!k.includes("@") || !k.includes(".")) return "E-mail inválido.";
-  }
-  if (type === "PHONE") {
-    if (k.length < 10 || k.length > 13) return "Telefone inválido (somente números).";
-  }
   if (type === "CPF") {
     if (k.length !== 11) return "CPF inválido (11 dígitos).";
   }
   if (type === "CNPJ") {
     if (k.length !== 14) return "CNPJ inválido (14 dígitos).";
-  }
-  if (type === "EVP") {
-    if (k.length < 32) return "Chave EVP parece curta demais.";
   }
   return null;
 }
@@ -124,7 +129,7 @@ export function OwnerPixKeyScreen() {
 
   const destination = useMemo(() => pickDestinationFromWalletRoot(walletQ.data), [walletQ.data]);
 
-  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("EMAIL");
+  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("CPF");
   const [pixKey, setPixKey] = useState("");
   const [holderName, setHolderName] = useState("");
   const [holderDoc, setHolderDoc] = useState("");
@@ -133,13 +138,13 @@ export function OwnerPixKeyScreen() {
 
   useEffect(() => {
     if (!destination) return;
-    setPixKeyType(destination.pixKeyType ?? "EMAIL");
+     setPixKeyType(destination.pixKeyType === "CPF" || destination.pixKeyType === "CNPJ" ? destination.pixKeyType : "CPF");
     setPixKey(destination.pixKey ?? "");
     setHolderName(destination.holderName ?? "");
     setHolderDoc(destination.holderDoc ?? "");
     setBankName(destination.bankName ?? "");
     setNotes(destination.notes ?? "");
-  }, [destination?.id]);
+  }, [destination]);
 
   const normalizedPixKey = useMemo(() => normalizePixKey(pixKeyType, pixKey), [pixKeyType, pixKey]);
 
@@ -226,7 +231,7 @@ export function OwnerPixKeyScreen() {
 
                 <Text style={m.label}>Tipo de chave</Text>
                 <View style={m.chipsRow}>
-                  {(["EMAIL", "CPF", "CNPJ", "PHONE", "EVP"] as PixKeyType[]).map((tp) => (
+                  {(["CPF", "CNPJ"] as PixKeyType[]).map((tp) => (
                     <Chip key={tp} label={tp} active={pixKeyType === tp} onPress={() => setPixKeyType(tp)} disabled={savePixMut.isPending} />
                   ))}
                 </View>
@@ -236,10 +241,11 @@ export function OwnerPixKeyScreen() {
                 <Text style={m.label}>Chave PIX</Text>
                 <TextInput
                   value={pixKey}
-                  onChangeText={setPixKey}
-                  placeholder="Digite ou cole sua chave"
+                  onChangeText={(value) => setPixKey(pixKeyType === "CPF" ? maskCpf(value) : maskCnpj(value))}
+                  placeholder="Digite CPF ou CNPJ"
                   placeholderTextColor={"rgba(0,0,0,0.35)"}
-                  autoCapitalize={pixKeyType === "EMAIL" ? "none" : "characters"}
+                  keyboardType="numeric"
+                  autoCapitalize="none"
                   autoCorrect={false}
                   style={m.input}
                 />

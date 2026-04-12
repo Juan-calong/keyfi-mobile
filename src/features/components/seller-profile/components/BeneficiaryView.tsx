@@ -9,7 +9,7 @@ import type {
   SellerBeneficiaryDTO,
 } from "../sellerProfile.types";
 import { beneficiaryStyles, pix, s } from "../sellerProfile.styles";
-import { formatDateOnlyBR, formatDateTimeBR } from "../sellerProfile.utils";
+import { formatDateOnlyBR, formatDateTimeBR, maskPixCpfCnpjByType } from "../sellerProfile.utils";
 
 type Props = {
   beneficiary: SellerBeneficiaryDTO | null;
@@ -131,7 +131,7 @@ export function BeneficiaryView({
 
         <Text style={[pix.label, { marginTop: 14 }]}>Tipo de chave PIX</Text>
         <View style={pix.chipsRow}>
-          {(["EMAIL", "CPF", "CNPJ", "PHONE", "RANDOM"] as BeneficiaryPixKeyType[]).map((tp) => (
+          {(["CPF", "CNPJ"] as BeneficiaryPixKeyType[]).map((tp) => (
             <Pressable
               key={tp}
               onPress={() => form.setPixKeyType(tp)}
@@ -154,10 +154,11 @@ export function BeneficiaryView({
         <Text style={[pix.label, { marginTop: 14 }]}>Chave PIX</Text>
         <TextInput
           value={form.pixKey}
-          onChangeText={form.setPixKey}
-          placeholder="CPF, CNPJ, e-mail, telefone ou UUID"
+          onChangeText={(value) => form.setPixKey(maskPixCpfCnpjByType(form.pixKeyType, value))}
+          placeholder="CPF ou CNPJ"
           placeholderTextColor={"rgba(0,0,0,0.35)"}
-          autoCapitalize={form.pixKeyType === "EMAIL" ? "none" : "characters"}
+          keyboardType="numeric"
+          autoCapitalize="none"
           autoCorrect={false}
           style={pix.input}
         />

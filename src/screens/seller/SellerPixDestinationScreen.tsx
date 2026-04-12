@@ -17,7 +17,7 @@ import { t } from "../../ui/tokens";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
 
-type PixKeyType = "EMAIL" | "CPF" | "CNPJ" | "PHONE" | "EVP";
+type PixKeyType = "CPF" | "CNPJ";
 
 type DestinationDTO = {
   id: string;
@@ -44,30 +44,34 @@ function onlyDigits(v: string) {
   return String(v ?? "").replace(/\D+/g, "");
 }
 
+function maskCpf(value: string) {
+  const d = onlyDigits(value).slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function maskCnpj(value: string) {
+  const d = onlyDigits(value).slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
 function normalizePixKey(type: PixKeyType, key: string) {
   const raw = String(key ?? "").trim();
-
-  if (type === "EMAIL") return raw.toLowerCase();
-  if (type === "PHONE") return onlyDigits(raw);
   if (type === "CPF") return onlyDigits(raw);
-  if (type === "CNPJ") return onlyDigits(raw);
-  // EVP geralmente é UUID: manter sem espaços
-  return raw.replace(/\s+/g, "");
+
+  return onlyDigits(raw);
 }
 
 function validatePixKey(type: PixKeyType, key: string) {
   const k = normalizePixKey(type, key);
 
   if (!k) return "Informe a chave PIX.";
-
-  if (type === "EMAIL") {
-    if (!k.includes("@") || !k.includes(".")) return "E-mail inválido.";
-  }
-
-  if (type === "PHONE") {
-    // Brasil costuma ficar entre 10 e 13 com DDI (55)
-    if (k.length < 10 || k.length > 13) return "Telefone inválido. Use apenas números.";
-  }
 
   if (type === "CPF") {
     if (k.length !== 11) return "CPF inválido (precisa ter 11 dígitos).";
@@ -76,20 +80,12 @@ function validatePixKey(type: PixKeyType, key: string) {
   if (type === "CNPJ") {
     if (k.length !== 14) return "CNPJ inválido (precisa ter 14 dígitos).";
   }
-
-  if (type === "EVP") {
-    if (k.length < 32) return "Chave aleatória (EVP) parece curta demais.";
-  }
-
   return null;
 }
 
 function labelForType(type: PixKeyType) {
-  if (type === "EMAIL") return "E-mail";
   if (type === "CPF") return "CPF";
-  if (type === "CNPJ") return "CNPJ";
-  if (type === "PHONE") return "Telefone";
-  return "Chave aleatória (EVP)";
+  return "CNPJ";
 }
 
 export function SellerPixDestinationScreen() {
@@ -108,7 +104,7 @@ export function SellerPixDestinationScreen() {
   const destination = walletQ.data?.destination ?? null;
   const hasPix = !!destination;
 
-  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("EMAIL");
+  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("CPF");
   const [pixKey, setPixKey] = useState("");
   const [holderName, setHolderName] = useState("");
   const [holderDoc, setHolderDoc] = useState("");
@@ -118,13 +114,13 @@ export function SellerPixDestinationScreen() {
   // carregar valores se já existir destination
   useEffect(() => {
     if (!destination) return;
-    setPixKeyType(destination.pixKeyType);
+    setPixKeyType(destination.pixKeyType === "CPF" || destination.pixKeyType === "CNPJ" ? destination.pixKeyType : "CPF");
     setPixKey(destination.pixKey ?? "");
     setHolderName(destination.holderName ?? "");
     setHolderDoc(destination.holderDoc ?? "");
     setBankName(destination.bankName ?? "");
     setNotes(destination.notes ?? "");
-  }, [destination?.id]);
+  }, [destination]);
 
   const normalizedKey = useMemo(() => normalizePixKey(pixKeyType, pixKey), [pixKeyType, pixKey]);
 
@@ -215,7 +211,7 @@ export function SellerPixDestinationScreen() {
               {/* Tipo */}
               <Text style={{ color: t.colors.muted, fontWeight: "900", fontSize: 12 }}>Tipo de chave</Text>
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                {(["EMAIL", "CPF", "CNPJ", "PHONE", "EVP"] as PixKeyType[]).map((tp) => {
+                {(["CPF", "CNPJ"] as PixKeyType[]).map((tp) => {
                   const active = pixKeyType === tp;
                   return (
                     <Button
@@ -233,10 +229,11 @@ export function SellerPixDestinationScreen() {
               <Text style={{ color: t.colors.muted, fontWeight: "900", fontSize: 12 }}>Chave PIX</Text>
               <TextInput
                 value={pixKey}
-                onChangeText={setPixKey}
-                placeholder="Digite ou cole sua chave"
+                onChangeText={(value) => setPixKey(pixKeyType === "CPF" ? maskCpf(value) : maskCnpj(value))}
+                placeholder="Digite CPF ou CNPJ"
                 placeholderTextColor={"rgba(255,255,255,0.35)"}
-                autoCapitalize={pixKeyType === "EMAIL" ? "none" : "characters"}
+                keyboardType="numeric"
+                autoCapitalize="none"
                 autoCorrect={false}
                 style={{
                   height: 46,

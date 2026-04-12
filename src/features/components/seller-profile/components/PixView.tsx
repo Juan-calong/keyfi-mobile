@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../sellerProfile.types";
-import { formatDateTimeBR } from "../sellerProfile.utils";
+import { formatDateTimeBR, maskPixCpfCnpjByType } from "../sellerProfile.utils";
 import { pix } from "../sellerProfile.styles";
 
 type Props = {
@@ -67,7 +67,7 @@ export function PixView({
 
         <Text style={pix.label}>Tipo de chave</Text>
         <View style={pix.chipsRow}>
-          {(["EMAIL", "CPF", "CNPJ", "PHONE", "EVP"] as WalletPixKeyType[]).map((tp) => (
+          {(["CPF", "CNPJ"] as WalletPixKeyType[]).map((tp) => (
             <Pressable
               key={tp}
               onPress={() => form.setPixKeyType(tp)}
@@ -92,10 +92,11 @@ export function PixView({
         <Text style={pix.label}>Chave PIX</Text>
         <TextInput
           value={form.pixKey}
-          onChangeText={form.setPixKey}
-          placeholder="Digite ou cole sua chave"
+          onChangeText={(value) => form.setPixKey(maskPixCpfCnpjByType(form.pixKeyType, value))}
+          placeholder="Digite CPF ou CNPJ"
           placeholderTextColor={"rgba(0,0,0,0.35)"}
-          autoCapitalize={form.pixKeyType === "EMAIL" ? "none" : "characters"}
+          keyboardType="numeric"
+          autoCapitalize="none"
           autoCorrect={false}
           style={pix.input}
         />

@@ -120,14 +120,36 @@ function getProductFavorited(p: any) {
   return Boolean(p?.isFavorite ?? p?.favorited ?? false);
 }
 
-function getEntityId(item: any) {
-  return String(item?.id ?? item?.productId ?? "").trim();
+function normalizeId(value: unknown) {
+  return String(value ?? "").trim();
+}
+
+function getEntityIds(item: any) {
+  const ids = [
+    item?.id,
+    item?.productId,
+    item?.product?.id,
+    item?.product?.productId,
+    item?.productRef?.id,
+    item?.productRef?.productId,
+    item?.productItem?.id,
+    item?.productItem?.productId,
+    item?.data?.id,
+    item?.data?.productId,
+    item?.data?.product?.id,
+    item?.data?.product?.productId,
+  ]
+    .map((value) => normalizeId(value))
+    .filter(Boolean);
+
+  return Array.from(new Set(ids));
 }
 
 function asItems<T>(v: any): T[] {
   if (Array.isArray(v)) return v;
   if (Array.isArray(v?.items)) return v.items;
   if (Array.isArray(v?.data?.items)) return v.data.items;
+  if (Array.isArray(v?.data)) return v.data;
   return [];
 }
 
@@ -135,17 +157,18 @@ function buildFavoriteIds(data: any) {
   const ids = new Set<string>();
 
   for (const item of asItems<any>(data)) {
-    const id = getEntityId(item);
-    if (id) ids.add(id);
+    for (const id of getEntityIds(item)) {
+      if (id) ids.add(id);
+    }
   }
 
   return ids;
 }
 
 function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
-  const id = getEntityId(item);
+  const itemIds = getEntityIds(item);
 
-  if (id && favoriteIds.has(id)) return true;
+  if (itemIds.some((id) => favoriteIds.has(id))) return true;
   return getProductFavorited(item);
 }
 
@@ -781,7 +804,7 @@ export function OwnerHomeScreen() {
     retry: false,
   });
 
-    const favoritesQ = useQuery({
+  const favoritesQ = useQuery({
     queryKey: ["owner-favorites"],
     queryFn: async () => {
       const res = await api.get(endpoints.products.favorites, {
@@ -791,6 +814,7 @@ export function OwnerHomeScreen() {
     },
     retry: false,
   });
+
 
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
