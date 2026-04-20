@@ -3,8 +3,6 @@ import {
   FlatList,
   View,
   Text,
-  Image,
-  Pressable,
   StyleSheet,
   Linking,
 } from "react-native";
@@ -12,8 +10,6 @@ import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import Icon from "react-native-vector-icons/Ionicons";
-
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
 import { HeaderBar } from "../../ui/components/HeaderBar";
@@ -26,7 +22,7 @@ import { t } from "../../ui/tokens";
 
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 import { useCartStore } from "../../stores/cart.store";
-import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton";
+ import { OwnerProductGridCard } from "./components/OwnerProductGridCard";
 
 type TargetType =
   | "NONE"
@@ -631,34 +627,7 @@ function BackgroundTexture() {
   );
 }
 
-function AddToCartButton({
-  inCart,
-  onPress,
-}: {
-  inCart: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={(e) => {
-        e.stopPropagation?.();
-        onPress();
-      }}
-      hitSlop={10}
-      style={({ pressed }) => [
-        styles.cardCartButton,
-        inCart && styles.cardCartButtonSelected,
-        pressed && styles.cardActionButtonPressed,
-      ]}
-    >
-      <Icon
-        name={inCart ? "bag" : "bag-outline"}
-        size={18}
-        color={inCart ? "#FFF" : "#000"}
-      />
-    </Pressable>
-  );
-}
+ 
 
 function PreviewGrid({
   data,
@@ -683,101 +652,28 @@ function PreviewGrid({
       renderItem={({ item }) => {
         const productId = String(item.id);
         const inCart = Number(qtyById?.[productId] ?? 0) > 0;
+        const promoBadgeLabel =
+          item.hasDiscount && item.discountPercent
+            ? `${item.discountPercent}% OFF`
+            : null;
 
         return (
-          <Pressable onPress={() => onPressItem(productId)} style={styles.cardWrap}>
-            <View style={styles.card}>
-              <View style={styles.cardImageWrap}>
-                {item.imageUri ? (
-                  <Image
-                    source={{ uri: item.imageUri }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.cardImageFallback} />
-                )}
-
-                {item.hasDiscount && item.discountPercent ? (
-                  <View style={styles.cardPromoBadge}>
-                    <Text style={styles.cardPromoBadgeTxt}>
-                      {item.discountPercent}% OFF
-                    </Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.cardTopRightAction}>
-                  <ProductFavoriteButton
-                    productId={productId}
-                    initialFavorited={item.isFavorite}
-                  />
-                </View>
-
-                <View style={styles.cardBottomRightAction}>
-                  <AddToCartButton
-                    inCart={inCart}
-                    onPress={() => onAddToCart(productId)}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.cardInnerDivider} />
-
-              <View style={styles.cardMeta}>
-                <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardName}>
-                  {item.name}
-                </Text>
-
-                {Number(item.ratingValue ?? 0) > 0 ? (
-                  <View style={styles.cardRatingRow}>
-                    <View style={styles.cardStarsRow}>
-                      {[1, 2, 3, 4, 5].map((star) => {
-                        const rating = Number(item.ratingValue ?? 0);
-
-                        const iconName =
-                          rating >= star
-                            ? "star"
-                            : rating >= star - 0.5
-                            ? "star-half"
-                            : "star-outline";
-
-                        return (
-                          <Icon
-                            key={star}
-                            name={iconName}
-                            size={11}
-                            color="#B8943C"
-                            style={styles.cardRatingStar}
-                          />
-                        );
-                      })}
-                    </View>
-
-                    <Text numberOfLines={1} style={styles.cardRatingText}>
-                      {Number(item.ratingValue).toFixed(1)}
-                      {Number(item.ratingCount ?? 0) > 0 ? ` (${item.ratingCount})` : ""}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.cardRatingSpacer} />
-                )}
-
-                <View style={styles.cardPriceBlock}>
-                  <View style={styles.cardPriceRow}>
-                    <Text numberOfLines={1} style={styles.cardPrice}>
-                      {formatBRL(item.price)}
-                    </Text>
-
-                    {item.hasDiscount && item.originalPrice ? (
-                      <Text numberOfLines={1} style={styles.cardOldPriceInline}>
-                        {formatBRL(item.originalPrice)}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Pressable>
+           <View style={styles.cardWrap}>
+            <OwnerProductGridCard
+              productId={productId}
+              name={item.name}
+              imageUri={item.imageUri}
+              promoBadgeLabel={promoBadgeLabel}
+              ratingValue={Number(item.ratingValue ?? 0)}
+              reviewsCount={Number(item.ratingCount ?? 0)}
+              priceLabel={formatBRL(item.price)}
+              oldPriceLabel={item.hasDiscount && item.originalPrice ? formatBRL(item.originalPrice) : null}
+              inCart={inCart}
+              isFavorite={item.isFavorite}
+              onPress={() => onPressItem(productId)}
+              onToggleCart={() => onAddToCart(productId)}
+            />
+          </View>
         );
       }}
     />
@@ -1203,40 +1099,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
 
-  cardTopRightAction: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 3,
-  },
-
-  cardBottomRightAction: {
-    position: "absolute",
-    right: 10,
-    bottom: 10,
-    zIndex: 3,
-  },
-
-  cardCartButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cardCartButtonSelected: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-
-  cardActionButtonPressed: {
-    opacity: 0.7,
-  },
-
+   
   gridContent: {
     paddingTop: 6,
   },
@@ -1341,119 +1204,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
 
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-
-  cardImageWrap: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#F7F4F3",
-    overflow: "hidden",
-    position: "relative",
-  },
-
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-
-  cardImageFallback: {
-    flex: 1,
-    backgroundColor: "#F7F4F3",
-  },
-
-  cardPromoBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#5D5351",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-
-  cardPromoBadgeTxt: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.2,
-  },
-
-  cardInnerDivider: {
-    display: "none",
-  },
-
-  cardMeta: {
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 10,
-    minHeight: 90,
-    justifyContent: "space-between",
-  },
-
-  cardName: {
-    color: "#1F1A19",
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
-    minHeight: 34,
-  },
-
-  cardRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    minHeight: 16,
-  },
-
-  cardStarsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-
-  cardRatingStar: {
-    marginRight: 1,
-  },
-
-  cardRatingText: {
-    marginLeft: 4,
-    color: "rgba(0,0,0,0.65)",
-    fontSize: 10.5,
-    fontWeight: "600",
-  },
-
-  cardRatingSpacer: {
-    height: 16,
-    marginTop: 4,
-  },
-
-  cardPriceBlock: {
-    marginTop: 6,
-    alignItems: "flex-start",
-  },
-
-  cardPriceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-
-  cardPrice: {
-    color: "rgba(0,0,0,0.78)",
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 17,
-  },
-
-  cardOldPriceInline: {
-    color: "rgba(0,0,0,0.42)",
-    fontSize: 10,
-    fontWeight: "700",
-    textDecorationLine: "line-through",
-  },
 });
