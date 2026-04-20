@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
-import LinearGradient from "react-native-linear-gradient";
 
 import { CUSTOMER_SCREENS } from "./customer.routes";
 
@@ -27,39 +26,11 @@ import cartIconBlack from "../assets/icons/carrinho-black.png";
 
 const Tab = createBottomTabNavigator();
 const GOLD = "#B8943C";
+const SOFT_BG = "#FFFFFF";
 
 function TabBarBg() {
   return (
-    <View style={StyleSheet.absoluteFill}>
-      <LinearGradient
-        colors={["#FFFEFC", "#FFFDF9", "#FEFBF7"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.06)",
-          "rgba(184,148,60,0.02)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={s.tabBlobLeft}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(232,214,165,0.08)",
-          "rgba(232,214,165,0.03)",
-          "rgba(232,214,165,0)",
-        ]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={s.tabBlobRight}
-      />
-    </View>
+   <View style={[StyleSheet.absoluteFill, { backgroundColor: SOFT_BG }]} />
   );
 }
 
@@ -195,7 +166,7 @@ export function CustomerTabs() {
 const s = StyleSheet.create({
   tabBar: {
     backgroundColor: "transparent",
-    borderTopColor: GOLD,
+    borderTopColor: "rgba(184,148,60,0.35)",
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
@@ -213,26 +184,6 @@ const s = StyleSheet.create({
   tabBarItem: {
     justifyContent: "center",
     alignItems: "center",
-  },
-
-  tabBlobLeft: {
-    position: "absolute",
-    left: -30,
-    top: -10,
-    width: 180,
-    height: 120,
-    borderRadius: 999,
-    transform: [{ rotate: "-8deg" }],
-  },
-
-  tabBlobRight: {
-    position: "absolute",
-    right: -40,
-    top: 0,
-    width: 170,
-    height: 110,
-    borderRadius: 999,
-    transform: [{ rotate: "10deg" }],
   },
 
   item: {

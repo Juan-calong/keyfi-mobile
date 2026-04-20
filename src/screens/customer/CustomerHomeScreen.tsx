@@ -3,8 +3,6 @@ import {
   FlatList,
   View,
   Text,
-  Image,
-  Pressable,
   StyleSheet,
   Linking,
   Alert,
@@ -14,10 +12,9 @@ import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import Icon from "react-native-vector-icons/Ionicons";
 
 import { Screen } from "../../ui/components/Screen";
-import { Container } from "../../ui/components/Container";
+
 import { HeaderBar } from "../../ui/components/HeaderBar";
 import { HomeHeroCarousel } from "../../ui/components/HomeHeroCarousel";
 import { Loading, ErrorState } from "../../ui/components/State";
@@ -28,7 +25,7 @@ import { t } from "../../ui/tokens";
 
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { useCartStore } from "../../stores/cart.store";
-import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton";
+import { CustomerProductGridCard } from "./components/CustomerProductGridCard";
 
 const POST_SIGNUP_REFERRAL_PROMPT_KEY = "@keyfi/post_signup_referral_prompt";
 
@@ -633,34 +630,7 @@ function BackgroundTexture() {
   );
 }
 
-function AddToCartButton({
-  inCart,
-  onPress,
-}: {
-  inCart: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={(e) => {
-        e.stopPropagation?.();
-        onPress();
-      }}
-      hitSlop={10}
-      style={({ pressed }) => [
-        styles.cardCartButton,
-        inCart && styles.cardCartButtonSelected,
-        pressed && styles.cardActionButtonPressed,
-      ]}
-    >
-      <Icon
-        name={inCart ? "bag" : "bag-outline"}
-        size={18}
-        color={inCart ? "#FFF" : "#000"}
-      />
-    </Pressable>
-  );
-}
+ 
 
 function PreviewGrid({
   data,
@@ -685,102 +655,29 @@ function PreviewGrid({
       renderItem={({ item }) => {
         const productId = String(item.id);
         const inCart = Number(qtyById?.[productId] ?? 0) > 0;
+        const hasRating = Number(item.ratingValue ?? 0) > 0;
+        const promoBadgeLabel =
+          item.hasDiscount && item.discountPercent
+            ? `${item.discountPercent}% OFF`
+            : null;
 
         return (
-          <Pressable
-            onPress={() => onPressItem(productId)}
-            style={styles.cardWrap}
-          >
-            <View style={styles.card}>
-              <View style={styles.cardImageWrap}>
-                {item.imageUri ? (
-                  <Image
-                    source={{ uri: item.imageUri }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.cardImageFallback} />
-                )}
-
-                {item.hasDiscount && item.discountPercent ? (
-                  <View style={styles.cardPromoBadge}>
-                    <Text style={styles.cardPromoBadgeTxt}>
-                      {item.discountPercent}% OFF
-                    </Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.cardTopRightAction}>
-                  <ProductFavoriteButton
-                    productId={productId}
-                    initialFavorited={item.isFavorite}
-                  />
-                </View>
-
-                <View style={styles.cardBottomRightAction}>
-                  <AddToCartButton
-                    inCart={inCart}
-                    onPress={() => onAddToCart(productId)}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.cardInnerDivider} />
-
-              <View style={styles.cardMeta}>
-                <Text numberOfLines={2} ellipsizeMode="tail" style={styles.cardName}>
-                  {item.name}
-                </Text>
-
-                {Number(item.ratingValue ?? 0) > 0 ? (
-                  <View style={styles.cardRatingRow}>
-                    <View style={styles.cardStarsRow}>
-                      {[1, 2, 3, 4, 5].map((star) => {
-                        const rating = Number(item.ratingValue ?? 0);
-
-                        const iconName =
-                          rating >= star
-                            ? "star"
-                            : rating >= star - 0.5
-                            ? "star-half"
-                            : "star-outline";
-
-                        return (
-                          <Icon
-                            key={star}
-                            name={iconName}
-                            size={11}
-                            color="#B8943C"
-                            style={styles.cardRatingStar}
-                          />
-                        );
-                      })}
-                    </View>
-
-                    <Text numberOfLines={1} style={styles.cardRatingText}>
-                      {Number(item.ratingValue).toFixed(1)}
-                      {Number(item.ratingCount ?? 0) > 0 ? ` (${item.ratingCount})` : ""}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.cardRatingSpacer} />
-                )}
-
-                <View style={styles.cardPriceBlock}>
-                  <Text numberOfLines={1} style={styles.cardPrice}>
-                    {formatBRL(item.price)}
-                  </Text>
-
-                  {item.hasDiscount && item.originalPrice ? (
-                    <Text numberOfLines={1} style={styles.cardOldPrice}>
-                      {formatBRL(item.originalPrice)}
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
-            </View>
-          </Pressable>
+           <View style={styles.cardWrap}>
+            <CustomerProductGridCard
+              productId={productId}
+              name={item.name}
+              imageUri={item.imageUri}
+              promoBadgeLabel={promoBadgeLabel}
+              ratingValue={hasRating ? Number(item.ratingValue) : 0}
+              reviewsCount={Number(item.ratingCount ?? 0)}
+              priceLabel={formatBRL(item.price)}
+              oldPriceLabel={item.hasDiscount && item.originalPrice ? formatBRL(item.originalPrice) : null}
+              inCart={inCart}
+              isFavorite={item.isFavorite}
+              onPress={() => onPressItem(productId)}
+              onToggleCart={() => onAddToCart(productId)}
+            />
+          </View>
         );
       }}
     />
@@ -788,6 +685,7 @@ function PreviewGrid({
 }
 
 export function CustomerHomeScreen() {
+  const SOFT_BG = "#ffffff";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -1131,18 +1029,18 @@ export function CustomerHomeScreen() {
     favoritesQ.isError;
 
   return (
-    <Screen>
-      <BackgroundTexture />
-
+    <Screen style={{ backgroundColor: SOFT_BG }}>
       <HeaderBar
         title="KEYFI"
         onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
         titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
         menuVariant="bare"
         menuIconSize={22}
+        backgroundColor={SOFT_BG}
+        showDivider={false}
       />
 
-      <Container style={styles.container}>
+      <View style={styles.container}>
         {isLoading ? (
           <Loading />
         ) : isError ? (
@@ -1218,7 +1116,7 @@ export function CustomerHomeScreen() {
             }
           />
         )}
-      </Container>
+      </View>
     </Screen>
   );
 }
@@ -1227,56 +1125,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 8,
-    backgroundColor: "transparent",
+    paddingHorizontal: 6,
+    backgroundColor: "#ffffff",
     position: "relative",
   },
 
-  cardTopRightAction: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    zIndex: 3,
-  },
-
-  cardBottomRightAction: {
-    position: "absolute",
-    right: 10,
-    bottom: 10,
-    zIndex: 3,
-  },
-
-  cardCartButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cardCartButtonSelected: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-
-  cardActionButtonPressed: {
-    opacity: 0.7,
-  },
+   
 
   gridContent: {
     paddingTop: 6,
   },
 
- gridRow: {
-  justifyContent: "space-between",
-  marginBottom: 14,
-},
+  gridRow: {
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
 
- cardWrap: {
-  width: "48.5%",
-},
+  cardWrap: {
+    width: "49.4%",
+  },
 
   bgLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -1286,54 +1153,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 
-  cardRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    minHeight: 16,
-  },
-
-  cardStarsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-
-  cardRatingSpacer: {
-    height: 16,
-    marginTop: 4,
-  },
-
-  cardPriceBlock: {
-    marginTop: 6,
-    alignItems: "flex-start",
-  },
-
-  cardPrice: {
-    color: "rgba(0,0,0,0.78)",
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 17,
-  },
-
-  cardOldPrice: {
-    marginTop: 2,
-    color: "rgba(0,0,0,0.42)",
-    fontSize: 10,
-    fontWeight: "700",
-    textDecorationLine: "line-through",
-  },
-
-  cardRatingStar: {
-    marginRight: 1,
-  },
-
-  cardRatingText: {
-    marginLeft: 6,
-    color: "rgba(0,0,0,0.55)",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
+   
 
   blobTopLeft: {
     position: "absolute",
@@ -1430,65 +1250,4 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     paddingHorizontal: 2,
   },
-
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-
-  cardImageWrap: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#F7F4F3",
-    overflow: "hidden",
-    position: "relative",
-  },
-
-  cardImage: {
-    width: "100%",
-    height: "100%",
-  },
-
-  cardImageFallback: {
-    flex: 1,
-    backgroundColor: "#F7F4F3",
-  },
-
-  cardPromoBadge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#5D5351",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-
-  cardPromoBadgeTxt: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.2,
-  },
-
-cardInnerDivider: {
-  display: "none",
-},
-
-  cardMeta: {
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 10,
-    minHeight: 90,
-    justifyContent: "space-between",
-  },
-
-  cardName: {
-    color: "#1F1A19",
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
-    minHeight: 34,
-  },
-});
+   });

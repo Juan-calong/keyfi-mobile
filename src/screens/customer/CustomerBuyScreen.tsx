@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   Pressable,
-  Image,
   GestureResponderEvent,
   Platform,
   StatusBar,
@@ -28,7 +27,7 @@ import { getProductImageUrl } from "../../core/utils/productImage";
 import Icon from "react-native-vector-icons/Ionicons";
 
 // ajuste o caminho abaixo se o seu ProductFavoriteButton estiver em outra pasta
-import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton.tsx";
+import { CustomerProductGridCard } from "./components/CustomerProductGridCard";
 
 type Product = {
   id: string;
@@ -202,32 +201,6 @@ function getProductReviewsCount(item: any) {
   if (!Number.isFinite(n) || n < 0) return 0;
   return n;
 }
-
-function RatingStars({
-  value,
-  size = 12,
-}: {
-  value: number;
-  size?: number;
-}) {
-  return (
-    <View style={styles.ratingRow}>
-      {Array.from({ length: 5 }).map((_, index) => {
-        const filled = index < Math.round(value);
-
-        return (
-          <Icon
-            key={`star-${index}`}
-            name={filled ? "star" : "star-outline"}
-            size={size}
-            color="#C69214"
-          />
-        );
-      })}
-    </View>
-  );
-}
-
 const ALL = "ALL" as const;
 const PROMOS = "PROMOS" as const;
 
@@ -742,98 +715,24 @@ export function CustomerBuyScreen() {
                 };
 
                 return (
-                  <Pressable
+                    <CustomerProductGridCard
+                    productId={item.id}
+                    name={item.name}
+                    imageUri={img}
+                    promoBadgeLabel={!out ? promoBadgeLabel : null}
+                    ratingValue={ratingValue}
+                    reviewsCount={reviewsCount}
+                    priceLabel={formatBRL(hasDiscount ? final : base)}
+                    oldPriceLabel={hasDiscount ? formatBRL(base) : null}
+                    inCart={inCart}
+                    isFavorite={Boolean(item.isFavorite)}
+                    outOfStock={out}
+                    highlighted={isHighlighted}
+                    width={cardWidth}
+                    marginLeft={isLeft ? 0 : gridGap}
                     onPress={() => openDetails(item.id)}
-                    style={[
-                      styles.cardPress,
-                      { width: cardWidth, marginLeft: isLeft ? 0 : gridGap },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.card,
-                        out && !inCart ? styles.cardOut : null,
-                        isHighlighted && styles.cardHighlight,
-                      ]}
-                    >
-                      <View style={styles.cardImageWrap}>
-                        {img ? (
-                          <Image source={{ uri: img }} style={styles.cardImage} resizeMode="cover" />
-                        ) : (
-                          <Image
-                            source={{
-                              uri: "https://dummyimage.com/400x400/ffffff/000000.png&text=NO+IMAGE",
-                            }}
-                            style={styles.cardImage}
-                            resizeMode="contain"
-                          />
-                        )}
-
-                        {!!promoBadgeLabel && !out ? (
-                          <View style={styles.cardPromoBadge}>
-                            <Text style={styles.cardPromoBadgeTxt}>{promoBadgeLabel}</Text>
-                          </View>
-                        ) : null}
-
-                        <ProductFavoriteButton
-                          productId={item.id}
-                          initialFavorited={Boolean(item.isFavorite)}
-                          containerStyle={styles.favoriteBtn}
-                          size={18}
-                          activeColor="#E11D48"
-                          inactiveColor="#2E2A29"
-                        />
-
-                        <Pressable
-                          onPress={(e) => onPressToggle(e)}
-                          hitSlop={10}
-                          style={({ pressed }) => [
-                            styles.addBtnFloating,
-                            inCart && styles.addBtnFloatingActive,
-                            pressed && styles.pressed,
-                            !inCart && out ? { opacity: 0.45 } : null,
-                          ]}
-                          disabled={!inCart && out}
-                        >
-                          <Icon
-                            name={inCart ? "bag" : "bag-outline"}
-                            size={18}
-                            color={inCart ? WHITE : BLACK}
-                          />
-                        </Pressable>
-                      </View>
-
-                      <View style={styles.cardBody}>
-                        <Text style={styles.cardName} numberOfLines={2}>
-                          {item.name}
-                        </Text>
-
-                        <View style={styles.cardRatingWrap}>
-                          <RatingStars value={ratingValue} size={12} />
-                          <Text style={styles.cardRatingText}>
-                            {ratingValue > 0 ? ratingValue.toFixed(1) : "0.0"}
-                          </Text>
-                          <Text style={styles.cardRatingCount}>({reviewsCount})</Text>
-                        </View>
-
-                        <View style={styles.cardPriceWrap}>
-                          <Text style={styles.cardPrice}>
-                            {formatBRL(hasDiscount ? final : base)}
-                          </Text>
-
-                          {hasDiscount ? (
-                            <Text style={styles.cardOldPrice}>
-                              {formatBRL(base)}
-                            </Text>
-                          ) : null}
-                        </View>
-
-                        {out && !inCart ? (
-                          <Text style={styles.cardOutText}>Sem estoque</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  </Pressable>
+                    onToggleCart={onPressToggle}
+                  />
                 );
               }}
             />
