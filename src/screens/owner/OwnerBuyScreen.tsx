@@ -855,7 +855,7 @@ export function OwnerBuyScreen() {
               cartCount <= 0 && { opacity: 0.5 },
             ]}
           >
-            Checkout{cartCount > 0 ? ` (${cartCount})` : ""}
+            Comprar{cartCount > 0 ? ` (${cartCount})` : ""}
           </Text>
         </Pressable>
       </View>

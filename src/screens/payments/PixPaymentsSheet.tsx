@@ -99,7 +99,7 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
     <View style={s.wrap}>
       <Text style={s.title}>Pagamento PIX</Text>
 
-      {paymentId ? <Text style={s.meta}>PaymentId: {paymentId}</Text> : null}
+      {paymentId ? <Text style={s.meta}>ID do pagamento: {paymentId}</Text> : null}
 
       <Text style={s.message}>{message}</Text>
 
@@ -120,6 +120,7 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
           <View style={s.qrBox}>
             <QRCode value={pixCode} size={210} />
           </View>
+          <View style={s.qrBottomSpacer} />
         </View>
       ) : (
         <View style={s.warnBox}>
@@ -236,6 +237,9 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 10,
+  },
+    qrBottomSpacer: {
+    height: 18,
   },
 
   warnBox: {

@@ -78,7 +78,14 @@ export type OwnerStackParamList = {
     | { id: string; amount?: number };
 
   [OWNER_SCREENS.CardTokenize]: { orderId: string; amount?: number };
-  [OWNER_SCREENS.CardEntry]: { orderId: string; amount?: number; cardToken: string };
+  [OWNER_SCREENS.CardEntry]: {
+    orderId: string;
+    amount?: number;
+    cardToken: string;
+    brand?: string;
+    cardBin?: string;
+    cardLast4Digits?: string;
+  };
 
   [OWNER_SCREENS.BoletoPayerForm]: { orderId: string; defaultPayer?: any };
   [OWNER_SCREENS.BoletoWebView]: { url: string };

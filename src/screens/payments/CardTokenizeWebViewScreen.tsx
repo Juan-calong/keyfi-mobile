@@ -3,6 +3,8 @@ import { View, Text, ActivityIndicator, Pressable, Platform } from "react-native
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Config from "react-native-config";
+import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
+import { OWNER_SCREENS } from "../../navigation/owner.routes";
 
 function normalizeBaseUrl(raw: string) {
   const base = (raw || "").trim();
@@ -70,15 +72,32 @@ export function CardTokenizeWebViewScreen() {
       if (!raw) return;
 
       const msg = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const token = msg?.cardToken || msg?.PaymentToken || msg?.paymentToken;
+      const routeName = String(route?.name || "");
+      const resolvedSuccessRouteName =
+        typeof successRouteName === "string" && successRouteName.trim()
+          ? successRouteName
+          : routeName === CUSTOMER_SCREENS.CardTokenize
+          ? CUSTOMER_SCREENS.CardEntry
+          : routeName === OWNER_SCREENS.CardTokenize
+          ? OWNER_SCREENS.CardEntry
+          : null;
 
-      if (msg?.type === "CIELO_CARD_TOKEN" && msg?.cardToken) {
-        nav.replace(successRouteName, {
+      if (msg?.type === "CIELO_CARD_TOKEN" && token) {
+        if (!resolvedSuccessRouteName) {
+          setErr("Token recebido, mas rota de retorno não configurada.");
+          goBackSafe();
+          return;
+        }
+
+        nav.replace(resolvedSuccessRouteName, {
           ...(route?.params?.successParams || {}),
           orderId,
           amount,
-          cardToken: msg.cardToken,
+          cardToken: token,
           brand: msg.brand,
-          last4: msg.last4,
+          cardBin: msg.cardBin || msg.firstSixDigits || msg.firstSix,
+          cardLast4Digits: msg.cardLast4Digits || msg.last4,
         });
         return;
       }

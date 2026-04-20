@@ -54,11 +54,11 @@ export function OwnerOrderDetailsScreen() {
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
 
-  const orderId: string = route.params?.id;
+  const orderId: string | undefined = route.params?.orderId || route.params?.id;
 
   const q = useQuery({
     queryKey: ["owner-order-detail", orderId],
-    queryFn: () => OrdersService.byId(orderId),
+    queryFn: () => OrdersService.byId(orderId!),
     enabled: !!orderId,
   });
 
@@ -77,8 +77,8 @@ export function OwnerOrderDetailsScreen() {
 
   const intentMut = useMutation({
     mutationFn: async () => {
-      await PaymentsService.intentPIX(orderId);
-      return PaymentsService.active(orderId);
+      await PaymentsService.intentPIX(orderId!);
+      return PaymentsService.active(orderId!);
     },
     onSuccess: () => {
       nav.navigate(OWNER_SCREENS.PixPayment, { orderId });
@@ -103,7 +103,7 @@ export function OwnerOrderDetailsScreen() {
             <Text style={m.backText}>{"<"}</Text>
           </Pressable>
 
-          <Text style={m.navTitle}>Order</Text>
+          <Text style={m.navTitle}>Pedido</Text>
 
           <Pressable hitSlop={12} onPress={() => q.refetch()} style={m.rightBtn}>
             <Text style={m.rightText}>{q.isRefetching ? "…" : "⟳"}</Text>
@@ -175,7 +175,7 @@ export function OwnerOrderDetailsScreen() {
               <Text style={m.sectionTitle}>Itens</Text>
 
               <View style={{ marginTop: 12 }}>
-                {(data.items ?? []).map((it: any, idx: number) => {
+                {(data.items ?? []).length > 0 ? (data.items ?? []).map((it: any, idx: number) => {
                   const title = ItemTitle(it, idx);
                   const qty = Number(it.qty ?? 0);
                   const unit = it.unitPrice ?? it.price ?? 0;
@@ -192,7 +192,9 @@ export function OwnerOrderDetailsScreen() {
                       <Text style={m.itemRight}>{formatBRL(subtotal)}</Text>
                     </View>
                   );
-                })}
+                }) : (
+                  <Text style={m.itemEmpty}>Nenhum item retornado para este pedido.</Text>
+                )}
               </View>
 
               <View style={{ height: 24 }} />
@@ -280,4 +282,5 @@ const m = StyleSheet.create({
   itemTitle: { color: "#000000", fontSize: 14, fontWeight: "900", letterSpacing: -0.1 },
   itemMeta: { marginTop: 4, color: "#000000", fontSize: 12, fontWeight: "600", opacity: 0.75, lineHeight: 16 },
   itemRight: { color: "#000000", fontSize: 13, fontWeight: "900", marginTop: 2 },
+  itemEmpty: { color: "#000000", fontSize: 13, fontWeight: "700", opacity: 0.65 },
 });

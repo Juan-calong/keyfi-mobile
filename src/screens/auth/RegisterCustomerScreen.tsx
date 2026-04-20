@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   TextInputProps,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { cpf as cpfValidator } from "cpf-cnpj-validator";
@@ -31,6 +32,9 @@ import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
+import { getPendingInvite } from "../../core/airbridge/invite-link.service";
+
+const POST_SIGNUP_REFERRAL_PROMPT_KEY = "@keyfi/post_signup_referral_prompt";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "RegisterCustomer">;
 type Step = 1 | 2;
@@ -454,6 +458,11 @@ const normalizedEmail = email.trim().toLowerCase();
 await login(normalizedEmail, password);
 setNeedsOnboarding(false);
 await queueBiometricSetup(normalizedEmail);
+
+      const pendingInvite = await getPendingInvite().catch(() => null);
+      if (!pendingInvite) {
+        await AsyncStorage.setItem(POST_SIGNUP_REFERRAL_PROMPT_KEY, "1");
+      }
     } catch (e: any) {
       handleCooldownFromError(e);
 

@@ -151,7 +151,16 @@ export function CustomerProfileMe() {
             }}
           >
             <RowItem title="Pedidos" onPress={() => nav.navigate(CUSTOMER_SCREENS.Orders)} />
-            <RowItem title="Notificações" onPress={() => nav.navigate(CUSTOMER_SCREENS.Notifications)} hideDivider />
+            <RowItem
+              title="Notificações"
+              onPress={() => nav.navigate(CUSTOMER_SCREENS.Notifications)}
+            />
+            <RowItem
+              title="Vincular por token"
+              subtitle="Cole o token do vendedor ou salão"
+              onPress={() => nav.navigate(CUSTOMER_SCREENS.ApplyReferral)}
+              hideDivider
+            />
           </View>
         </ScrollView>
 

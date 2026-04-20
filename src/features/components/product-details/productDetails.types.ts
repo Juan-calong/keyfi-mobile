@@ -58,6 +58,30 @@ export type Product = {
     startsAt?: string | Date;
     endsAt?: string | Date | null;
   } | null;
+    quantityDiscount?: {
+    enabled?: boolean | null;
+    source?: string | null;
+    tiers?: Array<{
+      minQty?: number | string | null;
+      qty?: number | string | null;
+      quantity?: number | string | null;
+      percentOff?: number | string | null;
+      discountPercent?: number | string | null;
+      percentage?: number | string | null;
+      value?: number | string | null;
+      type?: string | null;
+    }> | null;
+    minQty?: number | string | null;
+    quantity?: number | string | null;
+    qty?: number | string | null;
+    type?: string | null;
+    value?: number | string | null;
+    percent?: number | string | null;
+    percentage?: number | string | null;
+    discountPercent?: number | string | null;
+    label?: string | null;
+    description?: string | null;
+  } | null;
 };
 
 export type RelatedProduct = {

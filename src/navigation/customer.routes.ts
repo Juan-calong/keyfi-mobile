@@ -22,6 +22,7 @@ export const CUSTOMER_SCREENS = {
 
   BoletoPayerForm: "CustomerBoletoPayerForm",
   BoletoWebView: "CustomerBoletoWebView",
+  ApplyReferral: "CustomerApplyReferral",
 
   ProductDetails: "CustomerProductDetails",
   ProductComments: "CustomerProductComments",
@@ -79,6 +80,9 @@ export type CustomerStackParamList = {
     orderId: string;
     amount?: number;
     cardToken: string;
+    brand?: string;
+    cardBin?: string;
+    cardLast4Digits?: string;
   };
 
   [CUSTOMER_SCREENS.CardTokenize]: {
@@ -93,6 +97,7 @@ export type CustomerStackParamList = {
   };
 
   [CUSTOMER_SCREENS.BoletoWebView]: { url: string };
+  [CUSTOMER_SCREENS.ApplyReferral]: undefined;
 
   [CUSTOMER_SCREENS.ProductDetails]: { productId: string } | { product: any };
 

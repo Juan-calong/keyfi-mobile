@@ -66,6 +66,10 @@ export function OwnerCardEntryScreen({ route, navigation }: any) {
         method: "CARD",
         cpf: onlyDigits(cpf),
         email: trim(email).toLowerCase(),
+          payer: {
+          cpf: onlyDigits(cpf),
+          email: trim(email).toLowerCase(),
+        },
         installments: Number(installments || 1),
         card: {
           cardToken,

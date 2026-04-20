@@ -249,6 +249,93 @@ function getPriceModel(item: any, viewerMode: ViewerMode = "OWNER") {
   };
 }
 
+function toPositiveIntOrNull(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const int = Math.floor(n);
+  if (int <= 0) return null;
+  return int;
+}
+
+function toPositiveNumberOrNull(value: unknown) {
+  const n = Number(String(value ?? "").replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+function getQuantityDiscountLabel(item: any) {
+  const qd = item?.quantityDiscount;
+  if (!qd || typeof qd !== "object") return null;
+
+  if (qd.enabled === false) return null;
+
+  const tiersRaw = Array.isArray(qd?.tiers) ? qd.tiers : [];
+  const tiers = tiersRaw
+    .map((tier: any) => {
+      const minQty =
+        toPositiveIntOrNull(tier?.minQty) ??
+        toPositiveIntOrNull(tier?.qty) ??
+        toPositiveIntOrNull(tier?.quantity);
+
+      const pct =
+        toPositiveNumberOrNull(tier?.percentOff) ??
+        toPositiveNumberOrNull(tier?.discountPercent) ??
+        toPositiveNumberOrNull(tier?.percentage) ??
+        (String(tier?.type || "").toUpperCase() === "PCT"
+          ? toPositiveNumberOrNull(tier?.value)
+          : null);
+
+      if (!minQty || !pct) return null;
+      return { minQty, pct: Math.round(pct) };
+    })
+    .filter((tier: any) => !!tier)
+    .sort((a: any, b: any) => a.minQty - b.minQty);
+
+  if (tiers.length > 0) {
+    const first = tiers[0];
+    const strongest = tiers[tiers.length - 1];
+
+    if (tiers.length === 1) {
+      return `Leve ${first.minQty}+ com ${first.pct}% OFF`;
+    }
+
+    return `A partir de ${first.minQty} unidades • até ${strongest.pct}% OFF`;
+  }
+
+  const explicitLabel = normalizeText(qd?.label);
+  if (explicitLabel) return explicitLabel;
+
+  const explicitDescription = normalizeText(qd?.description);
+  if (explicitDescription) return explicitDescription;
+
+  const minQty =
+    toPositiveIntOrNull(qd?.minQty) ??
+    toPositiveIntOrNull(qd?.quantity) ??
+    toPositiveIntOrNull(qd?.qty);
+
+  const pct =
+    toPositiveNumberOrNull(qd?.percent) ??
+    toPositiveNumberOrNull(qd?.percentage) ??
+    toPositiveNumberOrNull(qd?.discountPercent) ??
+    (String(qd?.type || "").toUpperCase() === "PCT"
+      ? toPositiveNumberOrNull(qd?.value)
+      : null);
+
+  if (minQty && pct) {
+    return `Leve ${minQty}+ unidades com ${Math.round(pct)}% OFF`;
+  }
+
+  if (minQty) {
+    return `Desconto por quantidade a partir de ${minQty} unidades`;
+  }
+
+  if (pct) {
+    return `Desconto por quantidade: ${Math.round(pct)}% OFF`;
+  }
+
+  return null;
+}
+
 function getReviewRating(item: any) {
   const n = Number(item?.rating ?? item?.stars ?? item?.score ?? 0);
   if (!Number.isFinite(n)) return 0;
@@ -580,6 +667,11 @@ export function SharedProductDetails({
   const priceModel = useMemo(
     () => getPriceModel(product, viewerMode),
     [product, viewerMode]
+  );
+
+    const quantityDiscountLabel = useMemo(
+    () => getQuantityDiscountLabel(product),
+    [product]
   );
 
   const safeRelatedItems = useMemo(() => relatedItems, [relatedItems]);
@@ -1010,6 +1102,10 @@ export function SharedProductDetails({
                     </Text>
                   )}
                 </View>
+
+                  {quantityDiscountLabel ? (
+                  <Text style={s.quantityDiscountText}>{quantityDiscountLabel}</Text>
+                ) : null}
 
                 <View style={s.separator} />
 

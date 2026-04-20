@@ -28,6 +28,8 @@ type ShippingQuoteApiResponse = {
   errors?: string[];
 };
 
+const LAST_SELECTED_SHIPPING_BY_CONTEXT = new Map<string, string>();
+
 type DeliveryAddressInput = {
   zipcode?: string;
   zipCode?: string;
@@ -499,6 +501,22 @@ export function SharedShippingMethodScreen({
   const cleanZipcode = useMemo(() => onlyDigits(rawZipcode), [rawZipcode]);
   const hasValidZipcode = cleanZipcode.length === 8;
 
+    const shippingContextKey = useMemo(() => {
+    const normalizedItems = [...items]
+      .map((it) => ({
+        productId: String(it.productId),
+        qty: Number(it.qty ?? 0),
+      }))
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+
+    return JSON.stringify({
+      role,
+      zip: cleanZipcode,
+      coupon: couponCode || "",
+      items: normalizedItems,
+    });
+  }, [role, cleanZipcode, couponCode, items]);
+
   const normalizedDeliveryAddress = useMemo(
     () => normalizeDeliveryAddress(deliveryAddress, cleanZipcode),
     [deliveryAddress, cleanZipcode]
@@ -650,9 +668,19 @@ if (selectedShipping.quoteId) {
 
     setSelected((current) => {
       if (!availableOptions.length) return null;
+            const rememberedKey = LAST_SELECTED_SHIPPING_BY_CONTEXT.get(
+        shippingContextKey
+      );
+
+      if (!current && rememberedKey) {
+        const rememberedOption = availableOptions.find(
+          (opt) => resolveOptionSelectionKey(opt) === rememberedKey
+        );
+        if (rememberedOption) return rememberedOption;
+      }
 
       if (!current) {
-        return availableOptions[0];
+        return availableOptions[0] ?? null;
       }
 
       const currentKey = resolveOptionSelectionKey(current);
@@ -660,9 +688,25 @@ if (selectedShipping.quoteId) {
         (opt) => resolveOptionSelectionKey(opt) === currentKey
       );
 
-      return stillExists ?? availableOptions[0];
+      if (stillExists) return stillExists;
+
+      if (rememberedKey) {
+        const rememberedOption = availableOptions.find(
+          (opt) => resolveOptionSelectionKey(opt) === rememberedKey
+        );
+        if (rememberedOption) return rememberedOption;
+      }
+
+      return availableOptions[0] ?? null;
     });
-  }, [quoteQ.data?.options]);
+  }, [quoteQ.data?.options, shippingContextKey]);
+
+  React.useEffect(() => {
+    const selectedKey = resolveOptionSelectionKey(selected);
+    if (selectedKey) {
+      LAST_SELECTED_SHIPPING_BY_CONTEXT.set(shippingContextKey, selectedKey);
+    }
+  }, [shippingContextKey, selected]);
 
   const isInitialLoading =
     meQ.isLoading ||

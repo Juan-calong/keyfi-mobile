@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
   FlatList,
   View,
@@ -7,8 +7,10 @@ import {
   Pressable,
   StyleSheet,
   Linking,
+  Alert,
   useWindowDimensions,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
@@ -28,6 +30,8 @@ import { t } from "../../ui/tokens";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { useCartStore } from "../../stores/cart.store";
 import { ProductFavoriteButton } from "../../features/components/product-details/ProductFavoriteButton";
+
+const POST_SIGNUP_REFERRAL_PROMPT_KEY = "@keyfi/post_signup_referral_prompt";
 
 type TargetType =
   | "NONE"
@@ -636,10 +640,10 @@ function PreviewGrid({
 }) {
   const { width } = useWindowDimensions();
 
-  const gap = 12;
+  const gap = 4;
   const horizontalPadding = 4;
-  const containerHorizontalInset = 32;
-  const cardWidth = (width - containerHorizontalInset - horizontalPadding - gap) / 2;
+  const containerHorizontalInset = horizontalPadding * 2;
+  const cardWidth = Math.floor((width - containerHorizontalInset - gap) / 2);
   const qtyById = useCartStore((s) => s.qtyById);
 
   return (
@@ -810,6 +814,38 @@ export function CustomerHomeScreen() {
     },
     retry: false,
   });
+
+   useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const shouldPrompt = await AsyncStorage.getItem(
+        POST_SIGNUP_REFERRAL_PROMPT_KEY
+      );
+
+      if (cancelled || shouldPrompt !== "1") return;
+
+      await AsyncStorage.removeItem(POST_SIGNUP_REFERRAL_PROMPT_KEY);
+      if (cancelled) return;
+
+      Alert.alert(
+        "Vincular token",
+        "Você pode vincular um token de indicação agora. Isso é opcional e pode ser feito depois no perfil.",
+        [
+          { text: "Agora não", style: "cancel" },
+          {
+            text: "Vincular agora",
+            onPress: () => nav.navigate(CUSTOMER_SCREENS.ApplyReferral),
+          },
+        ]
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nav]);
+
 
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
@@ -1356,11 +1392,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(92, 89, 81, 0.35)",
     backgroundColor: "transparent",
     overflow: "hidden",
-    minHeight: 270,
   },
 
   cardImageWrap: {
-    height: 155,
+    width: "100%",
+    aspectRatio: 1,
     paddingTop: 1,
     paddingHorizontal: 1,
     justifyContent: "center",

@@ -638,10 +638,10 @@ function PreviewGrid({
 }) {
   const { width } = useWindowDimensions();
 
-  const gap = 12;
+  const gap = 4;
   const horizontalPadding = 4;
-  const containerHorizontalInset = 32;
-  const cardWidth = (width - containerHorizontalInset - horizontalPadding - gap) / 2;
+  const containerHorizontalInset = horizontalPadding * 2;
+  const cardWidth = Math.floor((width - containerHorizontalInset - gap) / 2);
   const qtyById = useCartStore((s) => s.qtyById);
 
   return (
@@ -1369,11 +1369,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(92, 89, 81, 0.35)",
     backgroundColor: "transparent",
     overflow: "hidden",
-    minHeight: 270,
   },
 
   cardImageWrap: {
-    height: 155,
+    width: "100%",
+    aspectRatio: 1,
     paddingTop: 1,
     paddingHorizontal: 1,
     justifyContent: "center",

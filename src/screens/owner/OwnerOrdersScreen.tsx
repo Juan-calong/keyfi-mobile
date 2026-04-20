@@ -37,6 +37,13 @@ type OrderListItem = {
   paymentStatus: string;
   totalAmount: string;
   createdAt: string;
+  items?: Array<{
+  qty?: number | string | null;
+  product?: { name?: string | null } | null;
+  productSnapshot?: { name?: string | null } | null;
+  name?: string | null;
+  title?: string | null;
+  }> | null;
 };
 
 type OrdersListDTO = { items: OrderListItem[] } | OrderListItem[];
@@ -92,6 +99,34 @@ function isCanceledLike(item: OrderListItem) {
   return st === "CANCELED" || ["CANCELED", "FAILED", "EXPIRED"].includes(ps);
 }
 
+function summarizeOrderItems(item: OrderListItem) {
+  const lines = Array.isArray(item?.items) ? item.items : [];
+  if (lines.length === 0) return null;
+
+  const normalized = lines.map((line, idx) => {
+    const name =
+      String(
+        line?.product?.name ||
+          line?.productSnapshot?.name ||
+          line?.name ||
+          line?.title ||
+          `Item ${idx + 1}`
+      ).trim() || `Item ${idx + 1}`;
+    const qty = Math.max(1, Number(line?.qty ?? 1) || 1);
+    return { name, qty };
+  });
+
+  if (normalized.length === 1) {
+    return `${normalized[0].name} (${normalized[0].qty}x)`;
+  }
+
+  if (normalized.length === 2) {
+    return `${normalized[0].name} (${normalized[0].qty}x) • ${normalized[1].name} (${normalized[1].qty}x)`;
+  }
+
+  return `${normalized[0].name} (${normalized[0].qty}x) +${normalized.length - 1} item(ns)`;
+}
+
 export function OwnerOrdersScreen() {
   const nav = useNavigation<any>();
   const token = useAuthStore((s) => s.token);
@@ -103,6 +138,7 @@ export function OwnerOrdersScreen() {
     () => ({
       buyerType: "SALON_OWNER",
       take: 100,
+      includeItems: true,
     }),
     []
   );
@@ -181,7 +217,9 @@ export function OwnerOrdersScreen() {
               data={filteredItems}
               keyExtractor={(i) => i.id}
               contentContainerStyle={{ paddingBottom: 120, gap: 12 }}
-              renderItem={({ item }: { item: OrderListItem }) => (
+              renderItem={({ item }: { item: OrderListItem }) => {
+                const itemsSummary = summarizeOrderItems(item);
+                return (
                 <Card style={s.card}>
                   <View style={s.rowTop}>
                     <View style={{ flex: 1 }}>
@@ -189,6 +227,7 @@ export function OwnerOrdersScreen() {
                       <Text style={s.meta}>
                         {formatDate(item.createdAt)} • Total {formatBRL(item.totalAmount)}
                       </Text>
+                      {itemsSummary ? <Text style={s.itemsSummary}>{itemsSummary}</Text> : null}
                     </View>
 
                     <View style={{ alignItems: "flex-end", gap: 8 }}>
@@ -216,7 +255,8 @@ export function OwnerOrdersScreen() {
                     />
                   </View>
                 </Card>
-              )}
+                );
+              }}
               ListEmptyComponent={<Empty text="Sem pedidos." />}
               refreshing={q.isRefetching}
               onRefresh={() => q.refetch()}
@@ -245,6 +285,7 @@ const s = StyleSheet.create({
   rowTop: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
   code: { color: t.colors.text, fontWeight: "900", fontSize: 14 },
   meta: { color: t.colors.text2, fontWeight: "800", marginTop: 8 },
+  itemsSummary: { color: t.colors.text2, fontWeight: "700", marginTop: 6, fontSize: 12 },
 
   actions: { marginTop: 12, flexDirection: "row", gap: 10, flexWrap: "wrap" },
 });

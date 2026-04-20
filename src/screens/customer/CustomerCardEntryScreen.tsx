@@ -70,6 +70,10 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
         installments: Number(installments || 1),
         cpf: onlyDigits(cpf),
         email: trim(email).toLowerCase(),
+          payer: {
+          cpf: onlyDigits(cpf),
+          email: trim(email).toLowerCase(),
+        },
         card: {
           cardToken,
           securityCode: onlyDigits(cvv),

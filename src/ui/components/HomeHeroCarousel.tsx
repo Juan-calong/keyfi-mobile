@@ -164,13 +164,13 @@ export function HomeHeroCarousel({
 
 const styles = StyleSheet.create({
   singleWrap: {
-    height: 210,
+    height: 250,
     borderRadius: 5,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",
   },
   slideWrap: {
-    height: 210,
+    height: 230,
     borderRadius: 5,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",

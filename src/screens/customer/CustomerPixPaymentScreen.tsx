@@ -225,6 +225,9 @@ const method = String(payment?.method ?? "").toUpperCase();
       navigation.navigate(CUSTOMER_SCREENS.CardTokenize, {
         orderId,
         amount,
+        successRouteName: CUSTOMER_SCREENS.CardEntry,
+        cancelRouteName: CUSTOMER_SCREENS.PixPayment,
+        cancelParams: { orderId, amount },
       });
     } finally {
       setTimeout(() => {

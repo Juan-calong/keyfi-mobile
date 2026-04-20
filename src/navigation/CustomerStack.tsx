@@ -14,7 +14,7 @@ import { CardTokenizeWebViewScreen } from "../screens/payments/CardTokenizeWebVi
 import { CustomerProfileMeScreen } from "../screens/customer/CustomerProfileMeScreen";
 import { CustomerShippingMethodScreen } from "../screens/customer/CustomerShippingMethodScreen";
 import { CustomerCheckoutAddressScreen } from "../screens/customer/CustomerCheckoutAddressScreen";
-
+import { ApplyReferralScreen } from "../screens/ApplyReferralScreen";
 
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -58,8 +58,8 @@ export function CustomerStack() {
       />
 
       <Stack.Screen
-        name={CUSTOMER_SCREENS.BoletoPayerForm}
-        component={CustomerBoletoPayerFormScreen}
+        name={CUSTOMER_SCREENS.ApplyReferral}
+        component={ApplyReferralScreen}
       />
 
       <Stack.Screen

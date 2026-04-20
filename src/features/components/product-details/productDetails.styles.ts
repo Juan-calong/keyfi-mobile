@@ -241,6 +241,14 @@ export const s = StyleSheet.create({
     lineHeight: 28,
   },
 
+    quantityDiscountText: {
+    marginTop: 6,
+    color: COLORS.textSoft,
+    fontWeight: "800",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
   separator: {
     height: 1,
     backgroundColor: COLORS.border,
