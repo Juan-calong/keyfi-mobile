@@ -7,7 +7,6 @@ import {
   Pressable,
   StyleSheet,
   Linking,
-  useWindowDimensions,
 } from "react-native";
 import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -104,6 +103,7 @@ type PreviewItem = {
   price?: string | number | null;
   originalPrice?: string | number | null;
   hasDiscount?: boolean;
+  discountPercent?: number | null;
   ratingValue?: number | null;
   ratingCount?: number | null;
   isFavorite?: boolean;
@@ -301,6 +301,39 @@ function getCardPriceData(p: any) {
     price: base,
     originalPrice: null,
     hasDiscount: false,
+  };
+}
+
+function getDiscountPercent(
+  price: string | number | null | undefined,
+  originalPrice: string | number | null | undefined
+) {
+  const current = toNumberBR(price);
+  const original = toNumberBR(originalPrice);
+
+  if (!(original > 0) || !(current >= 0) || current >= original) return null;
+
+  const pct = Math.round(((original - current) / original) * 100);
+  return pct > 0 ? pct : null;
+}
+
+function mergeWithPromoPricing(baseProduct: ProductDTO, promoProduct?: ProductDTO) {
+  if (!promoProduct) return baseProduct;
+
+  return {
+    ...baseProduct,
+    promoType: promoProduct.promoType ?? null,
+    promoValue: promoProduct.promoValue ?? null,
+    promoPrice: promoProduct.promoPrice ?? null,
+    salePrice: promoProduct.salePrice ?? null,
+    pricePromo: promoProduct.pricePromo ?? null,
+    promotionalPrice: promoProduct.promotionalPrice ?? null,
+    discountedPrice: promoProduct.discountedPrice ?? null,
+    finalPrice: promoProduct.finalPrice ?? null,
+    discountPct: promoProduct.discountPct ?? promoProduct.discountPercent ?? null,
+    discountPercent: promoProduct.discountPercent ?? null,
+    discountValue: promoProduct.discountValue ?? promoProduct.discountAmount ?? null,
+    discountAmount: promoProduct.discountAmount ?? null,
   };
 }
 
@@ -636,12 +669,6 @@ function PreviewGrid({
   onPressItem: (id: string) => void;
   onAddToCart: (id: string) => void;
 }) {
-  const { width } = useWindowDimensions();
-
-  const gap = 4;
-  const horizontalPadding = 4;
-  const containerHorizontalInset = horizontalPadding * 2;
-  const cardWidth = Math.floor((width - containerHorizontalInset - gap) / 2);
   const qtyById = useCartStore((s) => s.qtyById);
 
   return (
@@ -653,16 +680,12 @@ function PreviewGrid({
       scrollEnabled={false}
       columnWrapperStyle={styles.gridRow}
       contentContainerStyle={styles.gridContent}
-      ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
       renderItem={({ item }) => {
         const productId = String(item.id);
         const inCart = Number(qtyById?.[productId] ?? 0) > 0;
 
         return (
-          <Pressable
-            onPress={() => onPressItem(productId)}
-            style={[styles.cardWrap, { width: cardWidth }]}
-          >
+          <Pressable onPress={() => onPressItem(productId)} style={styles.cardWrap}>
             <View style={styles.card}>
               <View style={styles.cardImageWrap}>
                 {item.imageUri ? (
@@ -674,6 +697,14 @@ function PreviewGrid({
                 ) : (
                   <View style={styles.cardImageFallback} />
                 )}
+
+                {item.hasDiscount && item.discountPercent ? (
+                  <View style={styles.cardPromoBadge}>
+                    <Text style={styles.cardPromoBadgeTxt}>
+                      {item.discountPercent}% OFF
+                    </Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.cardTopRightAction}>
                   <ProductFavoriteButton
@@ -815,7 +846,6 @@ export function OwnerHomeScreen() {
     retry: false,
   });
 
-
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
       .filter((b) => b?.active !== false && !!b?.imageUrl)
@@ -825,6 +855,14 @@ export function OwnerHomeScreen() {
   const products = useMemo(() => {
     return (productsQ.data ?? []).filter((p) => p?.active !== false);
   }, [productsQ.data]);
+
+  const productsById = useMemo(() => {
+    const map = new Map<string, ProductDTO>();
+    for (const item of products) {
+      if (item?.id) map.set(item.id, item);
+    }
+    return map;
+  }, [products]);
 
   const promoProducts = useMemo(() => {
     return (promosQ.data ?? []).filter((p) => p?.active !== false);
@@ -843,21 +881,24 @@ export function OwnerHomeScreen() {
   const promoBasePreview = useMemo<PreviewItem[]>(
     () =>
       promoProducts.slice(0, 10).map((p) => {
-        const priceData = getCardPriceData(p);
+        const baseProduct = productsById.get(p.id) ?? p;
+        const merged = mergeWithPromoPricing(baseProduct, p);
+        const priceData = getCardPriceData(merged);
 
         return {
           id: p.id,
-          name: p.name,
-          imageUri: getProductImageUri(p),
+          name: merged.name,
+          imageUri: getProductImageUri(merged),
           price: priceData.price,
           originalPrice: priceData.originalPrice,
           hasDiscount: priceData.hasDiscount,
-          ratingValue: getProductRatingValue(p),
-          ratingCount: getProductRatingCount(p),
+          discountPercent: getDiscountPercent(priceData.price, priceData.originalPrice),
+          ratingValue: getProductRatingValue(merged),
+          ratingCount: getProductRatingCount(merged),
           isFavorite: resolveFavoriteFlag(p, favoriteIds),
         };
       }),
-    [promoProducts, favoriteIds]
+    [promoProducts, productsById, favoriteIds]
   );
 
   const handleAddToCart = useCallback(
@@ -886,10 +927,7 @@ export function OwnerHomeScreen() {
     });
 
     return copy.slice(0, 10).map((p) => {
-      const merged = promoProductById.get(p.id)
-        ? { ...p, ...promoProductById.get(p.id) }
-        : p;
-
+      const merged = mergeWithPromoPricing(p, promoProductById.get(p.id));
       const priceData = getCardPriceData(merged);
 
       return {
@@ -899,6 +937,7 @@ export function OwnerHomeScreen() {
         price: priceData.price,
         originalPrice: priceData.originalPrice,
         hasDiscount: priceData.hasDiscount,
+        discountPercent: getDiscountPercent(priceData.price, priceData.originalPrice),
         ratingValue: getProductRatingValue(merged),
         ratingCount: getProductRatingCount(merged),
         isFavorite: resolveFavoriteFlag(merged, favoriteIds),
@@ -1156,6 +1195,14 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
+  content: {
+    paddingBottom: 14,
+  },
+
+  stack: {
+    gap: 0,
+  },
+
   cardTopRightAction: {
     position: "absolute",
     top: 10,
@@ -1192,14 +1239,16 @@ const styles = StyleSheet.create({
 
   gridContent: {
     paddingTop: 6,
-    paddingHorizontal: 2,
   },
 
   gridRow: {
     justifyContent: "space-between",
+    marginBottom: 14,
   },
 
-  cardWrap: {},
+  cardWrap: {
+    width: "48.5%",
+  },
 
   bgLayer: {
     ...StyleSheet.absoluteFillObject,
@@ -1209,134 +1258,63 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 
-  cardRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-    minHeight: 16,
-  },
-
-  cardStarsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-
-  cardRatingSpacer: {
-    height: 16,
-    marginTop: 4,
-  },
-
-  cardPriceBlock: {
-    marginTop: 6,
-    alignItems: "flex-start",
-  },
-
-  cardPriceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "nowrap",
-    gap: 6,
-  },
-
-  cardPrice: {
-    color: "rgba(0,0,0,0.78)",
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 17,
-    flexShrink: 0,
-  },
-
-  cardOldPriceInline: {
-    color: "rgba(0,0,0,0.42)",
-    fontSize: 10,
-    fontWeight: "700",
-    textDecorationLine: "line-through",
-    flexShrink: 1,
-  },
-
-  cardRatingStar: {
-    marginRight: 1,
-  },
-
-  cardRatingText: {
-    marginLeft: 6,
-    color: "rgba(0,0,0,0.55)",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
-
   blobTopLeft: {
     position: "absolute",
-    top: -20,
-    left: -70,
-    width: 260,
-    height: 200,
+    top: -60,
+    left: -40,
+    width: 220,
+    height: 220,
     borderRadius: 999,
-    transform: [{ rotate: "-10deg" }],
   },
 
   blobTopRight: {
     position: "absolute",
-    top: 70,
-    right: -90,
-    width: 250,
-    height: 210,
+    top: 40,
+    right: -70,
+    width: 200,
+    height: 200,
     borderRadius: 999,
-    transform: [{ rotate: "12deg" }],
   },
 
   blobMidLeft: {
     position: "absolute",
-    top: 270,
+    top: 280,
     left: -80,
-    width: 280,
+    width: 240,
     height: 240,
     borderRadius: 999,
-    transform: [{ rotate: "18deg" }],
   },
 
   blobMidRight: {
     position: "absolute",
-    top: 350,
-    right: -95,
-    width: 290,
+    top: 430,
+    right: -80,
+    width: 260,
     height: 260,
     borderRadius: 999,
-    transform: [{ rotate: "-14deg" }],
   },
 
   blobBottomLeft: {
     position: "absolute",
-    bottom: 120,
-    left: -40,
-    width: 300,
-    height: 220,
+    bottom: 180,
+    left: -90,
+    width: 260,
+    height: 260,
     borderRadius: 999,
-    transform: [{ rotate: "10deg" }],
   },
 
   blobBottomRight: {
     position: "absolute",
-    bottom: 10,
-    right: -85,
-    width: 270,
-    height: 210,
+    bottom: -30,
+    right: -100,
+    width: 280,
+    height: 280,
     borderRadius: 999,
-    transform: [{ rotate: "-8deg" }],
   },
 
   softVeil: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.65,
-  },
-
-  content: {
-    paddingBottom: 20,
-  },
-
-  stack: {
-    gap: 10,
+    opacity: 0.9,
   },
 
   hairline: {
@@ -1364,20 +1342,17 @@ const styles = StyleSheet.create({
   },
 
   card: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(92, 89, 81, 0.35)",
-    backgroundColor: "transparent",
     overflow: "hidden",
   },
 
   cardImageWrap: {
     width: "100%",
     aspectRatio: 1,
-    paddingTop: 1,
-    paddingHorizontal: 1,
-    justifyContent: "center",
-    backgroundColor: "transparent",
+    backgroundColor: "#F7F4F3",
+    overflow: "hidden",
+    position: "relative",
   },
 
   cardImage: {
@@ -1387,27 +1362,98 @@ const styles = StyleSheet.create({
 
   cardImageFallback: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#F7F4F3",
+  },
+
+  cardPromoBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "#5D5351",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+
+  cardPromoBadgeTxt: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
 
   cardInnerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    display: "none",
   },
 
   cardMeta: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     paddingTop: 8,
     paddingBottom: 10,
-    minHeight: 92,
+    minHeight: 90,
     justifyContent: "space-between",
   },
 
   cardName: {
-    color: "#000",
-    fontSize: 11,
+    color: "#1F1A19",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 17,
+    minHeight: 34,
+  },
+
+  cardRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    minHeight: 16,
+  },
+
+  cardStarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+
+  cardRatingStar: {
+    marginRight: 1,
+  },
+
+  cardRatingText: {
+    marginLeft: 4,
+    color: "rgba(0,0,0,0.65)",
+    fontSize: 10.5,
+    fontWeight: "600",
+  },
+
+  cardRatingSpacer: {
+    height: 16,
+    marginTop: 4,
+  },
+
+  cardPriceBlock: {
+    marginTop: 6,
+    alignItems: "flex-start",
+  },
+
+  cardPriceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+
+  cardPrice: {
+    color: "rgba(0,0,0,0.78)",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 17,
+  },
+
+  cardOldPriceInline: {
+    color: "rgba(0,0,0,0.42)",
+    fontSize: 10,
     fontWeight: "700",
-    lineHeight: 15,
-    minHeight: 30,
+    textDecorationLine: "line-through",
   },
 });
