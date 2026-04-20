@@ -23,6 +23,20 @@ export type Product = {
   isFavorite?: boolean;
   favoritesCount?: number;
   commentsCount?: number;
+  activePromo?: {
+  id?: string | null;
+  type?: string | null;
+  value?: string | number | null;
+  promoPrice?: number | string | null;
+  startsAt?: string | Date | null;
+  endsAt?: string | Date | null;
+} | null;
+pricing?: {
+  basePrice?: number | string | null;
+  promoPrice?: number | string | null;
+  effectivePrice?: number | string | null;
+  hasActivePromo?: boolean | null;
+} | null;
 
   stock?: number | null;
   active: boolean;
@@ -50,35 +64,37 @@ export type Product = {
   volume?: string | null;
   audience?: "ALL" | "STAFF_ONLY" | string | null;
 
-  activePromo?: {
-    id: string;
-    type: string;
-    value: string;
-    promoPrice?: number | null;
-    startsAt?: string | Date;
-    endsAt?: string | Date | null;
-  } | null;
-    quantityDiscount?: {
-    enabled?: boolean | null;
-    source?: string | null;
-    tiers?: Array<{
-      minQty?: number | string | null;
-      qty?: number | string | null;
-      quantity?: number | string | null;
-      percentOff?: number | string | null;
-      discountPercent?: number | string | null;
-      percentage?: number | string | null;
-      value?: number | string | null;
-      type?: string | null;
-    }> | null;
-    minQty?: number | string | null;
-    quantity?: number | string | null;
-    qty?: number | string | null;
+  activeOffers?: Array<{
     type?: string | null;
-    value?: number | string | null;
-    percent?: number | string | null;
-    percentage?: number | string | null;
-    discountPercent?: number | string | null;
+    promoType?: string | null;
+    id?: string | null;
+    label?: string | null;
+    shortLabel?: string | null;
+    description?: string | null;
+    startsAt?: string | Date | null;
+    endsAt?: string | Date | null;
+  }> | null;
+
+  offerBadges?: string[] | null;
+
+  quantityDiscount?: {
+    enabled?: boolean | null;
+    source?: {
+      type?: string | null;
+      id?: string | null;
+      name?: string | null;
+      appliesTo?: string | null;
+      startsAt?: string | Date | null;
+      endsAt?: string | Date | null;
+    } | null;
+    tiers?: Array<{
+      id?: string | null;
+      minQty?: number | null;
+      discountType?: string | null;
+      discountValue?: number | null;
+      unitPriceAfterQuantity?: number | null;
+      unitPriceFinal?: number | null;
+    }> | null;
     label?: string | null;
     description?: string | null;
   } | null;

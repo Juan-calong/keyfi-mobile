@@ -241,12 +241,79 @@ export const s = StyleSheet.create({
     lineHeight: 28,
   },
 
-    quantityDiscountText: {
-    marginTop: 6,
+quantityDiscountText: {
+  marginTop: 6,
+  color: COLORS.textSoft,
+  fontWeight: "700",
+  fontSize: 12,
+  lineHeight: 17,
+},
+
+  offersSection: {
+    marginTop: 10,
+    gap: 8,
+  },
+
+offerBadgesWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+},
+
+promoOfferChip: {
+  alignSelf: "flex-start",
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 6,
+  backgroundColor: "transparent",
+  borderWidth: 2,
+  borderColor: "#5A403A",
+},
+
+promoOfferText: {
+  color: "#5A403A",
+  fontWeight: "900",
+  fontSize: 12,
+  letterSpacing: 0.2,
+},
+
+quantityOfferChip: {
+  alignSelf: "flex-start",
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 6,
+  backgroundColor: "transparent",
+  borderWidth: 2,
+  borderColor: "#A06A2C",
+},
+
+quantityOfferText: {
+  color: "#A06A2C",
+  fontWeight: "800",
+  fontSize: 12,
+},
+
+  offerBadgeChip: {
+    maxWidth: "100%",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#F4EEE8",
+    borderWidth: 1,
+    borderColor: "#E5D8CC",
+  },
+
+  offerBadgeText: {
+    color: COLORS.black,
+    fontWeight: "700",
+    fontSize: 11.5,
+  },
+
+  offerDescriptionText: {
     color: COLORS.textSoft,
-    fontWeight: "800",
-    fontSize: 12,
-    lineHeight: 17,
+    fontWeight: "600",
+    fontSize: 12.5,
+    lineHeight: 18,
   },
 
   separator: {
@@ -260,7 +327,7 @@ export const s = StyleSheet.create({
   },
 
   sectionSpacing: {
-    marginTop: 18,
+
   },
 
   sectionTitle: {

@@ -128,6 +128,42 @@ function findFavoriteFlagInData(
   return undefined;
 }
 
+function formatBRLShort(value?: string | number | null) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return "";
+  return `R$ ${n.toFixed(2).replace(".", ",")}`;
+}
+
+function buildQuantityTierBadge(tier: any) {
+  const minQty = Number(
+    tier?.minQty ?? tier?.qty ?? tier?.quantity ?? 0
+  );
+
+  const discountType = String(
+    tier?.discountType ?? tier?.type ?? ""
+  ).toUpperCase();
+
+  const discountValue = Number(
+    tier?.discountValue ?? tier?.value ?? 0
+  );
+
+  if (!Number.isFinite(minQty) || minQty <= 0) return "";
+
+  if ((discountType === "FIXED" || discountType === "VALUE") && Number.isFinite(discountValue) && discountValue > 0) {
+    return `${minQty}+ (${formatBRLShort(discountValue)})`;
+  }
+
+  if (discountType === "PCT" && Number.isFinite(discountValue) && discountValue > 0) {
+    return `${minQty}+ (${discountValue}% OFF)`;
+  }
+
+  if ((discountType === "PRICE" || discountType === "FIXED_PRICE") && Number.isFinite(discountValue) && discountValue > 0) {
+    return `${minQty}+ (por ${formatBRLShort(discountValue)})`;
+  }
+
+  return `${minQty}+`;
+}
+
 function extractItemsFromData(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
@@ -206,7 +242,10 @@ function getBasePrice(item: any, viewerMode: ViewerMode) {
 }
 
 function getPromoPrice(item: any) {
-  const promoPrice = toNullableNumber(item?.activePromo?.promoPrice);
+  const promoPrice =
+    toNullableNumber(item?.activePromo?.promoPrice) ??
+    toNullableNumber(item?.pricing?.promoPrice);
+
   if (promoPrice == null || promoPrice <= 0) return null;
   return promoPrice;
 }
@@ -221,16 +260,18 @@ function getPromoLabel(item: any, viewerMode: ViewerMode) {
   const type = String(promo?.type || "").toUpperCase();
   const value = toNumber(promo?.value);
 
-  if (type === "PCT" && value > 0) {
-    return `${Math.round(value)} OFF`;
-  }
+if (type === "PCT" && value > 0) {
+  return `${Math.round(value)}% OFF`;
+}
 
   return "OFF";
 }
 
 function getPriceModel(item: any, viewerMode: ViewerMode = "OWNER") {
   const base = getBasePrice(item, viewerMode);
-  const effective = toNullableNumber(item?.effectivePrice);
+  const effective =
+    toNullableNumber(item?.pricing?.effectivePrice) ??
+    toNullableNumber(item?.effectivePrice);
   const promoPrice = getPromoPrice(item);
 
   const hasPromo =
@@ -584,6 +625,7 @@ function DetailAccordion({
   );
 }
 
+
 export function SharedProductDetails({
   product,
   productQuery,
@@ -598,6 +640,14 @@ export function SharedProductDetails({
   allowVideos = false,
   viewerMode = "OWNER",
 }: Props) {
+    console.log("[PRODUCT_DETAILS][PROMO_DEBUG]", {
+    id: product?.id,
+    name: product?.name,
+    activePromo: (product as any)?.activePromo,
+    effectivePrice: (product as any)?.effectivePrice,
+    pricing: (product as any)?.pricing,
+    quantityDiscount: (product as any)?.quantityDiscount,
+  });
   const { width: screenWidth } = useWindowDimensions();
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(
@@ -694,6 +744,16 @@ export function SharedProductDetails({
     () => buildFavoriteIds(favoritesQ.data),
     [favoritesQ.data]
   );
+
+  const quantityTierBadges = useMemo(() => {
+  const tiers = Array.isArray((product as any)?.quantityDiscount?.tiers)
+    ? (product as any).quantityDiscount.tiers
+    : [];
+
+  return tiers
+    .map((tier: any) => buildQuantityTierBadge(tier))
+    .filter(Boolean);
+}, [product]);
 
   const commentsQ = useQuery({
     queryKey: ["product-comments", product?.id],
@@ -1066,12 +1126,6 @@ export function SharedProductDetails({
               </View>
 
               <View style={s.content}>
-                {priceModel.promoLabel ? (
-                  <View style={s.promoPill}>
-                    <Text style={s.promoPillText}>{priceModel.promoLabel}</Text>
-                  </View>
-                ) : null}
-
                 <Text style={s.name} numberOfLines={2} ellipsizeMode="tail">
                   {product.name}
                 </Text>
@@ -1086,29 +1140,42 @@ export function SharedProductDetails({
                   <Text style={s.ratingCount}>({reviewsCount || 0})</Text>
                 </View>
 
-                <View style={s.priceRow}>
-                  {priceModel.hasPromo ? (
-                    <>
-                      <Text style={s.oldPrice}>
-                        {formatBRL(priceModel.oldPrice)}
-                      </Text>
-                      <Text style={s.pricePromo}>
-                        {formatBRL(priceModel.currentPrice)}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text style={s.pricePromo}>
-                      {formatBRL(priceModel.currentPrice)}
-                    </Text>
-                  )}
-                </View>
+<View style={s.priceRow}>
+  {priceModel.hasPromo ? (
+    <>
+      <Text style={s.oldPrice}>{formatBRL(priceModel.oldPrice)}</Text>
+      <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
+    </>
+  ) : (
+    <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
+  )}
+</View>
 
-                  {quantityDiscountLabel ? (
-                  <Text style={s.quantityDiscountText}>{quantityDiscountLabel}</Text>
-                ) : null}
+{priceModel.promoLabel ? (
+  <View style={s.offersSection}>
+    <View style={s.offerBadgesWrap}>
+      <View style={s.promoOfferChip}>
+        <Text style={s.promoOfferText}>{priceModel.promoLabel}</Text>
+      </View>
+    </View>
+  </View>
+) : null}
 
-                <View style={s.separator} />
+{quantityTierBadges.length > 0 ? (
+  <View style={s.offersSection}>
+    <View style={s.offerBadgesWrap}>
+      {quantityTierBadges.map((badge: string, index: number) => (
+        <View style={s.quantityOfferChip} key={`${badge}-${index}`}>
+          <Text style={s.quantityOfferText}>{badge}</Text>
+        </View>
+      ))}
+    </View>
+  </View>
+) : quantityDiscountLabel ? (
+  <Text style={s.quantityDiscountText}>{quantityDiscountLabel}</Text>
+) : null}
 
+<View style={s.separator} />
                 <View style={s.cartActionRow}>
                   <View style={s.qtyGroup}>
                     <Pressable
