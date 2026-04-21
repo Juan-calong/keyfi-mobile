@@ -185,7 +185,7 @@ export function OwnerCartScreen() {
           text: "Continuar sem cupom",
           style: "destructive",
           onPress: () =>
-            nav.navigate(OWNER_SCREENS.CheckoutAddress, {
+            nav.navigate(OWNER_SCREENS.ShippingMethod, {
               items: itemsPayload,
               couponCode: appliedCoupon || undefined,
             }),
@@ -195,7 +195,7 @@ export function OwnerCartScreen() {
     return;
   }
 
-nav.navigate(OWNER_SCREENS.CheckoutAddress, {
+nav.navigate(OWNER_SCREENS.ShippingMethod, {
   items: itemsPayload,
   couponCode: appliedCoupon || undefined,
 });
