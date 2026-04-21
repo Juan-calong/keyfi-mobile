@@ -65,12 +65,17 @@ export type OwnerStackParamList = {
   [OWNER_SCREENS.CheckoutAddress]: {
     items: { productId: string; qty: number }[];
     couponCode?: string;
+    deliveryAddress?: CheckoutAddressPayload;
+    zipcode?: string;
+    zipCode?: string;
   };
 
   [OWNER_SCREENS.ShippingMethod]: {
     items: { productId: string; qty: number }[];
     couponCode?: string;
     deliveryAddress?: CheckoutAddressPayload;
+    zipcode?: string;
+    zipCode?: string;
   };
 
   [OWNER_SCREENS.PixPayment]:

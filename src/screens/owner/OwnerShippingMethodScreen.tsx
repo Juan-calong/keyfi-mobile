@@ -42,6 +42,9 @@ export function OwnerShippingMethodScreen({ route }: any) {
         nav.navigate(OWNER_SCREENS.CheckoutAddress, {
           items,
           couponCode,
+          deliveryAddress,
+          zipcode,
+          zipCode: zipcode,
         })
       }
       onContinue={({ orderId, amount, shippingOption }) => {

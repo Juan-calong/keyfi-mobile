@@ -64,12 +64,17 @@ export type CustomerStackParamList = {
   [CUSTOMER_SCREENS.CheckoutAddress]: {
     items: { productId: string; qty: number }[];
     couponCode?: string;
+    deliveryAddress?: CheckoutAddressPayload;
+    zipcode?: string;
+    zipCode?: string;
   };
 
   [CUSTOMER_SCREENS.ShippingMethod]: {
     items: { productId: string; qty: number }[];
     couponCode?: string;
     deliveryAddress?: CheckoutAddressPayload;
+    zipcode?: string;
+    zipCode?: string;
   };
 
   [CUSTOMER_SCREENS.PixPayment]:

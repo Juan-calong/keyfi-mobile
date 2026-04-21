@@ -576,12 +576,20 @@ export function SharedShippingMethodScreen({
 
   const activeDeliveryAddress = deliveryAddress ?? profileDeliveryAddress;
 
-  const rawZipcode =
-    zipcode ??
-    zipCode ??
-    activeDeliveryAddress?.zipCode ??
-    activeDeliveryAddress?.zipcode ??
-    "";
+const rawZipcode = useMemo(() => {
+  const candidates = [
+    zipcode,
+    zipCode,
+    activeDeliveryAddress?.zipCode,
+    activeDeliveryAddress?.zipcode,
+  ];
+
+  const firstNonEmpty = candidates.find(
+    (value) => String(value ?? "").trim() !== ""
+  );
+
+  return String(firstNonEmpty ?? "");
+}, [zipcode, zipCode, activeDeliveryAddress]);
 
     
 

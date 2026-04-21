@@ -30,6 +30,7 @@ type Props = {
   profileMode: "customer" | "owner";
   initialCouponCode?: string;
   items: { productId: string; qty: number }[];
+  initialAddress?: Partial<CheckoutAddressValues> | null;
   onContinue: (address: CheckoutAddressValues) => void;
 };
 
@@ -44,11 +45,11 @@ function maskCep(v: string) {
 }
 
 export function SharedCheckoutAddressScreen({
-  
   title = "Endereço de entrega",
   subtitle = "Confirme o endereço antes de calcular o frete",
   profileMode,
   items,
+  initialAddress,
   onContinue,
 }: Props) {
   const [form, setForm] = React.useState<CheckoutAddressValues>({
@@ -74,6 +75,24 @@ export function SharedCheckoutAddressScreen({
     retry: false,
     staleTime: 30_000,
   });
+
+  React.useEffect(() => {
+    if (didHydrate) return;
+    if (!initialAddress) return;
+
+    const initialZipcode = onlyDigits(
+      String(initialAddress.zipCode || initialAddress.zipcode || "")
+    );
+
+    setForm((prev) => ({
+      ...prev,
+      ...initialAddress,
+      zipCode: maskCep(initialZipcode),
+      zipcode: initialZipcode,
+    }));
+
+    setDidHydrate(true);
+  }, [didHydrate, initialAddress]);
 
   React.useEffect(() => {
     if (didHydrate) return;
