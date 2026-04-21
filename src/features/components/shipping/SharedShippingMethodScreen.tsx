@@ -22,6 +22,7 @@ import { toNumberBR, formatBRL } from "../../components/cart/cart.shared.utils";
 import type { CartPreviewResp } from "../../components/cart/cart.shared.types";
 import type { ShippingQuoteOption, ShippingOption } from "./shipping.types";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { resolveCheckoutAddressFromProfile } from "../../checkout/checkoutAddressProfile";
 
 
 type ShippingQuoteApiResponse = {
@@ -491,14 +492,34 @@ export function SharedShippingMethodScreen({
     null
   );
   const insets = useSafeAreaInsets();
-const continueLockRef = useRef(false);
-const orderAttemptKeyRef = useRef<string | null>(null);
+  const continueLockRef = useRef(false);
+  const orderAttemptKeyRef = useRef<string | null>(null);
+
+    const meQ = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await api.get(endpoints.profiles.me)).data,
+    retry: false,
+    staleTime: 60000,
+  });
+
+  const me = meQ.data;
+  const profileMode = role === "SALON_OWNER" ? "owner" : "customer";
+
+  const profileDeliveryAddress = useMemo(() => {
+    if (!me) return null;
+    return resolveCheckoutAddressFromProfile(me, profileMode);
+  }, [me, profileMode]);
+
+  const activeDeliveryAddress = deliveryAddress ?? profileDeliveryAddress;
+
+
+
 
   const rawZipcode =
     zipcode ??
     zipCode ??
-    deliveryAddress?.zipCode ??
-    deliveryAddress?.zipcode ??
+    activeDeliveryAddress?.zipCode ??
+    activeDeliveryAddress?.zipcode ??
     "";
 
     
@@ -523,8 +544,8 @@ const orderAttemptKeyRef = useRef<string | null>(null);
   }, [role, cleanZipcode, couponCode, items]);
 
   const normalizedDeliveryAddress = useMemo(
-    () => normalizeDeliveryAddress(deliveryAddress, cleanZipcode),
-    [deliveryAddress, cleanZipcode]
+    () => normalizeDeliveryAddress(activeDeliveryAddress, cleanZipcode),
+    [activeDeliveryAddress, cleanZipcode]
   );
 
   const selectedSelectionKey = useMemo(
@@ -537,15 +558,6 @@ const orderAttemptKeyRef = useRef<string | null>(null);
 React.useEffect(() => {
   orderAttemptKeyRef.current = null;
 }, [shippingContextKey, selectedSelectionKey]);
-
-  const meQ = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await api.get(endpoints.profiles.me)).data,
-    retry: false,
-    staleTime: 60000,
-  });
-
-  const me = meQ.data;
 
   const payerName = useMemo(() => pickUserName(me), [me]);
   const payerEmail = useMemo(() => trim(pickEmail(me)), [me]);
@@ -924,7 +936,7 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
               {!hasValidZipcode ? (
                 <InlineInfoCard
                   title="CEP de entrega não encontrado"
-                  message="Volte para a etapa anterior e selecione um endereço válido antes de cotar o frete."
+                  message="Não encontramos um CEP válido no endereço de entrega. Atualize seu endereço no perfil e tente novamente."
                 />
               ) : noOptions ? (
                 <InlineInfoCard
