@@ -10,7 +10,7 @@ type Props = {
 };
 
 export function CartHeader({
-  title = "Cart",
+  title = "Carrinho",
   onBack,
   rightText = "",
   onRightPress,

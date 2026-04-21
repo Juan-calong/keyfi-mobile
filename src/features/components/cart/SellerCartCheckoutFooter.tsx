@@ -88,13 +88,13 @@ export function SellerCartCheckoutFooter({
         </View>
       ) : null}
 
-      <Text style={s.sectionTitle}>Promo code</Text>
+       <Text style={s.sectionTitle}>Código promocional</Text>
 
       <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
         <TextInput
           value={coupon}
           onChangeText={onChangeCoupon}
-          placeholder="Promo code"
+          placeholder="Código promocional"
           placeholderTextColor="rgba(0,0,0,0.45)"
           autoCapitalize="characters"
           style={s.couponInput}
@@ -111,24 +111,23 @@ export function SellerCartCheckoutFooter({
           ]}
         >
           <Text style={s.couponBtnText}>
-            {isApplyingCoupon ? "..." : "Apply"}
+            {isApplyingCoupon ? "..." : "Aplicar"}
           </Text>
         </Pressable>
       </View>
 
       {appliedCoupon ? (
         <View style={s.appliedRow}>
-          <Text style={s.promoApplied}>Applied: {appliedCoupon}</Text>
-
+          <Text style={s.promoApplied}>Aplicado: {appliedCoupon}</Text>
           <Pressable onPress={onClearCoupon} hitSlop={10} style={s.clearCouponHit}>
-            <Text style={s.clearCouponText}>Remove</Text>
+            <Text style={s.clearCouponText}>Remover</Text>
           </Pressable>
         </View>
       ) : null}
 
       <View style={{ height: 12 }} />
 
-      <Text style={s.sectionTitle}>Order Summary</Text>
+      <Text style={s.sectionTitle}>Resumo do pedido</Text>
 
       <View style={{ marginTop: 8, gap: 8 }}>
         <SummaryRow
@@ -153,7 +152,7 @@ export function SellerCartCheckoutFooter({
         />
         <SummaryRow
           s={s}
-          label="Shipping"
+          label="Frete"
           value={formatBRL(toNumberBR(summary?.shipping || 0))}
         />
         <View style={s.sep} />

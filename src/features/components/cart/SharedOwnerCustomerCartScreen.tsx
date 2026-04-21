@@ -177,7 +177,7 @@ export function SharedOwnerCustomerCartScreen({
             letterSpacing: 0.3,
           }}
         >
-          Voltar Para Loja
+          Voltar para loja
         </Text>
       </Pressable>
     </View>
@@ -190,9 +190,9 @@ export function SharedOwnerCustomerCartScreen({
       <SafeAreaView style={{ flex: 1, backgroundColor: WHITE }}>
         <Container style={{ flex: 1, backgroundColor: WHITE }}>
           <CartHeader
-            title="Cart"
+            title="Carrinho"
             onBack={onBack}
-            rightText={cartItemsLength ? "Clear" : ""}
+            rightText={cartItemsLength ? "Limpar" : ""}
             onRightPress={onClearCart}
           />
 
@@ -275,7 +275,7 @@ export function SharedOwnerCustomerCartScreen({
                     onPress={onCheckout}
                   >
                     <Text style={s.checkoutText}>
-                      {checkoutPending ? "..." : "Checkout"}
+                      {checkoutPending ? "..." : "Finalizar compra"}
                     </Text>
                   </Pressable>
                 </View>

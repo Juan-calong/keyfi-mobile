@@ -37,7 +37,7 @@ export function OwnerCustomerCartRow({
           />
         ) : (
           <View style={s.thumbPh}>
-            <Text style={s.thumbPhText}>No image</Text>
+            <Text style={s.thumbPhText}>Sem imagem</Text>
           </View>
         )}
       </View>

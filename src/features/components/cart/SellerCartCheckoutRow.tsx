@@ -40,7 +40,7 @@ export function SellerCartCheckoutRow({
           />
         ) : (
           <View style={s.thumbPh}>
-            <Text style={s.thumbPhText}>No image</Text>
+            <Text style={s.thumbPhText}>Sem imagem</Text>
           </View>
         )}
       </View>
@@ -91,7 +91,7 @@ export function SellerCartCheckoutRow({
           hitSlop={8}
           style={({ pressed }) => [s.removeBtn, pressed && { opacity: 0.7 }]}
         >
-          <Text style={s.removeText}>Remove</Text>
+          <Text style={s.removeText}>Remover</Text>
         </Pressable>
       </View>
     </View>

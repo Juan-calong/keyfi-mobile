@@ -330,7 +330,7 @@ export function SellerCartCheckoutScreen() {
       <View style={s.header}>
         <Pressable onPress={() => nav.goBack?.()} hitSlop={12} style={s.headerLeft}>
           <Text style={s.chev}>‹</Text>
-          <Text style={s.backText}>Back</Text>
+          <Text style={s.backText}>Voltar</Text>
         </Pressable>
 
         <Text style={s.headerTitle}>Carrinho</Text>
@@ -371,7 +371,7 @@ export function SellerCartCheckoutScreen() {
                         />
                       ) : (
                         <View style={s.thumbPh}>
-                          <Text style={s.thumbPhText}>No image</Text>
+                          <Text style={s.thumbPhText}>Sem imagem</Text>
                         </View>
                       )}
                     </View>
@@ -422,7 +422,7 @@ export function SellerCartCheckoutScreen() {
                         hitSlop={8}
                         style={({ pressed }) => [s.removeBtn, pressed && { opacity: 0.7 }]}
                       >
-                        <Text style={s.removeText}>Remove</Text>
+                        <Text style={s.removeText}>Remover</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -443,12 +443,12 @@ export function SellerCartCheckoutScreen() {
                 </View>
               ) : null}
 
-              <Text style={s.sectionTitle}>Promo code</Text>
+              <Text style={s.sectionTitle}>Código promocional</Text>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
                 <TextInput
                   value={coupon}
                   onChangeText={setCoupon}
-                  placeholder="Promo code"
+                  placeholder="Código promocional"
                   placeholderTextColor="rgba(0,0,0,0.45)"
                   autoCapitalize="characters"
                   style={s.couponInput}
@@ -465,27 +465,27 @@ export function SellerCartCheckoutScreen() {
                   ]}
                 >
                   <Text style={s.couponBtnText}>
-                    {applyCouponMut.isPending ? "..." : "Apply"}
+                    {applyCouponMut.isPending ? "..." : "Aplicar"}
                   </Text>
                 </Pressable>
               </View>
 
               {appliedCoupon ? (
   <View style={s.appliedRow}>
-    <Text style={s.promoApplied}>Applied: {appliedCoupon}</Text>
+    <Text style={s.promoApplied}>Aplicado: {appliedCoupon}</Text>
     <Pressable
       onPress={clearCoupon}
       hitSlop={10}
       style={s.clearCouponHit}
     >
-      <Text style={s.clearCouponText}>Remove</Text>
+      <Text style={s.clearCouponText}>Remover</Text>
     </Pressable>
   </View>
 ) : null}
 
               <View style={{ height: 12 }} />
 
-              <Text style={s.sectionTitle}>Order Summary</Text>
+              <Text style={s.sectionTitle}>Resumo do pedido</Text>
 
               <View style={{ marginTop: 8, gap: 8 }}>
                 <Row label="Subtotal base" value={formatBRL(preview?.summary.subtotalBase || 0)} />
@@ -498,7 +498,7 @@ export function SellerCartCheckoutScreen() {
                   value={formatBRL(preview?.summary.subtotalAfterPromos || 0)}
                 />
                 <Row label="Cupom" value={formatBRL(preview?.summary.couponDiscount || 0)} />
-                <Row label="Shipping" value={formatBRL(preview?.summary.shipping || 0)} />
+                <Row label="Frete" value={formatBRL(preview?.summary.shipping || 0)} />
                 <View style={s.sep} />
                 <Row label="Total" value={formatBRL(preview?.summary.total || 0)} bold />
               </View>

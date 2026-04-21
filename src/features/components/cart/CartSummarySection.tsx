@@ -18,7 +18,7 @@ export function CartSummarySection({ summary, compact = false }: Props) {
 
   return (
     <View style={[s.section, compact && s.sectionCompact]}>
-      <Text style={s.sectionLabel}>Order Summary</Text>
+      <Text style={s.sectionLabel}>Resumo do pedido</Text>
 
       <View style={s.summary}>
         <View style={s.divider} />
@@ -31,7 +31,7 @@ export function CartSummarySection({ summary, compact = false }: Props) {
         <View style={s.divider} />
 
         <View style={s.summaryRow}>
-          <Text style={s.summaryKey}>Products discount</Text>
+          <Text style={s.summaryKey}>Desconto em produtos</Text>
           <Text style={s.summaryVal}>
             {toNumberBR(summary?.discountProducts ?? "0") > 0
               ? `−${discountProducts}`
@@ -42,7 +42,7 @@ export function CartSummarySection({ summary, compact = false }: Props) {
         <View style={s.divider} />
 
         <View style={s.summaryRow}>
-          <Text style={s.summaryKey}>Coupon</Text>
+          <Text style={s.summaryKey}>Cupom</Text>
           <Text style={s.summaryVal}>
             {toNumberBR(summary?.couponDiscount ?? "0") > 0
               ? `−${couponDiscount}`
@@ -53,7 +53,7 @@ export function CartSummarySection({ summary, compact = false }: Props) {
         <View style={s.divider} />
 
         <View style={s.summaryRow}>
-          <Text style={s.summaryKey}>Shipping</Text>
+          <Text style={s.summaryKey}>Frete</Text>
           <Text style={s.summaryVal}>{shipping}</Text>
         </View>
 

@@ -25,13 +25,13 @@ export function CartCouponSection({
 }: Props) {
   return (
     <View style={[s.section, compact && s.sectionCompact]}>
-      <Text style={s.sectionLabel}>Promo code</Text>
+      <Text style={s.sectionLabel}>Código promocional</Text>
 
       <View style={s.promoRow}>
         <TextInput
           value={promoInput}
           onChangeText={onChangePromoInput}
-          placeholder="Promo code"
+          placeholder="Código promocional"
           placeholderTextColor="#00000066"
           autoCapitalize="characters"
           style={s.promoInput}
@@ -50,21 +50,21 @@ export function CartCouponSection({
           disabled={applyCouponPending || disabled}
         >
           <Text style={s.promoBtnText}>
-            {applyCouponPending ? "..." : "Apply"}
+            {applyCouponPending ? "..." : "Aplicar"}
           </Text>
         </Pressable>
       </View>
 
       {!!appliedCoupon && !applyCouponPending ? (
         <View style={s.appliedRow}>
-          <Text style={s.promoApplied}>Applied: {appliedCoupon}</Text>
+          <Text style={s.promoApplied}>Aplicado: {appliedCoupon}</Text>
 
           <Pressable
             onPress={onRemoveCoupon}
             hitSlop={10}
             style={s.clearCouponHit}
           >
-            <Text style={s.clearCouponText}>Remove</Text>
+            <Text style={s.clearCouponText}>Remover</Text>
           </Pressable>
         </View>
       ) : null}
