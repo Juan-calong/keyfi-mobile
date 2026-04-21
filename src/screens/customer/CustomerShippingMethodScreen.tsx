@@ -10,7 +10,7 @@ function onlyDigits(value: string | undefined | null) {
 export function CustomerShippingMethodScreen({ route }: any) {
   const nav = useNavigation<any>();
 
-  const items = route?.params?.items || [];
+  const items = React.useMemo(() => route?.params?.items || [], [route?.params?.items]);
   const couponCode = route?.params?.couponCode;
   const deliveryAddress = route?.params?.deliveryAddress;
 
@@ -38,6 +38,12 @@ export function CustomerShippingMethodScreen({ route }: any) {
       zipcode={zipcode}
       zipCode={zipcode}
       onBack={() => nav.goBack?.()}
+      onEditAddress={() =>
+        nav.navigate(CUSTOMER_SCREENS.CheckoutAddress, {
+          items,
+          couponCode,
+        })
+      }
       onContinue={({ orderId, amount, shippingOption }) => {
         console.log("[CUSTOMER_SHIPPING_METHOD][CONTINUE]", {
           orderId,

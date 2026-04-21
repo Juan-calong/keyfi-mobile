@@ -60,6 +60,7 @@ type Props = {
   zipCode?: string;
 
   onBack: () => void;
+  onEditAddress?: () => void;
   onContinue: (params: {
     orderId: string;
     amount: number;
@@ -228,6 +229,33 @@ function normalizeDeliveryAddress(
         : String(address.complement).trim(),
   };
 }
+
+function hasCompleteDeliveryAddress(address: ReturnType<typeof normalizeDeliveryAddress>) {
+  return Boolean(
+    address?.zipCode &&
+      address?.streetName &&
+      address?.streetNumber &&
+      address?.neighborhood &&
+      address?.city &&
+      address?.federalUnit
+  );
+}
+
+function buildShortAddressSummary(address: ReturnType<typeof normalizeDeliveryAddress>) {
+  if (!address) return "Endereço de entrega não confirmado";
+
+  const cep = onlyDigits(address.zipCode);
+  const maskedCep = cep.length === 8 ? `CEP ${maskCep(cep)}` : null;
+
+  const city = trim(address.city);
+  const uf = trim(address.federalUnit).toUpperCase();
+  const cityUf = city && uf ? `${city} - ${uf}` : city || uf || null;
+
+  const parts = [maskedCep, cityUf].filter(Boolean);
+  if (!parts.length) return "Endereço de entrega não confirmado";
+  return parts.join(" • ");
+}
+
 
 function resolveOptionQuoteId(option: ShippingQuoteOption | null | undefined) {
   return String(option?.quoteId || "").trim() || null;
@@ -476,6 +504,40 @@ function InlineInfoCard({
   );
 }
 
+function AddressSummaryCard({
+  summary,
+  isComplete,
+  onEditAddress,
+}: {
+  summary: string;
+  isComplete: boolean;
+  onEditAddress?: () => void;
+}) {
+  const title = isComplete
+    ? "Endereço usado no cálculo"
+    : "Confirme o endereço para calcular corretamente";
+
+  const actionLabel = isComplete ? "Alterar endereço" : "Confirmar / editar endereço";
+
+  return (
+    <View style={s.addressSummaryCard}>
+      <Text style={s.addressSummaryTitle}>{title}</Text>
+      <Text style={s.addressSummaryValue}>{summary}</Text>
+      <Pressable
+        onPress={onEditAddress}
+        disabled={!onEditAddress}
+        style={({ pressed }) => [
+          s.addressSummaryAction,
+          pressed && onEditAddress ? { opacity: 0.9 } : null,
+          !onEditAddress ? { opacity: 0.55 } : null,
+        ]}
+      >
+        <Text style={s.addressSummaryActionText}>{actionLabel}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export function SharedShippingMethodScreen({
   role,
   title,
@@ -485,6 +547,7 @@ export function SharedShippingMethodScreen({
   zipcode,
   zipCode,
   onBack,
+  onEditAddress,
   onContinue,
 }: Props) {
   const [selected, setSelected] = useState<ShippingQuoteOption | null>(null);
@@ -495,12 +558,13 @@ export function SharedShippingMethodScreen({
   const continueLockRef = useRef(false);
   const orderAttemptKeyRef = useRef<string | null>(null);
 
-    const meQ = useQuery({
-    queryKey: ["me"],
-    queryFn: async () => (await api.get(endpoints.profiles.me)).data,
-    retry: false,
-    staleTime: 60000,
-  });
+  const meQ = useQuery({
+  queryKey: ["me"],
+  queryFn: async () => (await api.get(endpoints.profiles.me)).data,
+  retry: false,
+  staleTime: 60_000,
+});
+  
 
   const me = meQ.data;
   const profileMode = role === "SALON_OWNER" ? "owner" : "customer";
@@ -511,9 +575,6 @@ export function SharedShippingMethodScreen({
   }, [me, profileMode]);
 
   const activeDeliveryAddress = deliveryAddress ?? profileDeliveryAddress;
-
-
-
 
   const rawZipcode =
     zipcode ??
@@ -548,9 +609,20 @@ export function SharedShippingMethodScreen({
     [activeDeliveryAddress, cleanZipcode]
   );
 
+    const hasCompleteAddress = useMemo(
+    () => hasCompleteDeliveryAddress(normalizedDeliveryAddress),
+    [normalizedDeliveryAddress]
+  );
+  
+    const shortAddressSummary = useMemo(
+    () => buildShortAddressSummary(normalizedDeliveryAddress),
+    [normalizedDeliveryAddress]
+  );
+
   const selectedSelectionKey = useMemo(
   () => resolveOptionSelectionKey(selected),
   [selected]
+
 );
 
 
@@ -798,6 +870,15 @@ const isContinueBusy =
 const handleContinue = async () => {
   if (continueLockRef.current || isContinueBusy) return;
 
+    if (!hasCompleteAddress) {
+    setModal({
+      title: "Endereço incompleto",
+      message:
+        "Confirme o endereço de entrega antes de continuar para o pagamento.",
+    });
+    return;
+  }
+
   if (!selected) {
     setModal({
       title: "Entrega",
@@ -929,6 +1010,12 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
             >
               <Text style={s.sectionTitle}>Escolha uma forma de entrega</Text>
 
+                <AddressSummaryCard
+                summary={shortAddressSummary}
+                isComplete={hasCompleteAddress}
+                onEditAddress={onEditAddress}
+              />
+
               {hasValidZipcode ? (
                 <Text style={s.zipInfo}>CEP da entrega: {maskCep(cleanZipcode)}</Text>
               ) : null}
@@ -936,7 +1023,12 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
               {!hasValidZipcode ? (
                 <InlineInfoCard
                   title="CEP de entrega não encontrado"
-                  message="Não encontramos um CEP válido no endereço de entrega. Atualize seu endereço no perfil e tente novamente."
+                  message="Não encontramos um CEP válido para cotar o frete. Toque em confirmar/editar endereço para corrigir e continuar."
+                />
+              ) : !hasCompleteAddress ? (
+                <InlineInfoCard
+                  title="Endereço incompleto"
+                  message="O frete foi cotado com o CEP disponível, mas é necessário completar o endereço antes de seguir para o pagamento."
                 />
               ) : noOptions ? (
                 <InlineInfoCard
@@ -1021,11 +1113,11 @@ const isSame =
               <View style={s.hairline} />
 <Pressable
   onPress={handleContinue}
-  disabled={isContinueBusy || !selected}
+  disabled={isContinueBusy || !selected || !hasCompleteAddress}
   style={({ pressed }) => [
     s.ctaBtn,
     pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] },
-    (isContinueBusy || !selected) && { opacity: 0.6 },
+    (isContinueBusy || !selected || !hasCompleteAddress) && { opacity: 0.6 },
   ]}
 >
 <Text style={s.ctaText}>
@@ -1083,6 +1175,41 @@ const s = StyleSheet.create({
     color: "rgba(0,0,0,0.55)",
     fontSize: 13,
     fontWeight: "700",
+  },
+
+   addressSummaryCard: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.10)",
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  addressSummaryTitle: {
+    color: "rgba(0,0,0,0.6)",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  addressSummaryValue: {
+    marginTop: 6,
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  addressSummaryAction: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#F8F8F8",
+  },
+  addressSummaryActionText: {
+    color: "#111",
+    fontSize: 12,
+    fontWeight: "900",
   },
 
   option: {
