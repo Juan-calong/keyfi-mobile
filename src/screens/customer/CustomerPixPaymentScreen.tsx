@@ -335,46 +335,63 @@ const method = String(payment?.method ?? "").toUpperCase();
                 </View>
               </>
             ) : (
-              <View style={{ marginTop: 14, gap: 12 }}>
-                <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
+              <ScrollView
+  style={{ marginTop: 14 }}
+  contentContainerStyle={{ gap: 12, paddingBottom: 28 }}
+  showsVerticalScrollIndicator={false}
+>
+  <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
 
-                {method === "PIX" ? (
-  <PixPaymentSheet envelope={env} />
-) : method === "BOLETO" ? (
-  <BoletoPaymentSheet envelope={env} />
-) : method === "CARD" ? (
-  <CardPaymentSheet
-    env={env}
-    onRefresh={() => activeQ.refetch()}
-    onTryAgain={
-      env?.flags?.canRetry
-        ? () => navigation.replace(CUSTOMER_SCREENS.PixPayment, { orderId, amount })
-        : undefined
-    }
-  />
-) : (
-  <Card style={{ padding: 14, borderRadius: 18 }}>
-    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>Pagamento ativo</Text>
-    <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 8 }}>
-      Método: {String(env?.payment?.method)} • Status: {String(env?.payment?.status)}
-    </Text>
-  </Card>
-)}
+  {method === "PIX" ? (
+    <PixPaymentSheet envelope={env} />
+  ) : method === "BOLETO" ? (
+    <BoletoPaymentSheet envelope={env} />
+  ) : method === "CARD" ? (
+    <CardPaymentSheet
+      env={env}
+      onRefresh={() => activeQ.refetch()}
+      onTryAgain={
+        env?.flags?.canRetry
+          ? () => navigation.replace(CUSTOMER_SCREENS.PixPayment, { orderId, amount })
+          : undefined
+      }
+    />
+  ) : (
+    <Card style={{ padding: 14, borderRadius: 18 }}>
+      <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
+        Pagamento ativo
+      </Text>
+      <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 8 }}>
+        Método: {String(env?.payment?.method)} • Status: {String(env?.payment?.status)}
+      </Text>
+    </Card>
+  )}
 
-                {env?.flags?.canRetry ? (
-                  <Card style={{ padding: 14, borderRadius: 18, gap: 10 }}>
-                    <Text style={{ color: t.colors.text, fontWeight: "900" }}>Tentar novamente</Text>
-                    <Text style={{ color: t.colors.text2, fontWeight: "800" }}>
-                      Se você teve problema, pode gerar um novo pagamento (o antigo será cancelado/expirado).
-                    </Text>
+  {env?.flags?.canRetry ? (
+    <Card style={{ padding: 14, borderRadius: 18, gap: 10 }}>
+      <Text style={{ color: t.colors.text, fontWeight: "900" }}>
+        Tentar novamente
+      </Text>
+      <Text style={{ color: t.colors.text2, fontWeight: "800" }}>
+        Se você teve problema, pode gerar um novo pagamento (o antigo será cancelado/expirado).
+      </Text>
 
-                    <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-                      <Button title="Gerar novo PIX" variant="primary" onPress={() => createPixMut.mutate()} loading={createPixMut.isPending} />
-                      <Button title="Gerar novo boleto" variant="ghost" onPress={() => navigation.navigate(CUSTOMER_SCREENS.BoletoPayerForm, { orderId })} />
-                    </View>
-                  </Card>
-                ) : null}
-              </View>
+      <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+        <Button
+          title="Gerar novo PIX"
+          variant="primary"
+          onPress={() => createPixMut.mutate()}
+          loading={createPixMut.isPending}
+        />
+        <Button
+          title="Gerar novo boleto"
+          variant="ghost"
+          onPress={() => navigation.navigate(CUSTOMER_SCREENS.BoletoPayerForm, { orderId })}
+        />
+      </View>
+    </Card>
+  ) : null}
+</ScrollView>
             )}
           </>
         )}

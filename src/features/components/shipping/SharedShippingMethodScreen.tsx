@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { endpoints } from "../../../core/api/endpoints";
 import { toNumberBR, formatBRL } from "../../components/cart/cart.shared.utils";
 import type { CartPreviewResp } from "../../components/cart/cart.shared.types";
 import type { ShippingQuoteOption, ShippingOption } from "./shipping.types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 type ShippingQuoteApiResponse = {
   ok?: boolean;
@@ -69,6 +71,8 @@ function onlyDigits(value: string | undefined | null) {
 }
 
 const trim = (v: any) => String(v ?? "").trim();
+
+
 
 function pickUserName(me: any) {
   return me?.name || me?.fullName || me?.profile?.name || me?.user?.name || "";
@@ -225,16 +229,20 @@ function normalizeDeliveryAddress(
 }
 
 function resolveOptionQuoteId(option: ShippingQuoteOption | null | undefined) {
-  return String(option?.quoteId || option?.id || "").trim() || null;
+  return String(option?.quoteId || "").trim() || null;
+}
+
+function resolveOptionStableKey(option: ShippingQuoteOption | null | undefined) {
+  if (!option) return null;
+
+  return [
+    String(option.carrier || "").trim().toUpperCase(),
+    String(option.serviceCode || "").trim().toUpperCase(),
+  ].join(":");
 }
 
 function resolveOptionSelectionKey(option: ShippingQuoteOption | null | undefined) {
-  if (!option) return null;
-
-  const quoteId = resolveOptionQuoteId(option);
-  if (quoteId) return `quote:${quoteId}`;
-
-  return `svc:${String(option.carrier)}:${String(option.serviceCode)}`;
+  return resolveOptionStableKey(option);
 }
 
 function buildPreviewPayload(params: {
@@ -250,16 +258,8 @@ function buildPreviewPayload(params: {
     couponCode: couponCode || undefined,
   };
 
-  const quoteId = resolveOptionQuoteId(selected);
-  if (quoteId) {
-    payload.shippingQuoteId = quoteId;
-    payload.zipcode = cleanZipcode;
-    return payload;
-  }
-
   if (selected) {
     payload.shippingOption = {
-      quoteId: quoteId || undefined,
       carrier: selected.carrier,
       serviceCode: selected.serviceCode,
       serviceName: selected.serviceName,
@@ -490,6 +490,9 @@ export function SharedShippingMethodScreen({
   const [modal, setModal] = useState<null | { title: string; message: string }>(
     null
   );
+  const insets = useSafeAreaInsets();
+const continueLockRef = useRef(false);
+const orderAttemptKeyRef = useRef<string | null>(null);
 
   const rawZipcode =
     zipcode ??
@@ -497,6 +500,8 @@ export function SharedShippingMethodScreen({
     deliveryAddress?.zipCode ??
     deliveryAddress?.zipcode ??
     "";
+
+    
 
   const cleanZipcode = useMemo(() => onlyDigits(rawZipcode), [rawZipcode]);
   const hasValidZipcode = cleanZipcode.length === 8;
@@ -522,6 +527,17 @@ export function SharedShippingMethodScreen({
     [deliveryAddress, cleanZipcode]
   );
 
+  const selectedSelectionKey = useMemo(
+  () => resolveOptionSelectionKey(selected),
+  [selected]
+);
+
+
+
+React.useEffect(() => {
+  orderAttemptKeyRef.current = null;
+}, [shippingContextKey, selectedSelectionKey]);
+
   const meQ = useQuery({
     queryKey: ["me"],
     queryFn: async () => (await api.get(endpoints.profiles.me)).data,
@@ -536,64 +552,69 @@ export function SharedShippingMethodScreen({
   const payerDoc = useMemo(() => pickPayerDoc(me, role), [me, role]);
   const payerParsedName = useMemo(() => splitFullName(payerName), [payerName]);
 
-  const previewQ = useQuery({
-    queryKey: [
-      "shipping-preview",
-      role,
-      cleanZipcode,
-      couponCode || "",
-      JSON.stringify(items),
-      resolveOptionSelectionKey(selected) || "no-shipping",
-    ],
-    enabled: items.length > 0,
-    queryFn: async () => {
-      const { data } = await api.post<CartPreviewResp>(
-        endpoints.cart.preview,
-        buildPreviewPayload({
-          items,
-          couponCode,
-          selected,
-          cleanZipcode,
-        })
-      );
+const previewQ = useQuery({
+  queryKey: [
+    "shipping-preview",
+    role,
+    cleanZipcode,
+    couponCode || "",
+    JSON.stringify(items),
+    resolveOptionSelectionKey(selected) || "no-shipping",
+  ],
+  enabled: items.length > 0,
+  queryFn: async () => {
+    const { data } = await api.post<CartPreviewResp>(
+      endpoints.cart.preview,
+      buildPreviewPayload({
+        items,
+        couponCode,
+        selected,
+        cleanZipcode,
+      })
+    );
 
-      return data;
-    },
-    retry: false,
-    staleTime: 10000,
-    placeholderData: (prev) => prev,
-  });
+    return data;
+  },
+  retry: false,
+  staleTime: 0,
+  placeholderData: (prev) => prev,
+});
 
   const declaredValue = useMemo(() => {
     return toNumberBR(previewQ.data?.summary?.subtotalBase ?? "0");
   }, [previewQ.data?.summary?.subtotalBase]);
 
-  const quoteQ = useQuery<ShippingQuoteApiResponse>({
-    queryKey: [
-      "shipping-quote",
-      role,
-      cleanZipcode,
-      JSON.stringify(items),
+const quoteQ = useQuery<ShippingQuoteApiResponse>({
+  queryKey: [
+    "shipping-quote",
+    role,
+    cleanZipcode,
+    JSON.stringify(items),
+    declaredValue,
+  ],
+  enabled: items.length > 0 && hasValidZipcode && previewQ.isSuccess,
+  queryFn: async () => {
+    const data = await ShippingService.quote({
+      items,
+      zipcode: cleanZipcode,
       declaredValue,
-    ],
-    enabled: items.length > 0 && hasValidZipcode && previewQ.isSuccess,
-    queryFn: async () => {
-      const data = await ShippingService.quote({
-        items,
-        zipcode: cleanZipcode,
-        declaredValue,
-      });
+    });
 
-      return data as ShippingQuoteApiResponse;
-    },
-    retry: false,
-    staleTime: 15000,
-    placeholderData: (prev) => prev,
-  });
+    return data as ShippingQuoteApiResponse;
+  },
+  retry: false,
+  staleTime: 0,
+});
 
-  const createOrderMut = useMutation({
-    mutationFn: async () => {
-      if (!selected) throw new Error("Escolha uma opção de entrega");
+const createOrderMut = useMutation({
+  mutationFn: async ({
+    selectedOption,
+    idempotencyKey,
+  }: {
+    selectedOption: ShippingQuoteOption;
+    idempotencyKey: string;
+  }) => {
+      if (!selectedOption) throw new Error("Escolha uma opção de entrega");
 
       if (
         !normalizedDeliveryAddress ||
@@ -633,7 +654,10 @@ export function SharedShippingMethodScreen({
 
       if (couponCode) payload.couponCode = couponCode;
 
-const selectedShipping = buildSelectedShippingPayload(selected, cleanZipcode);
+const selectedShipping = buildSelectedShippingPayload(
+  selectedOption,
+  cleanZipcode
+);
 
 if (selectedShipping.quoteId) {
   payload.shippingQuoteId = selectedShipping.quoteId;
@@ -647,8 +671,8 @@ if (selectedShipping.quoteId) {
       );
 
       const { data } = await api.post(endpoints.orders.create, payload, {
-        headers: { "Idempotency-Key": `order-${Date.now()}` },
-      });
+  headers: { "Idempotency-Key": idempotencyKey },
+});
 
       return data;
     },
@@ -662,56 +686,59 @@ if (selectedShipping.quoteId) {
   });
 
   React.useEffect(() => {
-    const availableOptions = (quoteQ.data?.options || []).filter(
-      (opt) => opt.available !== false
+  if (!quoteQ.data?.options) return;
+
+  const availableOptions = quoteQ.data.options.filter(
+    (opt) => opt.available !== false
+  );
+
+  setSelected((current) => {
+    if (!availableOptions.length) return current;
+
+    const rememberedKey = LAST_SELECTED_SHIPPING_BY_CONTEXT.get(
+      shippingContextKey
     );
 
-    setSelected((current) => {
-      if (!availableOptions.length) return null;
-            const rememberedKey = LAST_SELECTED_SHIPPING_BY_CONTEXT.get(
-        shippingContextKey
-      );
+    if (!current && rememberedKey) {
+const rememberedOption = availableOptions.find(
+  (opt) => resolveOptionStableKey(opt) === rememberedKey
+);
+      if (rememberedOption) return rememberedOption;
+    }
 
-      if (!current && rememberedKey) {
-        const rememberedOption = availableOptions.find(
-          (opt) => resolveOptionSelectionKey(opt) === rememberedKey
-        );
-        if (rememberedOption) return rememberedOption;
-      }
-
-      if (!current) {
-        return availableOptions[0] ?? null;
-      }
-
-      const currentKey = resolveOptionSelectionKey(current);
-      const stillExists = availableOptions.find(
-        (opt) => resolveOptionSelectionKey(opt) === currentKey
-      );
-
-      if (stillExists) return stillExists;
-
-      if (rememberedKey) {
-        const rememberedOption = availableOptions.find(
-          (opt) => resolveOptionSelectionKey(opt) === rememberedKey
-        );
-        if (rememberedOption) return rememberedOption;
-      }
-
+    if (!current) {
       return availableOptions[0] ?? null;
-    });
-  }, [quoteQ.data?.options, shippingContextKey]);
+    }
+
+const currentKey = resolveOptionStableKey(current);
+const stillExists = availableOptions.find(
+  (opt) => resolveOptionStableKey(opt) === currentKey
+);
+
+    if (stillExists) return stillExists;
+
+    if (rememberedKey) {
+      const rememberedOption = availableOptions.find(
+        (opt) => resolveOptionSelectionKey(opt) === rememberedKey
+      );
+      if (rememberedOption) return rememberedOption;
+    }
+
+    return availableOptions[0] ?? null;
+  });
+}, [quoteQ.data?.options, shippingContextKey]);
 
   React.useEffect(() => {
-    const selectedKey = resolveOptionSelectionKey(selected);
+    const selectedKey = resolveOptionStableKey(selected);
     if (selectedKey) {
       LAST_SELECTED_SHIPPING_BY_CONTEXT.set(shippingContextKey, selectedKey);
     }
   }, [shippingContextKey, selected]);
 
-  const isInitialLoading =
-    meQ.isLoading ||
-    previewQ.isLoading ||
-    (hasValidZipcode && quoteQ.isLoading && !quoteQ.data);
+const isInitialLoading =
+  meQ.isLoading ||
+  (!previewQ.data && previewQ.isFetching) ||
+  (hasValidZipcode && !quoteQ.data && quoteQ.isFetching);
 
   const totalAmount = useMemo(() => {
     return toNumberBR(previewQ.data?.summary?.total ?? "0");
@@ -720,26 +747,117 @@ if (selectedShipping.quoteId) {
   const quoteOptions = quoteQ.data?.options || [];
   const quoteErrors = quoteQ.data?.errors || [];
 
+const isContinueBusy =
+  createOrderMut.isPending ||
+  meQ.isLoading ||
+  isInitialLoading;
+
   const noOptions =
     hasValidZipcode &&
     !quoteQ.isLoading &&
     !quoteQ.isError &&
     quoteOptions.length === 0;
 
+    React.useEffect(() => {
+  console.log(
+    "[SHIPPING][QUOTE_OPTIONS]",
+    (quoteQ.data?.options || []).map((opt) => ({
+      id: opt.id,
+      quoteId: opt.quoteId,
+      carrier: opt.carrier,
+      serviceCode: opt.serviceCode,
+      label: opt.label,
+      available: opt.available,
+      reason: opt.reason,
+      isLocalDelivery: opt.isLocalDelivery,
+      deliveryMode: opt.deliveryMode,
+      minSubtotal: opt.minSubtotal,
+      qualifiesMinSubtotal: opt.qualifiesMinSubtotal,
+      qualifiesFreeShipping: opt.qualifiesFreeShipping,
+      meta: opt.meta,
+    }))
+  );
+}, [quoteQ.data?.options]);
+
   const emptyMessage =
     quoteErrors[0] ||
     "Nenhuma transportadora retornou cotação válida para este endereço agora.";
 
-  const handleContinue = async () => {
-    if (!selected) {
+const handleContinue = async () => {
+  if (continueLockRef.current || isContinueBusy) return;
+
+  if (!selected) {
+    setModal({
+      title: "Entrega",
+      message: "Escolha uma forma de entrega para continuar.",
+    });
+    return;
+  }
+
+  try {
+    continueLockRef.current = true;
+
+    await previewQ.refetch();
+    const freshQuoteResult = await quoteQ.refetch();
+
+    const availableOptions = (freshQuoteResult.data?.options || []).filter(
+      (opt) => opt.available !== false
+    );
+
+    if (!availableOptions.length) {
+      setSelected(null);
       setModal({
-        title: "Entrega",
-        message: "Escolha uma forma de entrega para continuar.",
+        title: "Entrega atualizada",
+        message:
+          "As opções de frete foram atualizadas. Escolha novamente para continuar.",
       });
       return;
     }
 
-    const order = await createOrderMut.mutateAsync();
+    const currentKey = resolveOptionStableKey(selected);
+    console.log("[SHIPPING][CONTINUE_COMPARE]", {
+  selected: {
+    id: selected?.id,
+    quoteId: selected?.quoteId,
+    carrier: selected?.carrier,
+    serviceCode: selected?.serviceCode,
+    key: resolveOptionSelectionKey(selected),
+  },
+  availableOptions: availableOptions.map((opt) => ({
+    id: opt.id,
+    quoteId: opt.quoteId,
+    carrier: opt.carrier,
+    serviceCode: opt.serviceCode,
+    key: resolveOptionSelectionKey(opt),
+  })),
+});
+
+const freshSelected =
+  availableOptions.find(
+    (opt) => resolveOptionStableKey(opt) === currentKey
+  ) || null;
+
+    if (!freshSelected) {
+      const fallback = availableOptions[0] ?? null;
+      setSelected(fallback);
+
+      setModal({
+        title: "Entrega atualizada",
+        message:
+          "A cotação anterior não é mais válida. Revise a opção de entrega e tente novamente.",
+      });
+      return;
+    }
+
+    setSelected(freshSelected);
+
+const idempotencyKey = `order-${Date.now()}-${Math.random()
+  .toString(36)
+  .slice(2, 10)}`;
+    const order = await createOrderMut.mutateAsync({
+  selectedOption: freshSelected,
+  idempotencyKey,
+});
     const orderId = order?.orderId;
 
     if (!orderId) {
@@ -753,9 +871,15 @@ if (selectedShipping.quoteId) {
     onContinue({
       orderId,
       amount: totalAmount,
-      shippingOption: buildSelectedShippingPayload(selected, cleanZipcode),
+      shippingOption: buildSelectedShippingPayload(
+        freshSelected,
+        cleanZipcode
+      ),
     });
-  };
+  } finally {
+    continueLockRef.current = false;
+  }
+};
 
   return (
     <Screen>
@@ -788,7 +912,7 @@ if (selectedShipping.quoteId) {
         ) : (
           <>
             <ScrollView
-              contentContainerStyle={s.scroll}
+              contentContainerStyle={[s.scroll, { paddingBottom: 150 + insets.bottom }]}
               showsVerticalScrollIndicator={false}
             >
               <Text style={s.sectionTitle}>Escolha uma forma de entrega</Text>
@@ -809,14 +933,14 @@ if (selectedShipping.quoteId) {
                 />
               ) : (
                 quoteOptions.map((option, idx) => {
-                  const key =
-                    resolveOptionQuoteId(option) ||
-                    option.id ||
-                    `${option.carrier}-${option.serviceCode}-${idx}`;
+const key =
+  option.id ||
+  option.quoteId ||
+  `${option.carrier}-${option.serviceCode}-${idx}`;
 
-                  const isSelected =
-                    resolveOptionSelectionKey(selected) ===
-                    resolveOptionSelectionKey(option);
+const isSelected =
+  resolveOptionStableKey(selected) ===
+  resolveOptionStableKey(option);
 
                   return (
                     <ShippingRow
@@ -824,9 +948,9 @@ if (selectedShipping.quoteId) {
                       option={option}
                       selected={isSelected}
                       onPress={() => {
-                        const isSame =
-                          resolveOptionSelectionKey(selected) ===
-                          resolveOptionSelectionKey(option);
+const isSame =
+  resolveOptionStableKey(selected) ===
+  resolveOptionStableKey(option);
 
                         if (!isSame) {
                           setSelected(option);
@@ -881,22 +1005,20 @@ if (selectedShipping.quoteId) {
               <View style={{ height: 130 }} />
             </ScrollView>
 
-            <View style={s.ctaWrap}>
+            <View style={[s.ctaWrap, { paddingBottom: insets.bottom + 12 }]}>
               <View style={s.hairline} />
-              <Pressable
-                onPress={handleContinue}
-                disabled={createOrderMut.isPending || meQ.isLoading || !selected}
-                style={({ pressed }) => [
-                  s.ctaBtn,
-                  pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] },
-                  (createOrderMut.isPending || !selected) && { opacity: 0.6 },
-                ]}
-              >
-                <Text style={s.ctaText}>
-                  {createOrderMut.isPending || meQ.isLoading
-                    ? "..."
-                    : "Continuar para pagamento"}
-                </Text>
+<Pressable
+  onPress={handleContinue}
+  disabled={isContinueBusy || !selected}
+  style={({ pressed }) => [
+    s.ctaBtn,
+    pressed && { opacity: 0.92, transform: [{ scale: 0.995 }] },
+    (isContinueBusy || !selected) && { opacity: 0.6 },
+  ]}
+>
+<Text style={s.ctaText}>
+  {isContinueBusy ? "..." : "Continuar para pagamento"}
+</Text>
               </Pressable>
             </View>
           </>
@@ -1077,16 +1199,15 @@ const s = StyleSheet.create({
   totalKey: { color: "#000", fontSize: 16, fontWeight: "900" },
   totalVal: { color: "#000", fontSize: 16, fontWeight: "900" },
 
-  ctaWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 18 : 14,
-    paddingTop: 10,
-  },
+ctaWrap: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "#FFFFFF",
+  paddingHorizontal: 20,
+  paddingTop: 10,
+},
   ctaBtn: {
     marginTop: 10,
     height: 58,

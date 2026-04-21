@@ -16,6 +16,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type CheckoutAddressValues = {
   zipCode: string;
@@ -205,6 +206,7 @@ function pickAddressFromProfile(
 }
 
 export function SharedCheckoutAddressScreen({
+  
   title = "Endereço de entrega",
   subtitle = "Confirme o endereço antes de calcular o frete",
   profileMode,
@@ -223,6 +225,7 @@ export function SharedCheckoutAddressScreen({
   });
 
   const [didHydrate, setDidHydrate] = React.useState(false);
+  const insets = useSafeAreaInsets();
 
   const meQ = useQuery({
     queryKey: ["profile-me-checkout-address", profileMode],
@@ -363,9 +366,12 @@ export function SharedCheckoutAddressScreen({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={s.content}
-        keyboardShouldPersistTaps="handled"
-      >
+  contentContainerStyle={[
+    s.content,
+    { paddingBottom: 140 + insets.bottom },
+  ]}
+  keyboardShouldPersistTaps="handled"
+>
         <Text style={s.title}>{title}</Text>
         <Text style={s.subtitle}>{subtitle}</Text>
 
@@ -458,7 +464,7 @@ export function SharedCheckoutAddressScreen({
         </View>
       </ScrollView>
 
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={s.primaryBtn} onPress={validateAndContinue}>
           <Text style={s.primaryBtnText}>Continuar para entrega</Text>
         </TouchableOpacity>
@@ -541,16 +547,17 @@ const s = StyleSheet.create({
   col: {
     flex: 1,
   },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#ECECEC",
-    backgroundColor: "#F7F7F7",
-  },
+footer: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  paddingTop: 12,
+  paddingHorizontal: 16,
+  borderTopWidth: 1,
+  borderTopColor: "#ECECEC",
+  backgroundColor: "#F7F7F7",
+},
   primaryBtn: {
     height: 52,
     borderRadius: 999,

@@ -1,5 +1,13 @@
 import React, { useMemo } from "react";
-import { View, Text, Alert, Linking, Pressable, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Alert,
+  Linking,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import Clipboard from "@react-native-clipboard/clipboard";
 import QRCode from "react-native-qrcode-svg";
 
@@ -96,7 +104,12 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
   const hasTicketUrl = !!ticketUrl;
 
   return (
-    <View style={s.wrap}>
+    <ScrollView
+      style={s.wrap}
+      contentContainerStyle={s.content}
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+    >
       <Text style={s.title}>Pagamento PIX</Text>
 
       {paymentId ? <Text style={s.meta}>ID do pagamento: {paymentId}</Text> : null}
@@ -120,6 +133,7 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
           <View style={s.qrBox}>
             <QRCode value={pixCode} size={210} />
           </View>
+
           <View style={s.qrBottomSpacer} />
         </View>
       ) : (
@@ -130,14 +144,7 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
           </Text>
         </View>
       )}
-
-      <View style={s.tipBox}>
-        <Text style={s.tipTitle}>Recomendado</Text>
-        <Text style={s.tipText}>
-          Para BB Pix, o fluxo mais confiável é usar o botão de copiar e colar ou ler o QR gerado no app.
-        </Text>
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -155,7 +162,11 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.20)",
     borderRadius: 18,
+  },
+
+  content: {
     padding: 14,
+    paddingBottom: 24,
   },
 
   title: {
@@ -238,7 +249,8 @@ const s = StyleSheet.create({
     justifyContent: "center",
     padding: 10,
   },
-    qrBottomSpacer: {
+
+  qrBottomSpacer: {
     height: 18,
   },
 

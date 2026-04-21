@@ -324,7 +324,11 @@ export function OwnerPixPaymentScreen({ route }: any) {
                 </View>
               </>
             ) : (
-              <View style={{ marginTop: 14, gap: 12 }}>
+              <ScrollView
+  style={{ marginTop: 14 }}
+  contentContainerStyle={{ gap: 12, paddingBottom: 28 }}
+  showsVerticalScrollIndicator={false}
+>
                 <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
 
                 {method === "PIX" ? (
@@ -361,7 +365,7 @@ export function OwnerPixPaymentScreen({ route }: any) {
                     </Text>
                   ) : null}
                 </Card>
-              </View>
+              </ScrollView>
             )}
           </>
         )}
