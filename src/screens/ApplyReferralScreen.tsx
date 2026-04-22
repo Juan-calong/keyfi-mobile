@@ -8,6 +8,7 @@ import { Container } from "../ui/components/Container";
 import { Button } from "../ui/components/Button";
 import { t } from "../ui/tokens";
 import { api } from "../core/api/client";
+import { endpoints } from "../core/api/endpoints";
 
 function normalizeToken(v: string) {
   return String(v ?? "")
@@ -23,17 +24,19 @@ export function ApplyReferralScreen() {
   const cleanToken = useMemo(() => normalizeToken(token), [token]);
 
   const applyMut = useMutation({
-    mutationFn: async () => {
-      if (!cleanToken) throw new Error("TOKEN_EMPTY");
+mutationFn: async () => {
+  if (!cleanToken) throw new Error("TOKEN_EMPTY");
 
-      // ✅ ROTA DO SEU BACKEND (pelo router/controller que você colou):
-      // PATCH /seller/referrer  body: { referralToken }
-      const res = await api.patch("/seller/referrer", { referralToken: cleanToken });
-      return res.data;
-    },
+  const res = await api.post(endpoints.referrals.applySeller, {
+    linkType: "SELLER_INVITE",
+    sellerReferralToken: cleanToken,
+  });
+
+  return res.data;
+},
     onSuccess: () => {
       setToken("");
-      Alert.alert("Pronto ✅", "Indicador definido com sucesso (isso é permanente).");
+      Alert.alert("Pronto ✅", "Token aplicado com sucesso.");
       nav.goBack();
     },
     onError: (e: any) => {

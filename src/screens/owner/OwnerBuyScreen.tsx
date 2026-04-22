@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from "react-native";
 
 import { useQuery } from "@tanstack/react-query";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 
 import { Screen } from "../../ui/components/Screen";
 import { Loading, ErrorState } from "../../ui/components/State";
@@ -205,6 +205,8 @@ const PROMOS = "PROMOS" as const;
 
 type SortMode = "default" | "newest";
 
+const AUTO_REFRESH_MS = 60 * 1000;
+
 function FlatChip({
   label,
   active,
@@ -325,6 +327,63 @@ export function OwnerBuyScreen() {
       ).data,
     retry: false,
   });
+
+  const lastAutoRefreshAtRef = useRef(0);
+const initialLoadMarkedRef = useRef(false);
+
+const refetchAll = useCallback(async () => {
+  await Promise.allSettled([
+    categoriesQ.refetch(),
+    productsQ.refetch(),
+    promosQ.refetch(),
+    favoritesQ.refetch(),
+  ]);
+
+  lastAutoRefreshAtRef.current = Date.now();
+}, [categoriesQ, productsQ, promosQ, favoritesQ]);
+
+useEffect(() => {
+  const allLoaded =
+    !categoriesQ.isLoading &&
+    !productsQ.isLoading &&
+    !promosQ.isLoading &&
+    !favoritesQ.isLoading;
+
+  if (!initialLoadMarkedRef.current && allLoaded) {
+    initialLoadMarkedRef.current = true;
+    lastAutoRefreshAtRef.current = Date.now();
+  }
+}, [
+  categoriesQ.isLoading,
+  productsQ.isLoading,
+  promosQ.isLoading,
+  favoritesQ.isLoading,
+]);
+
+useFocusEffect(
+  useCallback(() => {
+    const stillLoading =
+      categoriesQ.isLoading ||
+      productsQ.isLoading ||
+      promosQ.isLoading ||
+      favoritesQ.isLoading;
+
+    if (stillLoading) return;
+
+    const now = Date.now();
+    const elapsed = now - lastAutoRefreshAtRef.current;
+
+    if (elapsed < AUTO_REFRESH_MS) return;
+
+    void refetchAll();
+  }, [
+    categoriesQ.isLoading,
+    productsQ.isLoading,
+    promosQ.isLoading,
+    favoritesQ.isLoading,
+    refetchAll,
+  ])
+);
 
   const categories = asItems<Category>(categoriesQ.data);
   const productsAll = asItems<Product>(productsQ.data);
@@ -615,10 +674,7 @@ export function OwnerBuyScreen() {
           ) : isError ? (
             <ErrorState
               onRetry={() => {
-                categoriesQ.refetch();
-                productsQ.refetch();
-                promosQ.refetch();
-                favoritesQ.refetch();
+                void refetchAll();
               }}
             />
           ) : (
@@ -655,10 +711,7 @@ export function OwnerBuyScreen() {
                 favoritesQ.isRefetching
               }
               onRefresh={() => {
-                categoriesQ.refetch();
-                productsQ.refetch();
-                promosQ.refetch();
-                favoritesQ.refetch();
+                void refetchAll();
               }}
               renderItem={({ item, index }) => {
                 const inCartQty = qtyById?.[item.id] ?? 0;

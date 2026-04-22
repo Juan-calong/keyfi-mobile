@@ -134,6 +134,10 @@ function ItemRow({
   );
 }
 
+function normalizePersonKey(value?: string | null) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 export function OwnerReferralLinksScreen() {
   const nav = useNavigation<any>();
 
@@ -147,6 +151,31 @@ export function OwnerReferralLinksScreen() {
   const customers = data?.customers ?? [];
   const salons = data?.salons ?? [];
   const summary = data?.summary;
+
+    const customerEmailSet = React.useMemo(() => {
+    return new Set(
+      customers
+        .map((item) => normalizePersonKey(item.email))
+        .filter(Boolean)
+    );
+  }, [customers]);
+
+  const uniquePeopleCount = React.useMemo(() => {
+    const keys = new Set<string>();
+
+    customers.forEach((item) => {
+      const key = normalizePersonKey(item.email) || `customer:${item.id}`;
+      keys.add(key);
+    });
+
+    salons.forEach((item) => {
+      const key =
+        normalizePersonKey(item.ownerEmail || item.email) || `salon:${item.id}`;
+      keys.add(key);
+    });
+
+    return keys.size;
+  }, [customers, salons]);
 
   return (
     <Screen>
@@ -197,20 +226,39 @@ export function OwnerReferralLinksScreen() {
 
             <View style={{ height: 12 }} />
 
-            <Section title="Resumo">
-              <Text style={{ color: t.colors.text2, fontWeight: "700", fontSize: 13, marginBottom: 6 }}>
-                Token: {data?.referralToken || "—"}
-              </Text>
-              <Text style={{ color: t.colors.text2, fontWeight: "700", fontSize: 13, marginBottom: 4 }}>
-                Clientes: {summary?.totalCustomers ?? 0}
-              </Text>
-              <Text style={{ color: t.colors.text2, fontWeight: "700", fontSize: 13, marginBottom: 4 }}>
-                Salões: {summary?.totalSalons ?? 0}
-              </Text>
-              <Text style={{ color: t.colors.text2, fontWeight: "700", fontSize: 13 }}>
-                Total: {summary?.total ?? 0}
-              </Text>
-            </Section>
+      <Section title="Resumo">
+        <Text style={{ fontSize: 14, color: "#374151", marginBottom: 6 }}>
+          Token: {data?.referralToken || "—"}
+        </Text>
+
+        <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
+          Clientes: {summary?.totalCustomers ?? customers.length}
+        </Text>
+
+        <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
+          Salões: {summary?.totalSalons ?? salons.length}
+        </Text>
+
+        <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
+          Vinculações: {summary?.total ?? customers.length + salons.length}
+        </Text>
+
+        <Text style={{ fontSize: 14, color: "#111827", fontWeight: "700" }}>
+          Pessoas únicas: {uniquePeopleCount}
+        </Text>
+
+        <Text
+          style={{
+            marginTop: 8,
+            fontSize: 12,
+            lineHeight: 18,
+            color: "#6B7280",
+          }}
+        >
+          A mesma pessoa pode aparecer em clientes e salões quando ela também
+          possui um salão vinculado.
+        </Text>
+      </Section>
 
             <Section title="Clientes vinculados ao meu token">
               {customers.length === 0 ? (
@@ -240,11 +288,17 @@ export function OwnerReferralLinksScreen() {
                     key={item.id}
                     title={item.name}
                     subtitle={item.ownerEmail || item.email}
-                    extra={
-                      item.ownerName
-                        ? `Responsável: ${item.ownerName}`
-                        : [item.city, item.state].filter(Boolean).join(" - ")
-                    }
+              extra={
+                item.ownerName
+                  ? `Responsável: ${item.ownerName}${
+                      customerEmailSet.has(
+                        normalizePersonKey(item.ownerEmail || item.email)
+                      )
+                        ? " • também aparece em clientes"
+                        : ""
+                    }`
+                  : [item.city, item.state].filter(Boolean).join(" - ")
+              }
                   />
                 ))
               )}

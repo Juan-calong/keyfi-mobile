@@ -62,6 +62,14 @@ function roleGuard(config: any, message: string) {
   return err;
 }
 
+const SELLER_ROUTES_ALLOWED_FOR_AUTHENTICATED_NON_SELLERS = new Set([
+  "/seller/referrals/apply",
+]);
+
+function normalizeGuardPath(url: unknown) {
+  return String(url ?? "").split("?")[0].trim();
+}
+
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   const role = useAuthStore.getState().activeRole;
@@ -70,9 +78,19 @@ api.interceptors.request.use((config) => {
   const publicRoute = isPublicRoute(url);
   const rid = reqId();
 
-  if (!publicRoute) {
-    const isSellerArea = url.startsWith("/seller/");
-    if (isSellerArea && role !== "SELLER" && role !== "SALON_OWNER" && role !== "ADMIN") {
+    if (!publicRoute) {
+    const guardPath = normalizeGuardPath(url);
+    const isSellerArea = guardPath.startsWith("/seller/");
+    const isAllowedSellerException =
+      SELLER_ROUTES_ALLOWED_FOR_AUTHENTICATED_NON_SELLERS.has(guardPath);
+
+    if (
+      isSellerArea &&
+      !isAllowedSellerException &&
+      role !== "SELLER" &&
+      role !== "SALON_OWNER" &&
+      role !== "ADMIN"
+    ) {
       throw roleGuard(config, "Blocked seller area for non-seller roles");
     }
   }

@@ -323,6 +323,8 @@ export function CustomerProfileMeScreen() {
   const cpf = formatCpf(pickCPF(me));
   const role = pickRole(me);
   const addr = pickAddress(me);
+  const cpfDigits = onlyDigits(pickCPF(me));
+  const canEditCpf = cpfDigits.length === 0;
 
   const formattedCep = addr.cep ? formatCep(String(addr.cep)) : "—";
 
@@ -357,6 +359,15 @@ export function CustomerProfileMeScreen() {
 
   function openEdit(field: EditFieldKey) {
     if (!me) return;
+
+    if (field === "user.cpf" && !canEditCpf) {
+      setModal({
+        title: "CPF bloqueado",
+        message: "O CPF não pode ser alterado após ser definido.",
+      });
+      return;
+    }
+
     const current = getCurrentValue(me, field);
 
     setEditField(field);
@@ -386,6 +397,13 @@ export function CustomerProfileMeScreen() {
   async function handleSave() {
     if (saveLock.current) return;
     if (!editField) return;
+        if (editField === "user.cpf" && !canEditCpf) {
+      setModal({
+        title: "CPF bloqueado",
+        message: "O CPF não pode ser alterado após ser definido.",
+      });
+      return;
+    }
 
     const cfg = fieldConfigs[editField];
     const raw = String(editValue ?? "");
@@ -535,7 +553,13 @@ export function CustomerProfileMeScreen() {
                 <InfoRow label="Nome" value={userName} iconName="person-outline" editable onPress={() => openEdit("user.name")} />
                 <InfoRow label="Email" value={email} iconName="mail-outline" />
                 <InfoRow label="Telefone" value={phone} iconName="call-outline" editable onPress={() => openEdit("user.phone")} />
-                <InfoRow label="CPF" value={cpf} iconName="card-outline" editable onPress={() => openEdit("user.cpf")} />
+                <InfoRow
+  label={canEditCpf ? "CPF" : "CPF bloqueado"}
+  value={cpf}
+  iconName="card-outline"
+  editable={canEditCpf}
+  onPress={canEditCpf ? () => openEdit("user.cpf") : undefined}
+/>
 
                 <InfoRow label="CEP" value={formattedCep} iconName="pricetag-outline" editable onPress={() => openEdit("user.cep")} />
                 <InfoRow label="Rua" value={String(addr.street || "—")} iconName="map-outline" editable onPress={() => openEdit("user.street")} />

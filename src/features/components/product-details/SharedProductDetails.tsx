@@ -147,21 +147,50 @@ function buildQuantityTierBadge(tier: any) {
     tier?.discountValue ?? tier?.value ?? 0
   );
 
-  if (!Number.isFinite(minQty) || minQty <= 0) return "";
+  if (!Number.isFinite(minQty) || minQty <= 0) return null;
 
-  if ((discountType === "FIXED" || discountType === "VALUE") && Number.isFinite(discountValue) && discountValue > 0) {
-    return `${minQty}+ (${formatBRLShort(discountValue)})`;
+  const qtyLabel =
+    minQty === 1
+      ? "Leve 1 unidade"
+      : `Leve ${minQty} ou mais unidades`;
+
+  if (
+    (discountType === "FIXED" || discountType === "VALUE") &&
+    Number.isFinite(discountValue) &&
+    discountValue > 0
+  ) {
+    return {
+      title: qtyLabel,
+      subtitle: `Ganhe ${formatBRLShort(discountValue)} OFF no valor total`,
+    };
   }
 
-  if (discountType === "PCT" && Number.isFinite(discountValue) && discountValue > 0) {
-    return `${minQty}+ (${discountValue}% OFF)`;
+  if (
+    discountType === "PCT" &&
+    Number.isFinite(discountValue) &&
+    discountValue > 0
+  ) {
+    return {
+      title: qtyLabel,
+      subtitle: `Ganhe ${discountValue}% OFF no valor total`,
+    };
   }
 
-  if ((discountType === "PRICE" || discountType === "FIXED_PRICE") && Number.isFinite(discountValue) && discountValue > 0) {
-    return `${minQty}+ (por ${formatBRLShort(discountValue)})`;
+  if (
+    (discountType === "PRICE" || discountType === "FIXED_PRICE") &&
+    Number.isFinite(discountValue) &&
+    discountValue > 0
+  ) {
+    return {
+      title: qtyLabel,
+      subtitle: `Cada unidade sai por ${formatBRLShort(discountValue)}`,
+    };
   }
 
-  return `${minQty}+`;
+  return {
+    title: qtyLabel,
+    subtitle: "Desconto progressivo por quantidade",
+  };
 }
 
 function extractItemsFromData(data: any): any[] {
@@ -745,14 +774,26 @@ export function SharedProductDetails({
     [favoritesQ.data]
   );
 
-  const quantityTierBadges = useMemo(() => {
+const quantityTierBadges = useMemo(() => {
   const tiers = Array.isArray((product as any)?.quantityDiscount?.tiers)
     ? (product as any).quantityDiscount.tiers
     : [];
 
   return tiers
-    .map((tier: any) => buildQuantityTierBadge(tier))
-    .filter(Boolean);
+    .map((tier: any, index: number) => {
+      const parsed = buildQuantityTierBadge(tier);
+      if (!parsed) return null;
+
+      return {
+        id: String(tier?.id ?? `${index}`),
+        ...parsed,
+      };
+    })
+    .filter(Boolean) as Array<{
+      id: string;
+      title: string;
+      subtitle: string;
+    }>;
 }, [product]);
 
   const commentsQ = useQuery({
@@ -1162,14 +1203,60 @@ export function SharedProductDetails({
 ) : null}
 
 {quantityTierBadges.length > 0 ? (
-  <View style={s.offersSection}>
-    <View style={s.offerBadgesWrap}>
-      {quantityTierBadges.map((badge: string, index: number) => (
-        <View style={s.quantityOfferChip} key={`${badge}-${index}`}>
-          <Text style={s.quantityOfferText}>{badge}</Text>
+  <View style={[s.offersSection, { gap: 10 }]}>
+    {quantityTierBadges.map((badge) => (
+      <View
+        key={badge.id}
+        style={{
+          borderWidth: 1,
+          borderColor: "#E8DED5",
+          backgroundColor: "#FCFAF8",
+          borderRadius: 16,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            backgroundColor: "#F4EEE8",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Icon name="pricetag-outline" size={18} color={COLORS.text} />
         </View>
-      ))}
-    </View>
+
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: COLORS.text,
+              fontSize: 13,
+              fontWeight: "800",
+            }}
+          >
+            {badge.title}
+          </Text>
+
+          <Text
+            style={{
+              marginTop: 2,
+              color: COLORS.textMuted,
+              fontSize: 12,
+              lineHeight: 18,
+              fontWeight: "600",
+            }}
+          >
+            {badge.subtitle}
+          </Text>
+        </View>
+      </View>
+    ))}
   </View>
 ) : quantityDiscountLabel ? (
   <Text style={s.quantityDiscountText}>{quantityDiscountLabel}</Text>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   FlatList,
   View,
@@ -6,12 +6,10 @@ import {
   StyleSheet,
   Linking,
 } from "react-native";
-import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import LinearGradient from "react-native-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Screen } from "../../ui/components/Screen";
-import { Container } from "../../ui/components/Container";
 import { HeaderBar } from "../../ui/components/HeaderBar";
 import { HomeHeroCarousel } from "../../ui/components/HomeHeroCarousel";
 import { Loading, ErrorState } from "../../ui/components/State";
@@ -111,6 +109,8 @@ type ReviewItem = {
   stars?: number | null;
   score?: number | null;
 };
+
+const AUTO_REFRESH_MS = 60 * 1000;
 
 function getProductFavorited(p: any) {
   return Boolean(p?.isFavorite ?? p?.favorited ?? false);
@@ -518,113 +518,7 @@ function HomeSectionHeader({ title }: { title: string }) {
 }
 
 function BackgroundTexture() {
-  return (
-    <View pointerEvents="none" style={styles.bgLayer}>
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.bgBase}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.blobTopLeft}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 1, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.blobTopRight}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.blobMidLeft}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 1, y: 0.2 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.blobMidRight}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0.2, y: 1 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.blobBottomLeft}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 1, y: 1 }}
-        end={{ x: 0, y: 0 }}
-        style={styles.blobBottomRight}
-      />
-
-      <LinearGradient
-        colors={[
-          "rgba(184,148,60,0.08)",
-          "rgba(184,148,60,0.05)",
-          "rgba(184,148,60,0.025)",
-          "rgba(184,148,60,0.01)",
-          "rgba(184,148,60,0)",
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.softVeil}
-      />
-    </View>
-  );
+  return null;
 }
 
  
@@ -681,6 +575,7 @@ function PreviewGrid({
 }
 
 export function OwnerHomeScreen() {
+  const SOFT_BG = "#ffffff";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -741,6 +636,68 @@ export function OwnerHomeScreen() {
     },
     retry: false,
   });
+
+  const lastAutoRefreshAtRef = useRef(0);
+  const initialLoadMarkedRef = useRef(false);
+
+  const refetchAll = useCallback(async () => {
+    await Promise.allSettled([
+      meQ.refetch(),
+      bannersQ.refetch(),
+      productsQ.refetch(),
+      promosQ.refetch(),
+      favoritesQ.refetch(),
+    ]);
+
+    lastAutoRefreshAtRef.current = Date.now();
+  }, [meQ, bannersQ, productsQ, promosQ, favoritesQ]);
+
+  useEffect(() => {
+    const allLoaded =
+      !meQ.isLoading &&
+      !bannersQ.isLoading &&
+      !productsQ.isLoading &&
+      !promosQ.isLoading &&
+      !favoritesQ.isLoading;
+
+    if (!initialLoadMarkedRef.current && allLoaded) {
+      initialLoadMarkedRef.current = true;
+      lastAutoRefreshAtRef.current = Date.now();
+    }
+  }, [
+    meQ.isLoading,
+    bannersQ.isLoading,
+    productsQ.isLoading,
+    promosQ.isLoading,
+    favoritesQ.isLoading,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const stillLoading =
+        meQ.isLoading ||
+        bannersQ.isLoading ||
+        productsQ.isLoading ||
+        promosQ.isLoading ||
+        favoritesQ.isLoading;
+
+      if (stillLoading) return;
+
+      const now = Date.now();
+      const elapsed = now - lastAutoRefreshAtRef.current;
+
+      if (elapsed < AUTO_REFRESH_MS) return;
+
+      void refetchAll();
+    }, [
+      meQ.isLoading,
+      bannersQ.isLoading,
+      productsQ.isLoading,
+      promosQ.isLoading,
+      favoritesQ.isLoading,
+      refetchAll,
+    ])
+  );
 
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
@@ -991,112 +948,111 @@ export function OwnerHomeScreen() {
     favoritesQ.isError;
 
   return (
-    <Screen>
-      <BackgroundTexture />
+  <Screen style={{ backgroundColor: SOFT_BG }}>
+    <BackgroundTexture />
 
-      <HeaderBar
-        title="KEYFI"
-        onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
-        titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
-        menuVariant="bare"
-        menuIconSize={22}
-      />
+    <HeaderBar
+      title="KEYFI"
+      onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
+      titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
+      menuVariant="bare"
+      menuIconSize={22}
+      backgroundColor={SOFT_BG}
+      showDivider={false}
+    />
 
-      <Container style={styles.container}>
-        {isLoading ? (
-          <Loading />
-        ) : isError ? (
-          <ErrorState
-            onRetry={() => {
-              meQ.refetch();
-              bannersQ.refetch();
-              productsQ.refetch();
-              promosQ.refetch();
-              favoritesQ.refetch();
-            }}
-          />
-        ) : (
-          <FlatList
-            data={[]}
-            keyExtractor={(_, idx) => String(idx)}
-            renderItem={() => null}
-            contentContainerStyle={[
-              styles.content,
-              { paddingBottom: tabBarHeight + 14 },
-            ]}
-            ListHeaderComponent={
-              <View style={styles.stack}>
-                {banners.length > 0 ? (
-                  <View>
-                    <HomeHeroCarousel
-                      items={banners.map((b) => ({
-                        id: b.id,
-                        imageUrl: b.imageUrl,
-                      }))}
-                      onPressItem={(heroItem) => {
-                        const fullBanner = banners.find((b) => b.id === heroItem.id);
-                        if (fullBanner) {
-                          handleBannerPress(fullBanner);
-                        }
-                      }}
-                    />
-                  </View>
-                ) : null}
+    <View style={styles.container}>
+      {isLoading ? (
+        <Loading />
+      ) : isError ? (
+        <ErrorState
+          onRetry={() => {
+            void refetchAll();
+          }}
+        />
+      ) : (
+        <FlatList
+          data={[]}
+          keyExtractor={(_, idx) => String(idx)}
+          renderItem={() => null}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: tabBarHeight + 14 },
+          ]}
+          ListHeaderComponent={
+            <View style={styles.stack}>
+              {banners.length > 0 ? (
+                <View>
+                  <HomeHeroCarousel
+                    items={banners.map((b) => ({
+                      id: b.id,
+                      imageUrl: b.imageUrl,
+                    }))}
+                    onPressItem={(heroItem) => {
+                      const fullBanner = banners.find((b) => b.id === heroItem.id);
+                      if (fullBanner) {
+                        handleBannerPress(fullBanner);
+                      }
+                    }}
+                  />
+                </View>
+              ) : null}
 
-                {promoPreview.length > 0 ? (
-                  <>
-                    <Hairline />
-                    <HomeSectionHeader title="Promoções" />
-                    <Hairline />
-
-                    <PreviewGrid
-                      data={promoPreview}
-                      onPressItem={(id) => goToProductDetails(id)}
-                      onAddToCart={handleAddToCart}
-                    />
-
-                    <View style={{ height: 6 }} />
-                    <Hairline />
-                  </>
-                ) : (
+              {promoPreview.length > 0 ? (
+                <>
                   <Hairline />
-                )}
+                  <HomeSectionHeader title="Promoções" />
+                  <Hairline />
 
-                <HomeSectionHeader title="Novidades" />
-                <Hairline />
-
-                {newestPreview.length === 0 ? (
-                  <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
-                ) : (
                   <PreviewGrid
-                    data={newestPreview}
+                    data={promoPreview}
                     onPressItem={(id) => goToProductDetails(id)}
                     onAddToCart={handleAddToCart}
                   />
-                )}
-              </View>
-            }
-          />
-        )}
-      </Container>
-    </Screen>
-  );
+
+                  <View style={{ height: 6 }} />
+                  <Hairline />
+                </>
+              ) : (
+                <Hairline />
+              )}
+
+              <HomeSectionHeader title="Novidades" />
+              <Hairline />
+
+              {newestPreview.length === 0 ? (
+                <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+              ) : (
+                <PreviewGrid
+                  data={newestPreview}
+                  onPressItem={(id) => goToProductDetails(id)}
+                  onAddToCart={handleAddToCart}
+                />
+              )}
+            </View>
+          }
+        />
+      )}
+    </View>
+  </Screen>
+);
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 8,
-    backgroundColor: "transparent",
+    paddingHorizontal: 6,
+    backgroundColor: "#ffffff",
     position: "relative",
   },
 
   content: {
-    paddingBottom: 14,
+    paddingBottom: 20,
   },
 
   stack: {
-    gap: 0,
+    gap: 10,
   },
 
    
@@ -1106,11 +1062,11 @@ const styles = StyleSheet.create({
 
   gridRow: {
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 10,
   },
 
   cardWrap: {
-    width: "48.5%",
+    width: "49.4%",
   },
 
   bgLayer: {
@@ -1181,8 +1137,7 @@ const styles = StyleSheet.create({
   },
 
   hairline: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    display: "none",
   },
 
   sectionHeader: {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   FlatList,
   View,
@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -115,6 +115,8 @@ type ReviewItem = {
   stars?: number | null;
   score?: number | null;
 };
+
+const AUTO_REFRESH_MS = 60 * 1000;
 
 function getProductFavorited(p: any) {
   return Boolean(p?.isFavorite ?? p?.favorited ?? false);
@@ -778,6 +780,68 @@ export function CustomerHomeScreen() {
     };
   }, [nav]);
 
+    const lastAutoRefreshAtRef = useRef(0);
+  const initialLoadMarkedRef = useRef(false);
+
+  const refetchAll = useCallback(async () => {
+    await Promise.allSettled([
+      meQ.refetch(),
+      bannersQ.refetch(),
+      productsQ.refetch(),
+      promosQ.refetch(),
+      favoritesQ.refetch(),
+    ]);
+
+    lastAutoRefreshAtRef.current = Date.now();
+  }, [meQ, bannersQ, productsQ, promosQ, favoritesQ]);
+
+  useEffect(() => {
+    const allLoaded =
+      !meQ.isLoading &&
+      !bannersQ.isLoading &&
+      !productsQ.isLoading &&
+      !promosQ.isLoading &&
+      !favoritesQ.isLoading;
+
+    if (!initialLoadMarkedRef.current && allLoaded) {
+      initialLoadMarkedRef.current = true;
+      lastAutoRefreshAtRef.current = Date.now();
+    }
+  }, [
+    meQ.isLoading,
+    bannersQ.isLoading,
+    productsQ.isLoading,
+    promosQ.isLoading,
+    favoritesQ.isLoading,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const stillLoading =
+        meQ.isLoading ||
+        bannersQ.isLoading ||
+        productsQ.isLoading ||
+        promosQ.isLoading ||
+        favoritesQ.isLoading;
+
+      if (stillLoading) return;
+
+      const now = Date.now();
+      const elapsed = now - lastAutoRefreshAtRef.current;
+
+      if (elapsed < AUTO_REFRESH_MS) return;
+
+      void refetchAll();
+    }, [
+      meQ.isLoading,
+      bannersQ.isLoading,
+      productsQ.isLoading,
+      promosQ.isLoading,
+      favoritesQ.isLoading,
+      refetchAll,
+    ])
+  );
+
 
   const banners = useMemo(() => {
     return (bannersQ.data ?? [])
@@ -1046,11 +1110,7 @@ export function CustomerHomeScreen() {
         ) : isError ? (
           <ErrorState
             onRetry={() => {
-              meQ.refetch();
-              bannersQ.refetch();
-              productsQ.refetch();
-              promosQ.refetch();
-              favoritesQ.refetch();
+              void refetchAll();
             }}
           />
         ) : (

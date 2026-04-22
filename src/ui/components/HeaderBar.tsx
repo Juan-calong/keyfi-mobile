@@ -1,6 +1,17 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, TextStyle, ViewStyle, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  TextStyle,
+  ViewStyle,
+  Platform,
+  Image,
+} from "react-native";
 import { t } from "../tokens";
+
+import KEYFI_LOGO from "../../assets/logo/keyfi-img.jpeg";
 
 type Props = {
   title?: string;
@@ -26,6 +37,7 @@ export function HeaderBar({
   containerStyle,
 }: Props) {
   const bare = menuVariant === "bare";
+  const showLogo = String(title ?? "").trim().toUpperCase() === "KEYFI";
 
   return (
     <View
@@ -36,7 +48,11 @@ export function HeaderBar({
         containerStyle,
       ]}
     >
-      <Pressable onPress={onMenu} hitSlop={10} style={[styles.menuBtn, bare && styles.menuBtnBare]}>
+      <Pressable
+        onPress={onMenu}
+        hitSlop={10}
+        style={[styles.menuBtn, bare && styles.menuBtnBare]}
+      >
         <View style={{ gap: 4 }}>
           <View style={[styles.line, { width: menuIconSize }]} />
           <View style={[styles.line, { width: menuIconSize }]} />
@@ -44,9 +60,19 @@ export function HeaderBar({
         </View>
       </Pressable>
 
-      <Text style={[t.text.brand, styles.title, titleStyle]} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={styles.titleContainer}>
+        {showLogo ? (
+          <Image
+            source={KEYFI_LOGO}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        ) : (
+          <Text style={[t.text.brand, styles.title, titleStyle]} numberOfLines={1}>
+            {title}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.rightSpacer} />
     </View>
@@ -73,6 +99,17 @@ const styles = StyleSheet.create({
     }),
   },
 
+  titleContainer: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+logo: {
+  width: 140,
+  height: 95,
+},
+
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(0,0,0,0.12)",
@@ -83,11 +120,10 @@ const styles = StyleSheet.create({
     height: 44,
   },
 
-  title: {
-    flex: 1,
-    textAlign: "center",
-    color: "#000000",
-  },
+title: {
+  textAlign: "center",
+  color: "#000000",
+},
 
   menuBtn: {
     width: 44,

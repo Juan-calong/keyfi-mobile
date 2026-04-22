@@ -163,22 +163,22 @@ export function OwnerTabs() {
 }
 
 const s = StyleSheet.create({
-  tabBar: {
-    backgroundColor: "transparent",
-    borderTopColor: "rgba(184,148,60,0.35)",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    overflow: "hidden",
-    ...(Platform.OS === "ios"
-      ? {
-          shadowColor: "transparent",
-          shadowOpacity: 0,
-          shadowRadius: 0,
-          shadowOffset: { width: 0, height: 0 },
-        }
-      : { elevation: 0 }),
-  },
+tabBar: {
+  backgroundColor: "transparent",
+  borderTopColor: "#EAEAEA",
+  borderTopWidth: StyleSheet.hairlineWidth,
+  borderTopLeftRadius: 18,
+  borderTopRightRadius: 18,
+  overflow: "hidden",
+  ...(Platform.OS === "ios"
+    ? {
+        shadowColor: "transparent",
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        shadowOffset: { width: 0, height: 0 },
+      }
+    : { elevation: 0 }),
+},
 
   tabBarItem: {
     justifyContent: "center",

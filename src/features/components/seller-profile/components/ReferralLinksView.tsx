@@ -96,10 +96,39 @@ function ItemRow({
   );
 }
 
+function normalizePersonKey(value?: string | null) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 export function ReferralLinksView({ data, onBack, onRefresh }: Props) {
   const customers = data?.customers ?? [];
   const salons = data?.salons ?? [];
   const summary = data?.summary;
+
+    const customerEmailSet = React.useMemo(() => {
+    return new Set(
+      customers
+        .map((item) => normalizePersonKey(item.email))
+        .filter(Boolean)
+    );
+  }, [customers]);
+
+  const uniquePeopleCount = React.useMemo(() => {
+    const keys = new Set<string>();
+
+    customers.forEach((item) => {
+      const key = normalizePersonKey(item.email) || `customer:${item.id}`;
+      keys.add(key);
+    });
+
+    salons.forEach((item) => {
+      const key =
+        normalizePersonKey(item.ownerEmail || item.email) || `salon:${item.id}`;
+      keys.add(key);
+    });
+
+    return keys.size;
+  }, [customers, salons]);
 
   return (
     <ScrollView contentContainerStyle={{ paddingTop: 24, paddingBottom: 40 }}>
@@ -130,18 +159,37 @@ export function ReferralLinksView({ data, onBack, onRefresh }: Props) {
         </Pressable>
       </View>
 
-      <Section title="Resumo">
+            <Section title="Resumo">
         <Text style={{ fontSize: 14, color: "#374151", marginBottom: 6 }}>
           Token: {data?.referralToken || "—"}
         </Text>
+
         <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
-          Clientes: {summary?.totalCustomers ?? 0}
+          Clientes: {summary?.totalCustomers ?? customers.length}
         </Text>
+
         <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
-          Salões: {summary?.totalSalons ?? 0}
+          Salões: {summary?.totalSalons ?? salons.length}
         </Text>
-        <Text style={{ fontSize: 14, color: "#374151" }}>
-          Total: {summary?.total ?? 0}
+
+        <Text style={{ fontSize: 14, color: "#374151", marginBottom: 4 }}>
+          Vinculações: {summary?.total ?? customers.length + salons.length}
+        </Text>
+
+        <Text style={{ fontSize: 14, color: "#111827", fontWeight: "700" }}>
+          Pessoas únicas: {uniquePeopleCount}
+        </Text>
+
+        <Text
+          style={{
+            marginTop: 8,
+            fontSize: 12,
+            lineHeight: 18,
+            color: "#6B7280",
+          }}
+        >
+          A mesma pessoa pode aparecer em clientes e salões quando ela também
+          possui um salão vinculado.
         </Text>
       </Section>
 
@@ -175,7 +223,13 @@ export function ReferralLinksView({ data, onBack, onRefresh }: Props) {
               subtitle={item.ownerEmail || item.email}
               extra={
                 item.ownerName
-                  ? `Responsável: ${item.ownerName}`
+                  ? `Responsável: ${item.ownerName}${
+                      customerEmailSet.has(
+                        normalizePersonKey(item.ownerEmail || item.email)
+                      )
+                        ? " • também aparece em clientes"
+                        : ""
+                    }`
                   : [item.city, item.state].filter(Boolean).join(" - ")
               }
             />
