@@ -22,7 +22,7 @@ export async function applyPendingInvite() {
   });
 
   if (invite.inviteType === "SELLER") {
-    const res = await api.post(endpoints.referrals.applySeller, {
+    const res = await api.post(endpoints.referrals.applyInviteForCurrentUser, {
       linkType: "SELLER_INVITE",
       sellerReferralToken: token,
     });
@@ -38,7 +38,7 @@ export async function applyPendingInvite() {
   }
 
   if (invite.inviteType === "SALON") {
-    const res = await api.post(endpoints.referrals.applySeller, {
+    const res = await api.post(endpoints.referrals.applyInviteForCurrentUser, {
       linkType: "SALON_INVITE",
       salonReferralToken: token,
     });

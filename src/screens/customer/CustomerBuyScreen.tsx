@@ -792,25 +792,6 @@ onRefresh={() => {
           )}
         </View>
       </View>
-
-      <View style={styles.footer}>
-        <View style={styles.footerRule} />
-        <Pressable
-          onPress={goCart}
-          style={({ pressed }) => [styles.checkoutBtn, pressed && styles.pressed]}
-          disabled={cartCount <= 0}
-        >
-          <Text
-            style={[
-              styles.checkoutText,
-              isTablet && styles.checkoutTextTablet,
-              cartCount <= 0 && { opacity: 0.5 },
-            ]}
-          >
-            Comprar{cartCount > 0 ? ` (${cartCount})` : ""}
-          </Text>
-        </Pressable>
-      </View>
     </Screen>
   );
 }

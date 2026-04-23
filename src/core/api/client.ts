@@ -2,6 +2,7 @@ import axios, { AxiosHeaders } from "axios";
 import Config from "react-native-config";
 import { useAuthStore } from "../../stores/auth.store";
 import { apiLog, apiWarn } from "./logger";
+import { endpoints } from "./endpoints";
 
 console.log("[ ENV ] [ RAW ]", Config);
 console.log("[ ENV ] [ API_BASE_URL ]", Config);
@@ -62,12 +63,42 @@ function roleGuard(config: any, message: string) {
   return err;
 }
 
-const SELLER_ROUTES_ALLOWED_FOR_AUTHENTICATED_NON_SELLERS = new Set([
-  "/seller/referrals/apply",
+type GuardRole = "SALON_OWNER" | "SELLER" | "ADMIN" | "CUSTOMER";
+
+const DEFAULT_AREA_ACCESS: Record<"/seller/" | "/salon/" | "/admin/", GuardRole[]> = {
+  "/seller/": ["SELLER", "SALON_OWNER", "ADMIN"],
+  "/salon/": ["SALON_OWNER", "ADMIN"],
+  "/admin/": ["ADMIN"],
+};
+
+const EXPLICIT_ROUTE_ACCESS = new Map<string, GuardRole[]>([
+  [endpoints.referrals.applyInviteForCurrentUser, ["CUSTOMER", "SELLER", "SALON_OWNER", "ADMIN"]],
+  [endpoints.referrals.setSalonReferrerOnce, ["SELLER", "SALON_OWNER", "ADMIN"]],
+  [endpoints.referrals.sellerMe, ["SELLER", "ADMIN"]],
+  [endpoints.referrals.salonMe, ["SALON_OWNER", "ADMIN"]],
 ]);
 
 function normalizeGuardPath(url: unknown) {
   return String(url ?? "").split("?")[0].trim();
+}
+
+function hasAreaRoleAccess(path: string, role: string | null): boolean {
+  const area = (Object.keys(DEFAULT_AREA_ACCESS) as Array<keyof typeof DEFAULT_AREA_ACCESS>).find(
+    (prefix) => path.startsWith(prefix)
+  );
+
+  if (!area) return true;
+  if (!role) return false;
+
+  return DEFAULT_AREA_ACCESS[area].includes(role as GuardRole);
+}
+
+function hasExplicitRouteAccess(path: string, role: string | null): boolean {
+  const allowed = EXPLICIT_ROUTE_ACCESS.get(path);
+  if (!allowed) return true;
+  if (!role) return false;
+
+  return allowed.includes(role as GuardRole);
 }
 
 api.interceptors.request.use((config) => {
@@ -79,21 +110,19 @@ api.interceptors.request.use((config) => {
   const rid = reqId();
 
     if (!publicRoute) {
-    const guardPath = normalizeGuardPath(url);
-    const isSellerArea = guardPath.startsWith("/seller/");
-    const isAllowedSellerException =
-      SELLER_ROUTES_ALLOWED_FOR_AUTHENTICATED_NON_SELLERS.has(guardPath);
+  const guardPath = normalizeGuardPath(url);
+  const hasExplicitRule = EXPLICIT_ROUTE_ACCESS.has(guardPath);
 
-    if (
-      isSellerArea &&
-      !isAllowedSellerException &&
-      role !== "SELLER" &&
-      role !== "SALON_OWNER" &&
-      role !== "ADMIN"
-    ) {
-      throw roleGuard(config, "Blocked seller area for non-seller roles");
+  if (hasExplicitRule) {
+    if (!hasExplicitRouteAccess(guardPath, role)) {
+      throw roleGuard(config, "Blocked route for this role");
+    }
+  } else {
+    if (!hasAreaRoleAccess(guardPath, role)) {
+      throw roleGuard(config, "Blocked restricted area for this role");
     }
   }
+}
 
   if (config.headers instanceof AxiosHeaders) {
     config.headers.set("x-request-id", rid);

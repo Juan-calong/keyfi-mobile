@@ -5,7 +5,7 @@ import { OwnerOrderDetailsScreen } from "../screens/owner/OwnerOrderDetailsScree
 import { OwnerPixPaymentScreen } from "../screens/owner/OwnerPixPaymentScreen";
 import { DebugCreateAccountsScreen } from "../screens/debug/DebugCreateAccountsScreen";
 import { OwnerSellersScreen } from "../screens/owner/OwnerSellersScreen";
-import { ApplyReferralScreen } from "../screens/ApplyReferralScreen";
+import { OwnerApplyReferralScreen } from "../screens/owner/OwnerLinkByToken.screen";
 import { OwnerCardEntryScreen } from "../screens/owner/OwnerCardEntryScreen";
 import { OwnerPromosScreen } from "../screens/owner/OwnerPromosScreen";
 import { OwnerProductDetailsScreen } from "../screens/owner/OwnerProductDetailsScreen";
@@ -45,7 +45,7 @@ export function OwnerStack() {
       <Stack.Screen name={OWNER_SCREENS.OwnerSellers} component={OwnerSellersScreen} />
       <Stack.Screen name={OWNER_SCREENS.DebugCreate} component={DebugCreateAccountsScreen} />
       <Stack.Screen name={OWNER_SCREENS.BoletoWebView} component={OwnerBoletoWebViewScreen} />
-      <Stack.Screen name={OWNER_SCREENS.ApplyReferral} component={ApplyReferralScreen} />
+      <Stack.Screen name={OWNER_SCREENS.ApplyReferral} component={OwnerApplyReferralScreen} />
       <Stack.Screen name={OWNER_SCREENS.ProductDetails} component={OwnerProductDetailsScreen} />
       <Stack.Screen name={OWNER_SCREENS.Promos} component={OwnerPromosScreen} />
       <Stack.Screen name={OWNER_SCREENS.BoletoPayerForm} component={OwnerBoletoPayerFormScreen} />

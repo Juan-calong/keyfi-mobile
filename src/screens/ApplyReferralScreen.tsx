@@ -9,6 +9,7 @@ import { Button } from "../ui/components/Button";
 import { t } from "../ui/tokens";
 import { api } from "../core/api/client";
 import { endpoints } from "../core/api/endpoints";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 function normalizeToken(v: string) {
   return String(v ?? "")
@@ -24,138 +25,179 @@ export function ApplyReferralScreen() {
   const cleanToken = useMemo(() => normalizeToken(token), [token]);
 
   const applyMut = useMutation({
-mutationFn: async () => {
-  if (!cleanToken) throw new Error("TOKEN_EMPTY");
+  mutationFn: async () => {
+    if (!cleanToken) throw new Error("TOKEN_EMPTY");
 
-  const res = await api.post(endpoints.referrals.applySeller, {
-    linkType: "SELLER_INVITE",
-    sellerReferralToken: cleanToken,
-  });
+    const res = await api.post(endpoints.referrals.applyInviteForCurrentUser, {
+      linkType: "SELLER_INVITE",
+      sellerReferralToken: cleanToken,
+    });
 
-  return res.data;
-},
-    onSuccess: () => {
+    console.log("[APPLY_REFERRAL][RES]", res.data);
+    return res.data;
+  },
+
+  onSuccess: (data: any) => {
+    if (data?.ok && data?.applied) {
       setToken("");
       Alert.alert("Pronto ✅", "Token aplicado com sucesso.");
       nav.goBack();
-    },
-    onError: (e: any) => {
-      const status = e?.response?.status;
-      const msg =
-        e?.response?.data?.error ||
-        e?.response?.data?.message ||
-        (e?.message === "TOKEN_EMPTY" ? "Informe um token." : null) ||
-        "Não foi possível aplicar esse token.";
+      return;
+    }
 
-      if (status === 409) {
-        Alert.alert("Travado (permanente)", String(msg));
-      } else {
-        Alert.alert("Erro", String(msg));
-      }
-    },
-  });
+    const reason = data?.reason;
+
+    let msg = "Não foi possível aplicar esse token.";
+
+    if (reason === "SELLER_NOT_FOUND") {
+      msg = "Token de vendedor não encontrado. Confira se você digitou o código correto.";
+    } else if (reason === "SALON_NOT_FOUND") {
+      msg = "Token de salão não encontrado.";
+    } else if (reason === "SELF_REFERRAL_BLOCKED") {
+      msg = "Você não pode aplicar o seu próprio token.";
+    } else if (reason === "USER_NOT_FOUND") {
+      msg = "Usuário não encontrado.";
+    } else if (data?.message) {
+      msg = String(data.message);
+    } else if (data?.error) {
+      msg = String(data.error);
+    }
+
+    Alert.alert("Erro", msg);
+  },
+
+  onError: (e: any) => {
+    const status = e?.response?.status;
+    const reason = e?.response?.data?.reason;
+
+    let msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      (e?.message === "TOKEN_EMPTY" ? "Informe um token." : null) ||
+      "Não foi possível aplicar esse token.";
+
+    if (reason === "ALREADY_LINKED_SAME_REFERRER") {
+      msg = "Esse vínculo já está aplicado.";
+    } else if (reason === "ALREADY_LINKED_DIFFERENT_REFERRER") {
+      msg = "Já existe um indicador definido e ele não pode ser alterado.";
+    } else if (reason === "SALON_OWNERSHIP_REQUIRED") {
+      msg = "Você não pode aplicar referral em um salão que não pertence a você.";
+    } else if (reason === "INVALID_PAYLOAD") {
+      msg = e?.response?.data?.error || "Dados inválidos para aplicar o token.";
+    } else if (reason === "INTERNAL_ERROR") {
+      msg = "Erro interno ao aplicar referral. Tente novamente.";
+    }
+
+    if (status === 409) {
+      Alert.alert("Vínculo já definido", String(msg));
+      return;
+    }
+
+    if (status === 403) {
+      Alert.alert("Acesso negado", String(msg));
+      return;
+    }
+
+    if (status === 400) {
+      Alert.alert("Dados inválidos", String(msg));
+      return;
+    }
+
+    Alert.alert("Erro", String(msg));
+  },
+});
 
   return (
     <Screen>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <Container style={{ flex: 1 }}>
-          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 16 }}>
-            <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 22 }}>
-              Aplicar token de indicador
+          <View style={{ paddingTop: 12, paddingHorizontal: 8 }}>
+  <Pressable
+    onPress={() => nav.goBack()}
+    hitSlop={12}
+    style={{
+      width: 36,
+      height: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 18,
+    }}
+  >
+    <Ionicons name="arrow-back" size={22} color={t.colors.text} />
+  </Pressable>
+</View>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28, marginTop: -40 }}>
+            <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28, textAlign: "center" }}>
+              Aplicar token
             </Text>
 
             <View style={{ height: 8 }} />
 
             <Text
               style={{
-                color: t.colors.text2,
-                fontWeight: "800",
-                fontSize: 12,
-                textAlign: "center",
-                maxWidth: 420,
-                lineHeight: 16,
+    color: t.colors.text2,
+    fontWeight: "700",
+    fontSize: 12,
+    textAlign: "center",
+    maxWidth: 320,
+    lineHeight: 18,
               }}
             >
-              Cole o token do vendedor ou salão que vai receber a comissão. Isso só pode ser feito uma vez.
+              Cole o token do vendedor ou salão aqui. Isso só pode ser feito uma vez.
             </Text>
 
             <View style={{ height: 14 }} />
 
             <View
-              style={{
-                width: "100%",
-                maxWidth: 420,
-                borderWidth: 1,
-                borderColor: t.colors.border,
-                backgroundColor: t.colors.surface,
-                borderRadius: 14,
-                paddingVertical: 16,
-                paddingHorizontal: 14,
-              }}
+style={{
+  width: "100%",
+  maxWidth: 340,
+  backgroundColor: "transparent",
+  borderRadius: 18,
+  paddingVertical: 8,
+  paddingHorizontal: 0,
+}}
             >
-              <Text style={{ color: t.colors.text2, fontWeight: "800", fontSize: 12 }}>
-                TOKEN
-              </Text>
-
               <TextInput
+              
                 value={token}
-                onChangeText={setToken}
-                placeholder="EX: A1B2C3D4"
+                onChangeText={(text) => {
+  const clean = text.toUpperCase().replace(/\s+/g, "").slice(0, 8);
+  setToken(clean);
+}}
+                placeholder="Digite o token"
+                
+                maxLength={8}
                 placeholderTextColor={t.colors.text2}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 returnKeyType="done"
                 onSubmitEditing={() => applyMut.mutate()}
                 style={{
-                  marginTop: 10,
-                  height: 54, // ✅ grande (fica óbvio onde clicar)
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  borderWidth: 1,
-                  borderColor: t.colors.border,
-                  backgroundColor: t.colors.bg,
-                  color: t.colors.text,
-                  fontWeight: "900",
-                  letterSpacing: 1,
+  marginTop: 4,
+  height: 52,
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  borderWidth: 1,
+  borderColor: t.colors.border,
+  backgroundColor: "#FFFFFF",
+  color: t.colors.text,
+  fontWeight: "800",
+  letterSpacing: 0.8,
                 }}
               />
-
-              <Text style={{ marginTop: 10, color: t.colors.text2, fontWeight: "800", fontSize: 12 }}>
-                {cleanToken ? `Será aplicado: ${cleanToken}` : "Digite o token acima"}
-              </Text>
-
-              <View style={{ height: 12 }} />
+              <View style={{ height: 50 }} />
 
               <Button
                 title={applyMut.isPending ? "Aplicando..." : "Aplicar token"}
                 onPress={() => applyMut.mutate()}
                 loading={applyMut.isPending}
-                disabled={!cleanToken || applyMut.isPending}
+                disabled={cleanToken.length !== 8 || applyMut.isPending}
                 variant="primary"
-                style={{ height: 48, borderRadius: 14 }}
+                style={{ height: 46, borderRadius: 14 }}
               />
 
               <View style={{ height: 10 }} />
-
-              <Pressable
-                onPress={() => nav.goBack()}
-                hitSlop={10}
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: t.colors.border,
-                  backgroundColor: t.colors.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
-                }}
-              >
-                <Text style={{ color: t.colors.text, fontWeight: "900" }}>
-                  Voltar
-                </Text>
-              </Pressable>
             </View>
           </View>
         </Container>

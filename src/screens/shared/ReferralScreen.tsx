@@ -79,40 +79,89 @@ export function ReferralScreen() {
     const [applyCode, setApplyCode] = useState("");
 
     const applyMut = useMutation({
-        mutationFn: async () => {
-            const code = normalizeCode(applyCode);
-            if (!isValidCode8(code)) {
-                throw new Error("Código inválido. Use 8 caracteres (ex: XA84XW8P).");
-            }
-            return (
-                await api.patch(
-                    endpoints.referrals.setSalonReferrerOnce,
-                    { referralToken: code },
-                    { headers: { "Idempotency-Key": `apply-ref-${Date.now()}` } }
-                )
-            ).data;
-        },
-        onSuccess: () => {
-            setApplyCode("");
-            qc.invalidateQueries({ queryKey: ["me"] });
-            Alert.alert("Tudo certo", "Código aplicado com sucesso. Esse vínculo é permanente.");
-        },
-        onError: (e: any) => {
-            // 409 = já tem indicador (permanente)
-            const status = e?.response?.status;
-            const msg =
-                e?.response?.data?.error ||
-                e?.response?.data?.message ||
-                e?.message ||
-                "Falha ao aplicar código.";
+  mutationFn: async () => {
+    const code = normalizeCode(applyCode);
 
-            if (status === 409) {
-                Alert.alert("Já existe indicador", msg);
-                return;
-            }
-            Alert.alert("Erro", msg);
-        },
-    });
+    if (!code) {
+      throw new Error("CODE_EMPTY");
+    }
+
+    const res = await api.patch(
+      endpoints.referrals.setSalonReferrerOnce,
+      { referralToken: code },
+      { headers: { "Idempotency-Key": `apply-ref-${Date.now()}` } }
+    );
+
+    console.log("[OWNER_REFERRAL][RES]", res.data);
+    return res.data;
+  },
+
+  onSuccess: (data: any) => {
+    if (data?.ok === false) {
+      const msg =
+        data?.message ||
+        data?.error ||
+        "Não foi possível aplicar esse código.";
+
+      Alert.alert("Erro", String(msg));
+      return;
+    }
+
+    if (data && typeof data === "object" && "applied" in data && data.applied === false) {
+      const msg =
+        data?.message ||
+        data?.error ||
+        "Não foi possível aplicar esse código.";
+
+      Alert.alert("Erro", String(msg));
+      return;
+    }
+
+    setApplyCode("");
+    qc.invalidateQueries({ queryKey: ["me"] });
+    Alert.alert("Tudo certo", "Código aplicado com sucesso. Esse vínculo é permanente.");
+  },
+
+  onError: (e: any) => {
+    const status = e?.response?.status;
+    const reason = e?.response?.data?.reason;
+
+    let msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.error ||
+      (e?.message === "CODE_EMPTY" ? "Informe um código." : null) ||
+      "Falha ao aplicar código.";
+
+    if (reason === "ALREADY_LINKED_SAME_REFERRER") {
+      msg = "Esse vínculo já está aplicado.";
+    } else if (reason === "ALREADY_LINKED_DIFFERENT_REFERRER") {
+      msg = "Já existe um indicador definido e ele não pode ser alterado.";
+    } else if (reason === "SALON_OWNERSHIP_REQUIRED") {
+      msg = "Você não pode aplicar referral em um salão que não pertence a você.";
+    } else if (reason === "INVALID_PAYLOAD") {
+      msg = e?.response?.data?.error || "Código inválido.";
+    } else if (reason === "INTERNAL_ERROR") {
+      msg = "Erro interno ao aplicar o código. Tente novamente.";
+    }
+
+    if (status === 409) {
+      Alert.alert("Vínculo já definido", String(msg));
+      return;
+    }
+
+    if (status === 403) {
+      Alert.alert("Acesso negado", String(msg));
+      return;
+    }
+
+    if (status === 400) {
+      Alert.alert("Dados inválidos", String(msg));
+      return;
+    }
+
+    Alert.alert("Erro", String(msg));
+  },
+});
 
     return (
         <Screen>
@@ -122,7 +171,7 @@ export function ReferralScreen() {
                     <View style={{ flex: 1 }}>
                         <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 18 }}>Indicação</Text>
                         <Text style={{ color: "rgba(234,240,255,0.65)", fontWeight: "800", marginTop: 4 }}>
-                            Veja seu código e aplique um código (salão)
+                            Use seu token ou aplique um token no salão.
                         </Text>
                     </View>
                     <Button title="Sair" variant="ghost" onPress={logout} />
@@ -139,7 +188,7 @@ export function ReferralScreen() {
                             {/* Meu código (somente o que aplica) */}
                             {role === "SALON_OWNER" ? (
                                 <Card>
-                                    <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>Meu código</Text>
+                                    <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>Código do salão</Text>
 
                                     <View style={{ marginTop: 10 }}>
                                         <Text style={{ color: "rgba(234,240,255,0.65)", fontWeight: "800" }}>Código do salão</Text>
@@ -160,7 +209,7 @@ export function ReferralScreen() {
                                 </Card>
                             ) : role === "SELLER" ? (
                                 <Card>
-                                    <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>Meu código</Text>
+                                    <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>Código do vendedor</Text>
 
                                     <View style={{ marginTop: 10 }}>
                                         <Text style={{ color: "rgba(234,240,255,0.65)", fontWeight: "800" }}>Código do vendedor</Text>
@@ -184,40 +233,43 @@ export function ReferralScreen() {
                             <View style={{ height: 12 }} />
 
                             <Card>
-                                <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>Aplicar código</Text>
+                                <Text style={{ color: "rgba(234,240,255,0.92)", fontWeight: "900", fontSize: 18 }}>
+                                Aplicar token
+                                </Text>
 
                                 {!isSalonOwner ? (
                                     <Text style={{ marginTop: 8, color: "rgba(234,240,255,0.65)", fontWeight: "800" }}>
-                                        Apenas SALON_OWNER pode aplicar u m código (porque o vínculo é no salão).
+                                        Apenas SALON_OWNER pode aplicar um código (porque o vínculo é no salão).
                                     </Text>
                                 ) : (
                                     <>
                                         <Text style={{ marginTop: 8, color: "rgba(234,240,255,0.65)", fontWeight: "800" }}>
-                                            Digite o código de 8 caracteres de quem te indicou. Isso é permanente.
+                                            Digite o token de quem indicou seu salão.
                                         </Text>
 
                                         <TextInput
                                             value={applyCode}
-                                            onChangeText={(v) => setApplyCode(normalizeCode(v))}
-                                            placeholder="Ex: XA84XW8P"
+                                            onChangeText={(v) => setApplyCode(normalizeCode(v).slice(0, 8))}
+                                            placeholder="Digite o token"
                                             placeholderTextColor="rgba(234,240,255,0.45)"
                                             autoCapitalize="characters"
                                             autoCorrect={false}
                                             maxLength={8}
                                             style={{
-                                                marginTop: 10,
-                                                borderWidth: 1,
-                                                borderColor: "rgba(234,240,255,0.15)",
-                                                borderRadius: 14,
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 10,
-                                                color: t.colors.text,
-                                                fontWeight: "900",
-                                                letterSpacing: 1.2,
+  marginTop: 8,
+  height: 48,
+  borderWidth: 1,
+  borderColor: "rgba(234,240,255,0.12)",
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  backgroundColor: "rgba(255,255,255,0.04)",
+  color: t.colors.text,
+  fontWeight: "800",
+  letterSpacing: 0.8,
                                             }}
                                         />
 
-                                        <View style={{ marginTop: 12, flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
+                                        <View style={{ marginTop: 22, flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
                                             <Button
                                                 title={applyMut.isPending ? "Aplicando..." : "Aplicar código"}
                                                 variant="primary"
@@ -229,9 +281,8 @@ export function ReferralScreen() {
                                                     ]);
                                                 }}
                                                 loading={applyMut.isPending}
-                                                disabled={!applyCode || applyMut.isPending}
+                                                disabled={normalizeCode(applyCode).length !== 8 || applyMut.isPending}
                                             />
-                                            <Button title="Atualizar" variant="ghost" onPress={() => meQ.refetch()} />
                                         </View>
                                     </>
                                 )}

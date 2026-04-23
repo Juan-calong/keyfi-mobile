@@ -50,7 +50,7 @@ products: {
   },
 
   referrals: {
-    applySeller: "/seller/referrals/apply",
+    applyInviteForCurrentUser: "/seller/referrals/apply",
     setSalonReferrerOnce: "/seller/referrer",
     sellerMe: "/seller/referrals/me",
     salonMe: "/seller/salon-referrals/me",
