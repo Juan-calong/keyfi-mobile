@@ -147,7 +147,6 @@ function PaymentRow({
 export function OwnerPixPaymentScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
-  const amount: number | undefined = route?.params?.amount;
 
   const [selected, setSelected] = useState<Method>("PIX");
   const continueLock = useRef(false);
@@ -224,10 +223,10 @@ export function OwnerPixPaymentScreen({ route }: any) {
 
       navigation.navigate(OWNER_SCREENS.CardTokenize, {
         orderId,
-        amount,
+
         successRouteName: OWNER_SCREENS.CardEntry,
         cancelRouteName: OWNER_SCREENS.PixPayment,
-        cancelParams: { orderId, amount },
+        cancelParams: { orderId },
       });
     } finally {
       setTimeout(() => (continueLock.current = false), 350);

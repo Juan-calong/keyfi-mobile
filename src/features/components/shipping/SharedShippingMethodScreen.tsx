@@ -63,7 +63,6 @@ type Props = {
   onEditAddress?: () => void;
   onContinue: (params: {
     orderId: string;
-    amount: number;
     shippingOption: ShippingOption;
   }) => void;
 };
@@ -825,10 +824,6 @@ const isInitialLoading =
   (!previewQ.data && previewQ.isFetching) ||
   (hasValidZipcode && !quoteQ.data && quoteQ.isFetching);
 
-  const totalAmount = useMemo(() => {
-    return toNumberBR(previewQ.data?.summary?.total ?? "0");
-  }, [previewQ.data?.summary?.total]);
-
   const quoteOptions = quoteQ.data?.options || [];
   const quoteErrors = quoteQ.data?.errors || [];
 
@@ -964,7 +959,6 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
 
     onContinue({
       orderId,
-      amount: totalAmount,
       shippingOption: buildSelectedShippingPayload(
         freshSelected,
         cleanZipcode

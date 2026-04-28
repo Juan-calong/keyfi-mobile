@@ -2,6 +2,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Platform, StatusBar } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
+import { useQuery } from "@tanstack/react-query";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -10,6 +11,7 @@ import { t } from "../../ui/tokens";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { endpoints } from "../../core/api/endpoints";
 import { api } from "../../core/api/client";
+import { OrdersService } from "../../core/api/services/orders.service";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
@@ -24,7 +26,6 @@ function formatBRL(v: number) {
 
 export function CustomerCardEntryScreen({ route, navigation }: any) {
   const orderId: string | undefined = route?.params?.orderId;
-  const amount: number = Number(route?.params?.amount ?? 0);
   const cardToken: string = route?.params?.cardToken;
 
   const [cvv, setCvv] = useState("");
@@ -39,6 +40,19 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
 
   const payLock = useRef(false);
+  const orderQ = useQuery({
+    queryKey: ["customer-card-entry-order", orderId],
+    enabled: !!orderId,
+    queryFn: () => OrdersService.byId(orderId!),
+    retry: false,
+  });
+
+  const orderAmount = useMemo(() => {
+    const order = (orderQ.data as any)?.data ?? orderQ.data;
+    const raw = (order as any)?.amountDue ?? (order as any)?.totalAmount ?? (order as any)?.total ?? null;
+    const parsed = Number(String(raw ?? "").replace(",", "."));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [orderQ.data]);
 
   function validateOrThrow() {
     if (!orderId) throw new Error("orderId ausente.");
@@ -53,7 +67,6 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
     const em = trim(email).toLowerCase();
     if (!em.includes("@") || !em.includes(".")) throw new Error("Email inválido.");
 
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Total inválido.");
   }
 
   async function onConfirmPay() {
@@ -118,7 +131,7 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
           </Text>
 
           <Pressable
-            onPress={() => navigation.replace(CUSTOMER_SCREENS.CardTokenize, { orderId, amount })}
+            onPress={() => navigation.replace(CUSTOMER_SCREENS.CardTokenize, { orderId })}
             style={{ marginTop: 14, padding: 12, borderWidth: 1, borderRadius: 12 }}
           >
             <Text style={{ fontWeight: "800" }}>Tokenizar cartão</Text>
@@ -146,7 +159,7 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
 
         <ScrollView contentContainerStyle={m.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Card style={m.cardGroup}>
-            <Text style={m.totalLabel}>Total: {amount > 0 ? formatBRL(amount) : "—"}</Text>
+            <Text style={m.totalLabel}>Total do pedido: {orderAmount != null ? formatBRL(orderAmount) : "—"}</Text>
 
             <View style={m.groupHeader}>
               <Icon name="lock" size={18} color="#1C63D5" />

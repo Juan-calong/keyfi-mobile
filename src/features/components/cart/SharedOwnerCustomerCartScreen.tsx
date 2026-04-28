@@ -260,6 +260,10 @@ export function SharedOwnerCustomerCartScreen({
                   compact
                 />
 
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#7A6F63", marginBottom: 6 }}>
+                  Valores estimados até selecionar o frete.
+                </Text>
+
                 <CartSummarySection summary={summary} compact />
 
                 <View style={s.checkoutOnlyWrap}>

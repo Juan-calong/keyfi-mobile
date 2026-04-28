@@ -7,8 +7,7 @@ import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 
 function normalizeBaseUrl(raw: string) {
-  const base = (raw || "").trim();
-  if (!base) return "";
+  const base = String(raw || "").trim();
   return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
@@ -17,7 +16,6 @@ export function CardTokenizeWebViewScreen() {
   const route = useRoute<any>();
 
   const orderId: string | undefined = route?.params?.orderId;
-  const amount: number | undefined = route?.params?.amount;
 
   // ✅ nomes de rota “genéricos” (cada stack passa os seus)
   const successRouteName: string = route?.params?.successRouteName;
@@ -27,7 +25,7 @@ export function CardTokenizeWebViewScreen() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  const baseURL = (Config.API_BASE_URL || "").trim();
+  const baseURL = normalizeBaseUrl(Config.API_BASE_URL || "");
   const pageUrl = useMemo(() => {
     if (!baseURL) return "";
     return `${baseURL}/cielo/sop/page?orderId=${encodeURIComponent(orderId || "")}`;
@@ -93,7 +91,6 @@ export function CardTokenizeWebViewScreen() {
         nav.replace(resolvedSuccessRouteName, {
           ...(route?.params?.successParams || {}),
           orderId,
-          amount,
           cardToken: token,
           brand: msg.brand,
           cardBin: msg.cardBin || msg.firstSixDigits || msg.firstSix,
@@ -106,7 +103,6 @@ export function CardTokenizeWebViewScreen() {
         setErr(msg?.message || "Falha ao tokenizar cartão.");
       }
     } catch {
-      // ignora
     }
   }
 

@@ -47,16 +47,14 @@ export function OwnerShippingMethodScreen({ route }: any) {
           zipCode: zipcode,
         })
       }
-      onContinue={({ orderId, amount, shippingOption }) => {
+      onContinue={({ orderId, shippingOption }) => {
         console.log("[OWNER_SHIPPING_METHOD][CONTINUE]", {
           orderId,
-          amount,
           shippingOption,
         });
 
         nav.navigate(OWNER_SCREENS.PixPayment, {
           orderId,
-          amount,
           shippingOption,
         });
       }}

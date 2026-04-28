@@ -13,7 +13,7 @@ import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfir
 
 import { SharedOwnerCustomerCartScreen } from "../../features/components/cart/SharedOwnerCustomerCartScreen";
 import type { CartItem, CartPreviewResp } from "../../features/components/cart/cart.shared.types";
-import { toNumberBR } from "../../features/components/cart/cart.shared.utils";
+
 
 const CART_PREVIEW_URL = endpoints.cart.preview;
 
@@ -110,45 +110,10 @@ export function CustomerCartScreen() {
     },
   });
 
-  const createOrderMut = useMutation({
-    mutationFn: async () => {
-      if (!itemsPayload.length) throw new Error("Carrinho vazio");
-
-      const payload: any = {
-        buyerType: "CUSTOMER" as const,
-        items: itemsPayload,
-      };
-
-      if (appliedCoupon) payload.couponCode = appliedCoupon;
-
-      const res = await api.post(endpoints.orders.create, payload, {
-        headers: { "Idempotency-Key": `order-${Date.now()}` },
-      });
-
-      return res.data;
-    },
-    onError: (e: any) => {
-      const fe = friendlyError(e);
-      setModal({ title: fe.title, message: fe.message });
-    },
-  });
 
   const preview = previewQ.data;
   const rows = preview?.items || [];
   const summary = preview?.summary;
-
-  const finishCreateOrder = async () => {
-    const order = await createOrderMut.mutateAsync();
-    const orderId = order?.orderId;
-
-    if (!orderId) {
-      setModal({ title: "Erro", message: "Pedido criado mas não retornou orderId." });
-      return;
-    }
-
-    const totalAmount = toNumberBR(summary?.total ?? "0");
-    nav.navigate(CUSTOMER_SCREENS.PixPayment, { orderId, amount: totalAmount });
-  };
 
   const onCheckoutPix = async () => {
   const typed = promoInput.trim().toUpperCase();
@@ -204,7 +169,6 @@ export function CustomerCartScreen() {
   const showError = previewQ.isError && !preview;
 
   const canCheckout =
-    !createOrderMut.isPending &&
     rows.length > 0 &&
     preview?.canCheckout !== false &&
     (preview?.unavailable?.length ?? 0) === 0;
@@ -269,7 +233,7 @@ export function CustomerCartScreen() {
   onDec={(productId) => dec(productId)}
   onRemoveItem={(productId) => remove(productId)}
   canCheckout={canCheckout}
-  checkoutPending={createOrderMut.isPending}
+  checkoutPending={false}
   onCheckout={onCheckoutPix}
   onGoToShop={() =>
   nav.navigate(CUSTOMER_SCREENS.Root, {

@@ -133,7 +133,6 @@ function formatCooldown(retryAfterSec?: number | null) {
 export function CustomerPixPaymentScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
-  const amount: number | undefined = route?.params?.amount;
 
   const [selected, setSelected] = useState<Method>("PIX");
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
@@ -224,10 +223,10 @@ const method = String(payment?.method ?? "").toUpperCase();
       // CARD → começa no SOP (tokenização)
       navigation.navigate(CUSTOMER_SCREENS.CardTokenize, {
         orderId,
-        amount,
+
         successRouteName: CUSTOMER_SCREENS.CardEntry,
         cancelRouteName: CUSTOMER_SCREENS.PixPayment,
-        cancelParams: { orderId, amount },
+        cancelParams: { orderId },
       });
     } finally {
       setTimeout(() => {
@@ -350,12 +349,12 @@ const method = String(payment?.method ?? "").toUpperCase();
     <CardPaymentSheet
       env={env}
       onRefresh={() => activeQ.refetch()}
-      onTryAgain={
-        env?.flags?.canRetry
-          ? () => navigation.replace(CUSTOMER_SCREENS.PixPayment, { orderId, amount })
+        onTryAgain={
+          env?.flags?.canRetry
+          ? () => navigation.replace(CUSTOMER_SCREENS.PixPayment, { orderId })
           : undefined
-      }
-    />
+        }
+      />
   ) : (
     <Card style={{ padding: 14, borderRadius: 18 }}>
       <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
