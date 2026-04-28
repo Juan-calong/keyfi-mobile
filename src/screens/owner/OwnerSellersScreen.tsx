@@ -25,6 +25,7 @@ import { OwnerSellersService, SalonSellerPermissionRequest } from "../../core/ap
 import { IosAlert } from "../../ui/components/IosAlert";
 import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfirm";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 function asArray<T>(v: any): T[] {
   if (Array.isArray(v)) return v;
@@ -128,22 +129,28 @@ export function OwnerSellersScreen() {
         {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
         {/* NAV iOS */}
-        <View style={m.nav}>
-          <Pressable hitSlop={12} onPress={() => nav.goBack()} style={m.backBtn}>
-            <Text style={m.backText}>{"<"}</Text>
-          </Pressable>
+<View style={m.nav}>
+  <View style={m.navSide}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color="#000000"
+      iconSize={24}
+      style={m.backBtn}
+    />
+  </View>
 
-          <Text style={m.navTitle}>Sellers</Text>
+  <Text style={m.navTitle}>Vendedores</Text>
 
-          <Pressable hitSlop={12} onPress={() => q.refetch()} style={m.rightBtn}>
-            <Text style={m.rightText}>{q.isRefetching ? "…" : "⟳"}</Text>
-          </Pressable>
-        </View>
+  <Pressable hitSlop={12} onPress={() => q.refetch()} style={m.rightBtn}>
+    <Text style={m.rightText}>{q.isRefetching ? "…" : "⟳"}</Text>
+  </Pressable>
+</View>
 
         <View style={m.hairline} />
 
         <View style={{ paddingHorizontal: HPAD, paddingTop: 14 }}>
-          <Text style={m.h1}>Gerenciar sellers</Text>
+          <Text style={m.h1}>Gerenciar vendedores</Text>
           <Text style={m.sub}>Convide por e-mail e aprove/rejeite o vínculo</Text>
         </View>
 
@@ -227,7 +234,7 @@ export function OwnerSellersScreen() {
                         </Text>
                         <Text style={m.itemMeta} numberOfLines={1}>
                           {st === "PENDING"
-                            ? "Aguardando resposta do seller"
+                            ? "Aguardando resposta do vendedor"
                             : st === "APPROVED"
                             ? "Vínculo aprovado"
                             : st === "REJECTED"
@@ -323,7 +330,17 @@ const m = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#FFFFFF",
   },
-  backBtn: { minWidth: 64, height: 44, justifyContent: "center" },
+  navSide: {
+  minWidth: 64,
+  height: 44,
+  justifyContent: "center",
+},
+
+backBtn: {
+  minWidth: 44,
+  minHeight: 44,
+  paddingRight: 0,
+},
   backText: { color: "#000000", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
   navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
   rightBtn: { minWidth: 64, height: 44, alignItems: "flex-end", justifyContent: "center" },

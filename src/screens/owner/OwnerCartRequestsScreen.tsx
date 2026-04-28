@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Platform,
   StatusBar,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -21,6 +20,7 @@ import {
   listSalonCartRequests,
   type SalonCartRequest,
 } from "../../core/api/services/cartRequests.service";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 const BLACK = "#000000";
 const WHITE = "#FFFFFF";
@@ -52,10 +52,15 @@ export function OwnerCartRequestsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
 
       <View style={s.header}>
-        <Pressable onPress={() => nav.goBack?.()} hitSlop={12} style={s.headerLeft}>
-          <Text style={s.chev}>‹</Text>
-          <Text style={s.backText}>Back</Text>
-        </Pressable>
+<View style={s.headerLeft}>
+  <AppBackButton
+    onPress={() => nav.goBack()}
+    showLabel={false}
+    color={BLACK}
+    iconSize={24}
+    style={s.backButton}
+  />
+</View>
 
         <Text style={s.headerTitle}>Pedidos de vendedores</Text>
 
@@ -158,12 +163,19 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: WHITE,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 80 },
+  backButton: {
+  minWidth: 44,
+  minHeight: 44,
+  paddingRight: 0,
+},
+  headerLeft: {
+  minWidth: 60,
+  alignItems: "flex-start",
+  justifyContent: "center",
+},
   headerTitle: { color: BLACK, fontSize: 17, fontWeight: "600" },
   headerRight: { minWidth: 60, alignItems: "flex-end" },
   headerRightText: { color: BLACK, fontSize: 16, fontWeight: "800" },
-  chev: { fontSize: 28, lineHeight: 28, color: BLACK, marginTop: Platform.OS === "android" ? -2 : 0 },
-  backText: { fontSize: 16, color: BLACK, fontWeight: "500" },
 
   rule: { height: 1, backgroundColor: LINE, marginBottom: 12 },
   sep: { height: 1, backgroundColor: LINE },

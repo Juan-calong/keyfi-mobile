@@ -9,7 +9,7 @@ import { Button } from "../ui/components/Button";
 import { t } from "../ui/tokens";
 import { api } from "../core/api/client";
 import { endpoints } from "../core/api/endpoints";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import { AppBackButton } from "../ui/components/AppBackButton";
 
 function normalizeToken(v: string) {
   return String(v ?? "")
@@ -111,20 +111,18 @@ export function ApplyReferralScreen() {
     <Screen>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <Container style={{ flex: 1 }}>
-          <View style={{ paddingTop: 12, paddingHorizontal: 8 }}>
-  <Pressable
+<View style={{ paddingTop: 12, paddingHorizontal: 8 }}>
+  <AppBackButton
     onPress={() => nav.goBack()}
-    hitSlop={12}
+    showLabel={false}
+    color={t.colors.text}
+    iconSize={24}
     style={{
-      width: 36,
-      height: 36,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 18,
+      minWidth: 40,
+      minHeight: 40,
+      paddingRight: 0,
     }}
-  >
-    <Ionicons name="arrow-back" size={22} color={t.colors.text} />
-  </Pressable>
+  />
 </View>
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 28, marginTop: -40 }}>
             <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28, textAlign: "center" }}>

@@ -17,6 +17,7 @@ import { api } from "../../core/api/client";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { useAuthStore } from "../../stores/auth.store";
 import { endpoints } from "../../core/api/endpoints";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 function formatBRL(value: string | number) {
   const n = Number(String(value ?? 0).replace(",", "."));
@@ -55,7 +56,7 @@ function asItems(v: any): OrderListItem[] {
   return [];
 }
 
-type OrderFilter = "ALL" | "AWAITING" | "PAID" | "CANCELED";
+type OrderFilter = "ALL" | "AWAITING" | "PAID";
 
 function toneForOrderStatus(s: string) {
   const up = String(s || "").toUpperCase();
@@ -146,46 +147,48 @@ export function CustomerOrdersScreen() {
 
   const items = useMemo(() => asItems(q.data), [q.data]);
 
-  const filteredItems = useMemo(() => {
-    const list = items;
+const filteredItems = useMemo(() => {
+  const visibleItems = items.filter((o) => !isCanceledLike(o));
 
-    if (filter === "PAID") {
-      return list.filter((o) => String(o.paymentStatus).toUpperCase() === "PAID");
-    }
+  if (filter === "PAID") {
+    return visibleItems.filter((o) => String(o.paymentStatus).toUpperCase() === "PAID");
+  }
 
-    if (filter === "AWAITING") {
-      return list.filter((o) => String(o.paymentStatus).toUpperCase() === "PENDING" && !isCanceledLike(o));
-    }
+  if (filter === "AWAITING") {
+    return visibleItems.filter((o) => String(o.paymentStatus).toUpperCase() === "PENDING");
+  }
 
-    if (filter === "CANCELED") {
-      return list.filter((o) => isCanceledLike(o));
-    }
-
-    return list;
-  }, [items, filter]);
+  return visibleItems;
+}, [items, filter]);
 
   return (
     <Screen>
       <Container style={{ flex: 1 }}>
-        <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.h1}>Pedidos</Text>
-            <Text style={s.sub}>Pague e acompanhe seus pedidos</Text>
-          </View>
+<View style={s.header}>
+  <View style={s.headerLeft}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={s.backButton}
+    />
 
-          <Button
-            title={q.isRefetching ? "..." : "⟳"}
-            variant="ghost"
-            onPress={() => q.refetch()}
-            style={{ minWidth: 44, height: 44, borderRadius: 12 }}
-          />
-        </View>
+    <Text style={s.h1}>Pedidos</Text>
+  </View>
+
+  <Button
+    title={q.isRefetching ? "..." : "⟳"}
+    variant="ghost"
+    onPress={() => q.refetch()}
+    style={{ minWidth: 44, height: 44, borderRadius: 12 }}
+  />
+</View>
 
         <View style={s.filters}>
           <Chip label="Todos" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
           <Chip label="Aguardando" active={filter === "AWAITING"} onPress={() => setFilter("AWAITING")} />
           <Chip label="Pago" active={filter === "PAID"} onPress={() => setFilter("PAID")} />
-          <Chip label="Cancelado" active={filter === "CANCELED"} onPress={() => setFilter("CANCELED")} />
         </View>
 
         <View style={{ marginTop: 12, flex: 1, minHeight: 0 }}>
@@ -240,13 +243,26 @@ export function CustomerOrdersScreen() {
 }
 
 const s = StyleSheet.create({
-  header: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
+header: {
+  marginTop: 8,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+},
+headerLeft: {
+  flexDirection: "row",
+  alignItems: "center",
+  flex: 1,
+  gap: 4,
+},
+
+backButton: {
+  minWidth: 40,
+  minHeight: 40,
+  paddingRight: 0,
+},
+
   h1: { color: t.colors.text, fontWeight: "900", fontSize: 28 },
   sub: { color: t.colors.text2, fontWeight: "800", marginTop: 6 },
 

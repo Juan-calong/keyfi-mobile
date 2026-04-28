@@ -16,6 +16,8 @@ import { Loading, ErrorState } from "../../ui/components/State";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
+import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
+import { resolvePromoPriceData } from "../../core/utils/promoPricing";
 import { t } from "../../ui/tokens";
 
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
@@ -97,7 +99,7 @@ type PreviewItem = {
   price?: string | number | null;
   originalPrice?: string | number | null;
   hasDiscount?: boolean;
-  discountPercent?: number | null;
+  promoBadgeLabel?: string | null;
   ratingValue?: number | null;
   ratingCount?: number | null;
   isFavorite?: boolean;
@@ -300,18 +302,6 @@ function getCardPriceData(p: any) {
   };
 }
 
-function getDiscountPercent(
-  price: string | number | null | undefined,
-  originalPrice: string | number | null | undefined
-) {
-  const current = toNumberBR(price);
-  const original = toNumberBR(originalPrice);
-
-  if (!(original > 0) || !(current >= 0) || current >= original) return null;
-
-  const pct = Math.round(((original - current) / original) * 100);
-  return pct > 0 ? pct : null;
-}
 
 function mergeWithPromoPricing(baseProduct: ProductDTO, promoProduct?: ProductDTO) {
   if (!promoProduct) return baseProduct;
@@ -546,10 +536,7 @@ function PreviewGrid({
       renderItem={({ item }) => {
         const productId = String(item.id);
         const inCart = Number(qtyById?.[productId] ?? 0) > 0;
-        const promoBadgeLabel =
-          item.hasDiscount && item.discountPercent
-            ? `${item.discountPercent}% OFF`
-            : null;
+
 
         return (
            <View style={styles.cardWrap}>
@@ -557,7 +544,7 @@ function PreviewGrid({
               productId={productId}
               name={item.name}
               imageUri={item.imageUri}
-              promoBadgeLabel={promoBadgeLabel}
+              promoBadgeLabel={item.promoBadgeLabel ?? null}
               ratingValue={Number(item.ratingValue ?? 0)}
               reviewsCount={Number(item.ratingCount ?? 0)}
               priceLabel={formatBRL(item.price)}
@@ -619,7 +606,9 @@ export function OwnerHomeScreen() {
       });
 
       const items = asPromoProducts(res.data);
-      const discounted = items.filter((p: any) => getCardPriceData(p).hasDiscount);
+      const discounted = items.filter(
+        (p: any) => (resolvePromoPriceData(p) ?? getCardPriceData(p)).hasDiscount
+      );
 
       return discounted.length ? discounted : items;
     },
@@ -736,7 +725,7 @@ export function OwnerHomeScreen() {
       promoProducts.slice(0, 10).map((p) => {
         const baseProduct = productsById.get(p.id) ?? p;
         const merged = mergeWithPromoPricing(baseProduct, p);
-        const priceData = getCardPriceData(merged);
+        const priceData = resolvePromoPriceData(merged) ?? getCardPriceData(merged);
 
         return {
           id: p.id,
@@ -745,7 +734,7 @@ export function OwnerHomeScreen() {
           price: priceData.price,
           originalPrice: priceData.originalPrice,
           hasDiscount: priceData.hasDiscount,
-          discountPercent: getDiscountPercent(priceData.price, priceData.originalPrice),
+          promoBadgeLabel: resolvePromoBadgeLabel(merged),
           ratingValue: getProductRatingValue(merged),
           ratingCount: getProductRatingCount(merged),
           isFavorite: resolveFavoriteFlag(p, favoriteIds),
@@ -781,7 +770,7 @@ export function OwnerHomeScreen() {
 
     return copy.slice(0, 10).map((p) => {
       const merged = mergeWithPromoPricing(p, promoProductById.get(p.id));
-      const priceData = getCardPriceData(merged);
+      const priceData = resolvePromoPriceData(merged) ?? getCardPriceData(merged);
 
       return {
         id: p.id,
@@ -790,7 +779,7 @@ export function OwnerHomeScreen() {
         price: priceData.price,
         originalPrice: priceData.originalPrice,
         hasDiscount: priceData.hasDiscount,
-        discountPercent: getDiscountPercent(priceData.price, priceData.originalPrice),
+        promoBadgeLabel: resolvePromoBadgeLabel(merged),
         ratingValue: getProductRatingValue(merged),
         ratingCount: getProductRatingCount(merged),
         isFavorite: resolveFavoriteFlag(merged, favoriteIds),

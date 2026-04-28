@@ -27,6 +27,8 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfirm";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { useNavigation } from "@react-navigation/native";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 type MeDTO = any;
 
@@ -287,6 +289,7 @@ function formatCooldown(retryAfterSec?: number | null) {
 }
 
 export function CustomerProfileMeScreen() {
+  const nav = useNavigation<any>();
   const qc = useQueryClient();
   const logout = useAuthStore((s) => s.logout);
 
@@ -501,10 +504,31 @@ export function CustomerProfileMeScreen() {
               </View>
             ) : null}
 
-            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, paddingTop: 24 }}>
-              <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 24, marginBottom: 12 }}>
-                Meu perfil
-              </Text>
+<ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, paddingTop: 12 }}>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginBottom: 12,
+    }}
+  >
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 40,
+        minHeight: 40,
+        paddingRight: 0,
+      }}
+    />
+
+    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 24 }}>
+      Meu perfil
+    </Text>
+  </View>
 
               <View
                 style={{

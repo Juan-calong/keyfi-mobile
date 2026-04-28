@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
-  Platform,
   StatusBar,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -23,6 +22,7 @@ import {
   rejectSalonCartRequest,
 } from "../../core/api/services/cartRequests.service";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 const BLACK = "#000000";
 const WHITE = "#FFFFFF";
@@ -87,16 +87,21 @@ export function OwnerCartRequestDetailsScreen() {
     <Screen style={{ flex: 1, backgroundColor: WHITE }}>
       <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
 
-      <View style={s.header}>
-        <Pressable onPress={() => nav.goBack?.()} hitSlop={12} style={s.headerLeft}>
-          <Text style={s.chev}>‹</Text>
-          <Text style={s.backText}>Back</Text>
-        </Pressable>
+<View style={s.header}>
+  <View style={s.headerLeft}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={BLACK}
+      iconSize={24}
+      style={s.backButton}
+    />
+  </View>
 
-        <Text style={s.headerTitle}>Pedido do vendedor</Text>
+  <Text style={s.headerTitle}>Pedido do vendedor</Text>
 
-        <View style={{ width: 70 }} />
-      </View>
+  <View style={{ width: 70 }} />
+</View>
 
       <Container style={{ flex: 1, paddingHorizontal: 16 }}>
         <View style={s.rule} />
@@ -209,10 +214,23 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: WHITE,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 6, minWidth: 80 },
-  headerTitle: { color: BLACK, fontSize: 17, fontWeight: "600" },
-  chev: { fontSize: 28, lineHeight: 28, color: BLACK, marginTop: Platform.OS === "android" ? -2 : 0 },
-  backText: { fontSize: 16, color: BLACK, fontWeight: "500" },
+headerLeft: {
+  minWidth: 70,
+  alignItems: "flex-start",
+  justifyContent: "center",
+},
+
+backButton: {
+  minWidth: 44,
+  minHeight: 44,
+  paddingRight: 0,
+},
+
+headerTitle: {
+  color: BLACK,
+  fontSize: 17,
+  fontWeight: "600",
+},
 
   rule: { height: 1, backgroundColor: LINE, marginBottom: 10 },
   sep: { height: 1, backgroundColor: LINE },

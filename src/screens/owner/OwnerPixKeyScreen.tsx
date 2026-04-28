@@ -24,6 +24,7 @@ import { endpoints } from "../../core/api/endpoints";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { t } from "../../ui/tokens";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 type PixKeyType = "CPF" | "CNPJ";
 
@@ -200,9 +201,15 @@ export function OwnerPixKeyScreen() {
           {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
           <View style={m.nav}>
-            <Pressable hitSlop={12} onPress={() => nav.goBack()} style={m.backBtn}>
-              <Text style={m.backText}>{"<"}</Text>
-            </Pressable>
+<View style={m.navSide}>
+  <AppBackButton
+    onPress={() => nav.goBack()}
+    showLabel={false}
+    color="#000000"
+    iconSize={24}
+    style={m.backBtn}
+  />
+</View>
 
             <Text style={m.navTitle}>PIX</Text>
 
@@ -223,8 +230,12 @@ export function OwnerPixKeyScreen() {
             </View>
           ) : (
             <>
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={m.scroll}>
-                <Text style={m.sectionTitle}>Recebimento (PIX)</Text>
+<ScrollView
+  style={{ flex: 1 }}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={m.scroll}
+>                <Text style={m.sectionTitle}>Recebimento (PIX)</Text>
                 <Text style={m.sub}>Atual: {destination?.pixKey ? String(destination.pixKey) : "não cadastrado"}</Text>
 
                 <View style={[m.hairline, { marginVertical: 18 }]} />
@@ -336,15 +347,29 @@ const m = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  backBtn: { minWidth: 64, height: 44, justifyContent: "center" },
-  backText: { color: "#000000", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
+navSide: {
+  minWidth: 64,
+  height: 44,
+  justifyContent: "center",
+},
+
+backBtn: {
+  minWidth: 44,
+  minHeight: 44,
+  paddingRight: 0,
+},
   navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
   rightBtn: { minWidth: 64, height: 44, alignItems: "flex-end", justifyContent: "center" },
   rightText: { color: "#000000", fontSize: 16, fontWeight: "900" },
 
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.18)", width: "100%" },
 
-  scroll: { paddingTop: 16, paddingHorizontal: HPAD, paddingBottom: 18 },
+  scroll: {
+  flexGrow: 1,
+  paddingTop: 16,
+  paddingHorizontal: HPAD,
+  paddingBottom: 160,
+},
 
   sectionTitle: { color: "#000000", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
   sub: { marginTop: 6, color: "#000000", fontSize: 12, fontWeight: "700", opacity: 0.75, lineHeight: 16 },

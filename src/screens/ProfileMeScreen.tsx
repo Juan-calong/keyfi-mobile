@@ -11,6 +11,7 @@ import { t } from "../ui/tokens";
 import { api } from "../core/api/client";
 import { endpoints } from "../core/api/endpoints";
 import { OWNER_SCREENS } from "../navigation/owner.routes";
+import { AppBackButton } from "../ui/components/AppBackButton";
 
 type MeDTO = any;
 
@@ -213,6 +214,12 @@ function EarningsPreviewRow({
 export function ProfileMeScreen() {
   const nav = useNavigation<any>();
 
+  const handleBack = () => {
+  if (nav.canGoBack()) {
+    nav.goBack();
+  }
+};
+
   const meQ = useQuery<MeDTO>({
     queryKey: ["me"],
     queryFn: async () => (await api.get(endpoints.profiles.me)).data,
@@ -258,23 +265,37 @@ export function ProfileMeScreen() {
             }}
           />
         ) : (
-          <ScrollView
-            contentContainerStyle={{
-              paddingBottom: 40,
-              paddingTop: 80,
-            }}
-          >
-            <Text
-              style={{
-                color: t.colors.text,
-                fontWeight: "900",
-                fontSize: 28,
-                ...(sans ? { fontFamily: sans } : null),
-                paddingHorizontal: 4,
-              }}
-            >
-              Profile
-            </Text>
+<ScrollView
+  contentContainerStyle={{
+    paddingBottom: 40,
+    paddingTop: 52,
+  }}
+>
+  <AppBackButton
+    onPress={handleBack}
+    showLabel={false}
+    color={t.colors.text}
+    iconSize={24}
+    style={{
+      alignSelf: "flex-start",
+      marginBottom: 14,
+      minWidth: 44,
+      minHeight: 44,
+      paddingRight: 0,
+    }}
+  />
+
+  <Text
+    style={{
+      color: t.colors.text,
+      fontWeight: "900",
+      fontSize: 28,
+      ...(sans ? { fontFamily: sans } : null),
+      paddingHorizontal: 4,
+    }}
+  >
+    Perfil
+  </Text>
 
             <View style={{ height: 12 }} />
 

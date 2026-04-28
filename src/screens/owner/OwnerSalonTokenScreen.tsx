@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, Share } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, Pressable, Share, ScrollView } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { useQuery } from "@tanstack/react-query";
 
@@ -11,8 +11,10 @@ import { IosAlert } from "../../ui/components/IosAlert";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 export function OwnerSalonTokenScreen() {
+  const nav = useNavigation<any>();
   const route = useRoute<any>();
   const token: string = route?.params?.token ?? "";
 
@@ -82,15 +84,44 @@ export function OwnerSalonTokenScreen() {
 
   return (
     <Screen>
-      <Container style={{ flex: 1 }}>
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: 16,
-          }}
-        >
+<Container style={{ flex: 1 }}>
+  <View
+    style={{
+      height: 52,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    }}
+  >
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 44,
+        minHeight: 44,
+        paddingRight: 0,
+      }}
+    />
+
+    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 17 }}>
+      Token do salão
+    </Text>
+
+    <View style={{ width: 44 }} />
+  </View>
+
+  <ScrollView
+    showsVerticalScrollIndicator={false}
+    contentContainerStyle={{
+      flexGrow: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+    }}
+  >
           <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 22 }}>
             Token e link do salão
           </Text>
@@ -240,8 +271,8 @@ export function OwnerSalonTokenScreen() {
               <Text style={{ color: t.colors.text, fontWeight: "900" }}>Atualizar</Text>
             </Pressable>
           </View>
-        </View>
-      </Container>
+      </ScrollView>
+    </Container>
 
       <IosAlert
         visible={!!modal}

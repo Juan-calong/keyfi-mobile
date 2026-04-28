@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../sellerProfile.types";
 import { formatDateTimeBR, maskPixCpfCnpjByType } from "../sellerProfile.utils";
 import { pix } from "../sellerProfile.styles";
+import { AppBackButton } from "../../../../ui/components/AppBackButton";
 
 type Props = {
   destination: DestinationDTO | null;
@@ -29,9 +30,15 @@ export function PixView({
   return (
     <View style={{ flex: 1 }}>
       <View style={pix.nav}>
-        <Pressable hitSlop={12} onPress={onBack} style={pix.backBtn}>
-          <Text style={pix.backText}>{"<"}</Text>
-        </Pressable>
+<View style={pix.navSide}>
+  <AppBackButton
+    onPress={onBack}
+    showLabel={false}
+    color="#000000"
+    iconSize={24}
+    style={pix.backBtn}
+  />
+</View>
 
         <Text style={pix.navTitle}>Recebimento (PIX)</Text>
 
@@ -42,11 +49,12 @@ export function PixView({
 
       <View style={pix.hairline} />
 
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={pix.scroll}
-      >
+<ScrollView
+  style={{ flex: 1 }}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={pix.scroll}
+>
         <Text style={pix.sectionTitle}>PIX</Text>
         <Text style={pix.sub}>
           Atual: {destination?.pixKey ? String(destination.pixKey) : "não cadastrado"}

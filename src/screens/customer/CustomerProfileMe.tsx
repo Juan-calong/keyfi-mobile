@@ -12,7 +12,7 @@ import { t } from "../../ui/tokens";
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
-
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 
 import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfirm";
@@ -67,6 +67,15 @@ function RowItem({
 export function CustomerProfileMe() {
   const nav = useNavigation<any>();
 
+  const handleBack = () => {
+  if (nav.canGoBack()) {
+    nav.goBack();
+    return;
+  }
+
+  nav.navigate(CUSTOMER_SCREENS.Home);
+};
+
   const [confirm, setConfirm] = useState<null | { title: string; message: string; actions: IosConfirmAction[] }>(null);
 
   const meQ = useQuery<MeDTO>({
@@ -103,10 +112,20 @@ export function CustomerProfileMe() {
   return (
     <Screen>
       <Container style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: 80 }}>
-          <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28, paddingHorizontal: 4 }}>Perfil</Text>
+<ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: 52 }}>
+  <AppBackButton
+    onPress={handleBack}
+    showLabel={false}
+    color={t.colors.text}
+    iconSize={24}
+    style={{ alignSelf: "flex-start", marginBottom: 14 }}
+  />
 
-          <View style={{ height: 12 }} />
+  <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28, paddingHorizontal: 4 }}>
+    Perfil
+  </Text>
+
+  <View style={{ height: 12 }} />
 
           <Pressable
             onPress={() => nav.navigate(CUSTOMER_SCREENS.ProfileDetails)}

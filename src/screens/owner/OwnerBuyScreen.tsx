@@ -21,6 +21,8 @@ import { Loading, ErrorState } from "../../ui/components/State";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
+import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
+import { resolvePromoPriceData } from "../../core/utils/promoPricing";
 import { useCartStore } from "../../stores/cart.store";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 import { getProductImageUrl } from "../../core/utils/productImage";
@@ -135,7 +137,8 @@ function applyPromo(basePrice: number, promo: { type: string; value: string }) {
       const final = basePrice * (1 - pct / 100);
       return clampMin(final, 0);
     }
-    case "VALUE": {
+    case "VALUE":
+    case "FIXED": {
       const final = basePrice - value;
       return clampMin(final, 0);
     }
@@ -146,14 +149,6 @@ function applyPromo(basePrice: number, promo: { type: string; value: string }) {
     default:
       return basePrice;
   }
-}
-
-function badgeText(promo: { type: string; value: string }, base: number, final: number) {
-  if (!(final < base)) return null;
-  if (String(promo.type || "").toUpperCase() === "PCT") {
-    return `-${Math.round(toNumberBR(promo.value))}%`;
-  }
-  return "PROMO";
 }
 
 function isOutOfStock(p: { stock?: number | null; active?: boolean | null }) {
@@ -722,18 +717,17 @@ useFocusEffect(
 
                 const promo = promoByProductId.get(item.id) || null;
 
-                const base = toNumberBR(getEffectivePrice(item));
-                const final = promo ? applyPromo(base, promo) : base;
+                const promoPriceData = resolvePromoPriceData(item, promo);
+                const legacyBase = toNumberBR(getEffectivePrice(item));
+                const legacyFinal = promo ? applyPromo(legacyBase, promo) : legacyBase;
+                const legacyHasDiscount = promo ? legacyFinal < legacyBase : false;
+                const base = promoPriceData?.originalPrice ?? legacyBase;
+                const final = promoPriceData?.price ?? legacyFinal;
+                const hasDiscount = promoPriceData?.hasDiscount ?? legacyHasDiscount;
 
-                const hasDiscount = promo ? final < base : false;
-                const promoBadgeRaw = promo && hasDiscount ? badgeText(promo, base, final) : null;
-
-                const promoBadgeLabel =
-                  promoBadgeRaw === null
-                    ? null
-                    : promoBadgeRaw === "PROMO"
-                    ? "OFF"
-                    : `${promoBadgeRaw.replace("-", "")} OFF`;
+const promoBadgeLabel =
+  resolvePromoBadgeLabel(item) ??
+  resolvePromoBadgeLabel({ promo });
 
                 const img = getProductImageUrl(item);
                 const isLeft = index % 2 === 0;

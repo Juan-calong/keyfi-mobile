@@ -17,6 +17,7 @@ import { t } from "../../ui/tokens";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 function formatBRL(value: string | number) {
   const n = Number(String(value ?? 0).replace(",", "."));
@@ -138,16 +139,46 @@ export function OwnerWalletScreen() {
     <Screen>
       <Container style={{ flex: 1, paddingTop: 10 }}>
         {/* Header */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <View style={{ paddingTop: 24, paddingBottom: 8 }}>
-            <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28 }}>Carteira</Text>
-            <Text style={{ color: t.colors.text2, fontWeight: "700", marginTop: 6 }}>
-              Pagamento automático todo dia 10
-            </Text>
-          </View>
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    paddingTop: 8,
+    paddingBottom: 8,
+  }}
+>
+  <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 40,
+        minHeight: 40,
+        paddingRight: 0,
+      }}
+    />
 
-          <Button title={q.isRefetching ? "..." : "Atualizar"} variant="ghost" onPress={() => q.refetch()} />
-        </View>
+    <View style={{ flex: 1 }}>
+      <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 28 }}>
+        Carteira
+      </Text>
+
+      <Text style={{ color: t.colors.text2, fontWeight: "700", marginTop: 6 }}>
+        Pagamento automático todo dia 10
+      </Text>
+    </View>
+  </View>
+
+  <Button
+    title={q.isRefetching ? "..." : "Atualizar"}
+    variant="ghost"
+    onPress={() => q.refetch()}
+  />
+</View>
 
         <View style={{ height: 12 }} />
 

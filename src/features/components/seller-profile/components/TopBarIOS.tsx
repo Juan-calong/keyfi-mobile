@@ -1,6 +1,7 @@
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
+import { AppBackButton } from "../../../../ui/components/AppBackButton";
 import { iosTop } from "../sellerProfile.styles";
 
 type Props = {
@@ -12,9 +13,15 @@ type Props = {
 export function TopBarIOS({ title, onBack, right }: Props) {
   return (
     <View style={iosTop.nav}>
-      <Pressable hitSlop={12} onPress={onBack} style={iosTop.backBtn}>
-        <Text style={iosTop.backText}>{"<"}</Text>
-      </Pressable>
+      <View style={iosTop.navSide}>
+        <AppBackButton
+          onPress={onBack}
+          showLabel={false}
+          color="#000000"
+          iconSize={24}
+          style={iosTop.backBtn}
+        />
+      </View>
 
       <Text style={iosTop.navTitle} numberOfLines={1}>
         {title}

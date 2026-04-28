@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import type { SellerReferralsResponse } from "../sellerProfile.types";
 import { s } from "../sellerProfile.styles";
+import { AppBackButton } from "../../../../ui/components/AppBackButton";
 
 type Props = {
   data: SellerReferralsResponse | null;
@@ -146,11 +147,17 @@ export function ReferralLinksView({ data, onBack, onRefresh }: Props) {
           marginBottom: 14,
         }}
       >
-        <Pressable onPress={onBack}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: "#111827" }}>
-            Voltar
-          </Text>
-        </Pressable>
+<AppBackButton
+  onPress={onBack}
+  showLabel={false}
+  color="#111827"
+  iconSize={24}
+  style={{
+    minWidth: 40,
+    minHeight: 40,
+    paddingRight: 0,
+  }}
+/>
 
         <Pressable onPress={onRefresh}>
           <Text style={{ fontSize: 15, fontWeight: "700", color: "#111827" }}>

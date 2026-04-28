@@ -13,6 +13,7 @@ import { OWNER_SCREENS } from "../../navigation/owner.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 function formatBRL(value: string | number) {
   const n = Number(String(value ?? 0).replace(",", "."));
@@ -29,23 +30,87 @@ function normalizeStatus(v: any) {
   return String(v ?? "").toUpperCase().trim();
 }
 
-function PillMono({ text }: { text: string }) {
+function statusLabel(text: string) {
+  const up = normalizeStatus(text);
+
+  if (up === "PAID") return "Pago";
+  if (up === "PENDING") return "Pendente";
+  if (up === "APPROVED") return "Aprovado";
+  if (up === "CREATED") return "Criado";
+  if (up === "CANCELED") return "Cancelado";
+  if (up === "FAILED") return "Falhou";
+  if (up === "EXPIRED") return "Expirado";
+  if (up === "SHIPPED") return "Enviado";
+  if (up === "COMPLETED") return "Concluído";
+
+  return up || "—";
+}
+
+function statusColors(text: string) {
+  const up = normalizeStatus(text);
+
+  if (up === "PAID" || up === "APPROVED" || up === "COMPLETED" || up === "SHIPPED") {
+    return {
+      bg: "#DCFCE7",
+      border: "#86EFAC",
+      text: "#166534",
+    };
+  }
+
+  if (up === "PENDING" || up === "CREATED") {
+    return {
+      bg: "#FEF3C7",
+      border: "#FCD34D",
+      text: "#92400E",
+    };
+  }
+
+  if (up === "CANCELED" || up === "FAILED" || up === "EXPIRED") {
+    return {
+      bg: "#FFE4E6",
+      border: "#FDA4AF",
+      text: "#BE123C",
+    };
+  }
+
+  return {
+    bg: "#F1F5F9",
+    border: "#CBD5E1",
+    text: "#334155",
+  };
+}
+
+function PillStatus({ text }: { text: string }) {
+  const c = statusColors(text);
+
   return (
-    <View style={m.pill}>
-      <Text style={m.pillText}>{text}</Text>
+    <View style={[m.pill, { backgroundColor: c.bg, borderColor: c.border }]}>
+      <Text style={[m.pillText, { color: c.text }]}>{statusLabel(text)}</Text>
     </View>
   );
 }
 
 function ItemTitle(it: any, idx: number) {
-  return (
+  const title =
     it?.product?.name ||
+    it?.product?.title ||
     it?.productSnapshot?.name ||
+    it?.productSnapshot?.title ||
+    it?.snapshot?.name ||
+    it?.snapshot?.title ||
+    it?.productName ||
+    it?.productTitle ||
     it?.name ||
     it?.title ||
-    (it?.sku ? `SKU ${it.sku}` : "") ||
-    `Item ${idx + 1}`
-  );
+    it?.skuName ||
+    "";
+
+  const cleaned = String(title || "").trim();
+
+  if (cleaned) return cleaned;
+  if (it?.sku) return `SKU ${it.sku}`;
+
+  return `Item ${idx + 1}`;
 }
 
 export function OwnerOrderDetailsScreen() {
@@ -98,17 +163,23 @@ export function OwnerOrderDetailsScreen() {
         {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
         {/* NAV (iOS-like) */}
-        <View style={m.nav}>
-          <Pressable hitSlop={12} onPress={() => nav.goBack()} style={m.backBtn}>
-            <Text style={m.backText}>{"<"}</Text>
-          </Pressable>
+<View style={m.nav}>
+  <View style={m.navSide}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color="#000000"
+      iconSize={24}
+      style={m.backBtn}
+    />
+  </View>
 
-          <Text style={m.navTitle}>Pedido</Text>
+  <Text style={m.navTitle}>Pedido</Text>
 
-          <Pressable hitSlop={12} onPress={() => q.refetch()} style={m.rightBtn}>
-            <Text style={m.rightText}>{q.isRefetching ? "…" : "⟳"}</Text>
-          </Pressable>
-        </View>
+  <Pressable hitSlop={12} onPress={() => q.refetch()} style={m.rightBtn}>
+    <Text style={m.rightText}>{q.isRefetching ? "…" : "⟳"}</Text>
+  </Pressable>
+</View>
 
         <View style={m.hairline} />
 
@@ -146,11 +217,11 @@ export function OwnerOrderDetailsScreen() {
 
               <Text style={m.sectionTitle}>Status</Text>
 
-              <View style={m.pillsRow}>
-                {status ? <PillMono text={status} /> : null}
-                {paymentStatus ? <PillMono text={paymentStatus} /> : null}
-                {approval && approval !== "UNDEFINED" ? <PillMono text={approval} /> : null}
-              </View>
+<View style={m.pillsRow}>
+  {status ? <PillStatus text={status} /> : null}
+  {paymentStatus ? <PillStatus text={paymentStatus} /> : null}
+  {approval && approval !== "UNDEFINED" ? <PillStatus text={approval} /> : null}
+</View>
 
               {canPay ? (
                 <View style={{ marginTop: 14 }}>
@@ -214,14 +285,23 @@ export function OwnerOrderDetailsScreen() {
 const HPAD = 20;
 
 const m = StyleSheet.create({
-  nav: {
-    height: 52,
-    paddingHorizontal: HPAD,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backBtn: { minWidth: 64, height: 44, justifyContent: "center" },
+nav: {
+  height: 52,
+  paddingHorizontal: HPAD,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+navSide: {
+  minWidth: 64,
+  height: 44,
+  justifyContent: "center",
+},
+backBtn: {
+  minWidth: 44,
+  minHeight: 44,
+  paddingRight: 0,
+},
   backText: { color: "#000000", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
   navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
   rightBtn: { minWidth: 64, height: 44, alignItems: "flex-end", justifyContent: "center" },
@@ -241,15 +321,19 @@ const m = StyleSheet.create({
   bold: { fontWeight: "900" },
 
   pillsRow: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.25)",
-    backgroundColor: "#FFFFFF",
-  },
-  pillText: { color: "#000000", fontSize: 11, fontWeight: "900", letterSpacing: -0.1, opacity: 0.85 },
+  
+pill: {
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  borderRadius: 999,
+  borderWidth: 1,
+},
+
+pillText: {
+  fontSize: 11,
+  fontWeight: "900",
+  letterSpacing: -0.1,
+},
 
   ctaBtn: {
     height: 54,

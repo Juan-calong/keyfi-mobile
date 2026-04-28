@@ -196,14 +196,7 @@ function isLocalDeliveryOption(option: ShippingQuoteOption) {
 function resolveLocalDeliveryCountdownLabel(option: ShippingQuoteOption) {
   const backendLabel = String(option.deliveryCountdownLabel ?? "").trim();
   if (backendLabel) return backendLabel;
-
-  const days = Number(option.nextDeliveryInDays);
-  if (!Number.isFinite(days) || days < 0) return null;
-
-  if (days === 0) return "Entrega hoje";
-  if (days === 1) return "Entrega em 1 dia";
-
-  return `Entrega em ${days} dias`;
+  return "Próxima entrega disponível";
 }
 
 function normalizeDeliveryAddress(

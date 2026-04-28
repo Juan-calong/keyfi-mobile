@@ -23,6 +23,8 @@ import { friendlyError } from "../../../core/errors/friendlyError";
 import { api } from "../../../core/api/client";
 import { endpoints } from "../../../core/api/endpoints";
 import { ProductFavoriteButton } from "./ProductFavoriteButton";
+import { AppBackButton } from "../../../ui/components/AppBackButton";
+
 
 import type {
   Product,
@@ -42,6 +44,8 @@ import {
   normalizeGalleryMedia,
 } from "./productDetails.utils";
 import { s } from "./productDetails.styles";
+
+const PRODUCT_DETAILS_BG = "#FFFFFF";
 
 type ViewerMode = "OWNER" | "CUSTOMER";
 
@@ -1038,29 +1042,32 @@ const quantityTierBadges = useMemo(() => {
   }, [favoriteIds, queryClient, product]);
 
   return (
-    <Screen style={{ backgroundColor: COLORS.bg as any }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+<Screen style={{ backgroundColor: PRODUCT_DETAILS_BG as any }}>
+  <StatusBar barStyle="dark-content" backgroundColor={PRODUCT_DETAILS_BG} />
 
-      <Container
-        style={{
-          flex: 1,
-          backgroundColor: COLORS.bg,
-          paddingHorizontal: 0,
-        }}
-      >
-        <View style={s.header}>
-          <Pressable
-            onPress={onBack}
-            hitSlop={10}
-            style={({ pressed }) => [s.back, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={s.chev}>{"<"}</Text>
-            <Text style={s.backText}>Voltar</Text>
-          </Pressable>
+  <Container
+    style={{
+      flex: 1,
+      backgroundColor: PRODUCT_DETAILS_BG,
+      paddingHorizontal: 0,
+    }}
+  >
+<View style={[s.header, { backgroundColor: PRODUCT_DETAILS_BG }]}>
+  <AppBackButton
+    onPress={onBack}
+    showLabel={false}
+    color={COLORS.text}
+    iconSize={24}
+    style={{
+      minWidth: 44,
+      minHeight: 44,
+      paddingRight: 0,
+    }}
+  />
 
-          <View style={{ flex: 1 }} />
-          <View style={{ width: 52 }} />
-        </View>
+  <View style={{ flex: 1 }} />
+  <View style={{ width: 52 }} />
+</View>
 
         {productQuery.isLoading ? (
           <Loading />
@@ -1073,11 +1080,15 @@ const quantityTierBadges = useMemo(() => {
             </Text>
           </View>
           ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={s.scrollContent}
-          >
-            <View style={s.mainCard}>
+<ScrollView
+  showsVerticalScrollIndicator={false}
+  style={{ backgroundColor: PRODUCT_DETAILS_BG }}
+  contentContainerStyle={[
+    s.scrollContent,
+    { backgroundColor: PRODUCT_DETAILS_BG },
+  ]}
+>
+            <View style={[s.mainCard, { backgroundColor: PRODUCT_DETAILS_BG }]}>
               <View style={[s.galleryWrap, { height: galleryHeight }]}>
                 {galleryMedia.length > 0 ? (
                   <FlatList
@@ -1166,7 +1177,7 @@ const quantityTierBadges = useMemo(() => {
                 ) : null}
               </View>
 
-              <View style={s.content}>
+              <View style={[s.content, { backgroundColor: PRODUCT_DETAILS_BG }]}>
                 <Text style={s.name} numberOfLines={2} ellipsizeMode="tail">
                   {product.name}
                 </Text>

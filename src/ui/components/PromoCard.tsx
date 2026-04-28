@@ -1,6 +1,7 @@
 // src/ui/components/PromoCard.tsx
 import React from "react";
 import { View, Text } from "react-native";
+import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
 
 type Promo = {
     id: string;
@@ -10,15 +11,14 @@ type Promo = {
     discountPercent?: number | null;
     discountValue?: number | null;
     visibleTo?: "SELLER" | "SALON" | "BOTH";
+        promoBadge?: {
+        label?: string | null;
+        shortLabel?: string | null;
+    } | null;
 };
 
 export function PromoCard({ promo }: { promo: Promo }) {
-    const discountLabel =
-        promo.discountPercent != null
-            ? `${promo.discountPercent}% OFF`
-            : promo.discountValue != null
-                ? `R$ ${promo.discountValue} OFF`
-                : "Promoção";
+    const discountLabel = resolvePromoBadgeLabel(promo) ?? "Promoção";
 
     return (
         <View style={{ padding: 12, borderRadius: 16, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#FFF" }}>

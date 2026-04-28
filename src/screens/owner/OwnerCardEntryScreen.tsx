@@ -79,7 +79,6 @@ export function OwnerCardEntryScreen({ route, navigation }: any) {
 
       await api.post(endpoints.payments.intent(orderId!), payload);
 
-      // ✅ destino: detalhes do pedido (recomendado)
       navigation.replace(OWNER_SCREENS.OrderDetails, { orderId });
     } catch (e: any) {
       const fe: any = friendlyError(e);

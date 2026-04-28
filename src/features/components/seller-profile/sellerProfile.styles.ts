@@ -16,6 +16,12 @@ export const link = StyleSheet.create({
     fontSize: 14,
   },
 
+navSide: {
+  minWidth: 64,
+  height: 44,
+  justifyContent: "center",
+},
+
   primaryBtn: {
     height: 48,
     borderRadius: 14,
@@ -153,13 +159,39 @@ export const iosTop = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  backBtn: { minWidth: 64, height: 44, justifyContent: "center" },
-  backText: { color: "#000000", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
+  navSide: {
+    minWidth: 64,
+    height: 44,
+    justifyContent: "center",
+  },
 
-  navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
-  rightSlot: { minWidth: 64, height: 44, alignItems: "flex-end", justifyContent: "center" },
+  backBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingRight: 0,
+  },
 
-  hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.18)", width: "100%" },
+  navTitle: {
+    color: "#000000",
+    fontSize: 17,
+    fontWeight: "900",
+    letterSpacing: -0.2,
+    flex: 1,
+    textAlign: "center",
+  },
+
+  rightSlot: {
+    minWidth: 64,
+    height: 44,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(0,0,0,0.18)",
+    width: "100%",
+  },
 });
 
 export const pix = StyleSheet.create({
@@ -171,6 +203,12 @@ export const pix = StyleSheet.create({
     justifyContent: "space-between",
   },
 
+  navSide: {
+  minWidth: 64,
+  height: 44,
+  justifyContent: "center",
+},
+
   backBtn: { minWidth: 64, height: 44, justifyContent: "center" },
   backText: { color: "#000000", fontSize: 22, fontWeight: "800", letterSpacing: -0.2 },
   navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
@@ -179,7 +217,12 @@ export const pix = StyleSheet.create({
 
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.18)", width: "100%" },
 
-  scroll: { paddingTop: 16, paddingHorizontal: HPAD_PIX, paddingBottom: 18 },
+  scroll: {
+  flexGrow: 1,
+  paddingTop: 16,
+  paddingHorizontal: 20,
+  paddingBottom: 160,
+},
 
   sectionTitle: { color: "#000000", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
   sub: { marginTop: 6, color: "#000000", fontSize: 12, fontWeight: "700", opacity: 0.75, lineHeight: 16 },

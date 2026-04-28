@@ -10,6 +10,7 @@ import { t } from "../../ui/tokens";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 type SalonReferralCustomer = {
   id: string;
@@ -188,30 +189,36 @@ export function OwnerReferralLinksScreen() {
           <ScrollView
             contentContainerStyle={{
               paddingBottom: 40,
-              paddingTop: 80,
+              paddingTop: 52,
             }}
           >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-                paddingHorizontal: 4,
-              }}
-            >
-              <Pressable onPress={() => nav.goBack()}>
-                <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 22}}>
-                  {"<"}
-                </Text>
-              </Pressable>
+<View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+    paddingHorizontal: 4,
+  }}
+>
+  <AppBackButton
+    onPress={() => nav.goBack()}
+    showLabel={false}
+    color={t.colors.text}
+    iconSize={24}
+    style={{
+      minWidth: 40,
+      minHeight: 40,
+      paddingRight: 0,
+    }}
+  />
 
-              <Pressable onPress={() => q.refetch()}>
-                <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
-                  Atualizar
-                </Text>
-              </Pressable>
-            </View>
+  <Pressable onPress={() => q.refetch()}>
+    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
+      Atualizar
+    </Text>
+  </Pressable>
+</View>
 
             <Text
               style={{

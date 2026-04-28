@@ -14,6 +14,7 @@ import { Button } from "../../ui/components/Button";
 import { Pill } from "../../ui/components/Pill";
 import { Loading, ErrorState, Empty } from "../../ui/components/State";
 import { t } from "../../ui/tokens";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
@@ -207,15 +208,29 @@ export function SellerWalletScreen() {
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <View>
-              <View style={styles.header}>
-                <View style={styles.headerTextWrap}>
-                  <Text style={styles.eyebrow}>Minha carteira</Text>
-                  <Text style={styles.title}>Comissões</Text>
-                  <Text style={styles.subtitle}>Acompanhe seus valores e o próximo repasse.</Text>
-                </View>
+<View style={styles.header}>
+  <View style={styles.headerLeft}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={styles.backButton}
+    />
 
-                <Button title={q.isRefetching ? "..." : "Atualizar"} variant="ghost" onPress={() => q.refetch()} />
-              </View>
+    <View style={styles.headerTextWrap}>
+      <Text style={styles.eyebrow}>Minha carteira</Text>
+      <Text style={styles.title}>Comissões</Text>
+      <Text style={styles.subtitle}>Acompanhe seus valores e o próximo repasse.</Text>
+    </View>
+  </View>
+
+  <Button
+    title={q.isRefetching ? "..." : "Atualizar"}
+    variant="ghost"
+    onPress={() => q.refetch()}
+  />
+</View>
 
               <Card style={styles.heroCard}>
                 <View style={styles.heroTopRow}>
@@ -378,19 +393,32 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
+header: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  paddingTop: 12,
+  paddingBottom: 8,
+},
 
-  headerTextWrap: {
-    flex: 1,
-    paddingTop: 8,
-  },
+headerLeft: {
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+},
+
+backButton: {
+  minWidth: 40,
+  minHeight: 40,
+  paddingRight: 0,
+},
+
+headerTextWrap: {
+  flex: 1,
+  paddingTop: 0,
+},
 
   eyebrow: {
     color: t.colors.text2,

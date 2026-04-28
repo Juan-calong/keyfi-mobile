@@ -14,8 +14,11 @@ import { Button } from "../../ui/components/Button";
 import { t } from "../../ui/tokens";
 
 import { IosAlert } from "../../ui/components/IosAlert";
+import { useNavigation } from "@react-navigation/native";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 export function SellerApplyReferralTokenScreen() {
+  const nav = useNavigation<any>();
   const qc = useQueryClient();
   const [token, setToken] = useState("");
 
@@ -48,8 +51,31 @@ export function SellerApplyReferralTokenScreen() {
   return (
     <Screen>
       <Container style={{ flex: 1 }}>
-        <Text style={{ fontSize: 18, fontWeight: "800", color: t.colors.text }}>Aplicar token</Text>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginBottom: 12,
+      paddingTop: 12,
+    }}
+  >
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 40,
+        minHeight: 40,
+        paddingRight: 0,
+      }}
+    />
 
+    <Text style={{ fontSize: 18, fontWeight: "800", color: t.colors.text }}>
+      Aplicar token
+    </Text>
+  </View>
         <View style={{ marginTop: 12 }}>
           <Card style={{ padding: 12 }}>
             <Text style={{ marginBottom: 8, opacity: 0.8, color: t.colors.text2 }}>Token</Text>

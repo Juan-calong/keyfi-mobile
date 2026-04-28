@@ -3,6 +3,8 @@ import { View, Text, FlatList, Pressable, Image, StyleSheet } from "react-native
 import { useNavigation } from "@react-navigation/native";
 import { useSalonActivePromos } from "../../core/queries/salonHome.queries";
 import { getProductImageUrl } from "../../core/utils/productImage";
+import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
+import { resolvePromoPriceData } from "../../core/utils/promoPricing";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -31,7 +33,8 @@ function applyPromo(basePrice: number, promo: { type: string; value: string }) {
       const final = basePrice * (1 - pct / 100);
       return clampMin(final, 0);
     }
-    case "VALUE": {
+    case "VALUE":
+    case "FIXED": {
       const final = basePrice - value;
       return clampMin(final, 0);
     }
@@ -43,13 +46,6 @@ function applyPromo(basePrice: number, promo: { type: string; value: string }) {
       return basePrice;
   }
 }
-
-function badgeText(promo: { type: string; value: string }, base: number, final: number) {
-  if (!(final < base)) return null;
-  if (promo.type === "PCT") return `-${Math.round(toNumberBR(promo.value))}%`;
-  return "PROMO";
-}
-
 function formatBRL(value: string | number) {
   const n = Number(String(value ?? 0).replace(",", "."));
   if (!Number.isFinite(n)) return "R$ —";
@@ -60,17 +56,25 @@ export function OwnerPromosScreen() {
   const nav = useNavigation<any>();
   const q = useSalonActivePromos();
 
-  const items = q.data?.items ?? [];
-
   const rows = useMemo(() => {
+    const items = q.data?.items ?? [];
     return items.map((it: any) => {
-      const base = toNumberBR(it.product?.price);
-      const final = applyPromo(base, it.promo);
-      const hasDiscount = final < base;
-      const badge = badgeText(it.promo, base, final);
+      const promoPriceData =
+        resolvePromoPriceData(it) ??
+        resolvePromoPriceData(it.product, it.promo) ??
+        resolvePromoPriceData(it.promo);
+      const legacyBase = toNumberBR(it.product?.price);
+      const legacyFinal = applyPromo(legacyBase, it.promo);
+      const base = promoPriceData?.originalPrice ?? legacyBase;
+      const final = promoPriceData?.price ?? legacyFinal;
+      const hasDiscount = promoPriceData?.hasDiscount ?? (legacyFinal < legacyBase);
+      const badge =
+        resolvePromoBadgeLabel(it) ??
+        resolvePromoBadgeLabel(it.product) ??
+        resolvePromoBadgeLabel(it.promo);
       return { ...it, base, final, hasDiscount, badge };
     });
-  }, [items]);
+  }, [q.data?.items]);
 
   if (q.isLoading) {
     return (

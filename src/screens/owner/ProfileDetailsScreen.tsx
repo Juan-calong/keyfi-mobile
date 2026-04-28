@@ -25,6 +25,8 @@ import { fetchAddressByCep, formatCep } from "../../core/utils/cep";
 
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfirm";
+import { useNavigation } from "@react-navigation/native";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 type MeDTO = any;
 
@@ -410,6 +412,7 @@ function getCurrentValue(me: any, field: EditFieldKey) {
 }
 
 export function OwnerProfileDetailsScreen() {
+  const nav = useNavigation<any>();
   const qc = useQueryClient();
   const logout = useAuthStore((s) => s.logout);
 
@@ -552,10 +555,31 @@ export function OwnerProfileDetailsScreen() {
           <ErrorState onRetry={() => meQ.refetch()} />
         ) : (
           <>
-            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, paddingTop: 24 }}>
-              <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 24, marginBottom: 12 }}>
-                Meu perfil
-              </Text>
+<ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, paddingTop: 12 }}>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginBottom: 12,
+    }}
+  >
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 40,
+        minHeight: 40,
+        paddingRight: 0,
+      }}
+    />
+
+    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 24 }}>
+      Meu perfil
+    </Text>
+  </View>
 
               <View
                 style={{

@@ -11,6 +11,8 @@ import { t } from "../../ui/tokens";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
+import { useNavigation } from "@react-navigation/native";
+import { AppBackButton } from "../../ui/components/AppBackButton";
 
 function formatBRL(value: string | number) {
   const n = Number(String(value ?? 0).replace(",", "."));
@@ -51,6 +53,7 @@ type Notif = {
 };
 
 export function OwnerNotificationsScreen() {
+  const nav = useNavigation<any>();
   const ordersQ = useQuery<OrdersListDTO>({
     queryKey: ["owner-notifs-orders"],
     queryFn: async () => {
@@ -113,22 +116,32 @@ export function OwnerNotificationsScreen() {
   return (
     <Screen>
       <Container style={{ flex: 1 }}>
-        <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.h1}>Notificações</Text>
-            <Text style={s.sub}>Compras e promoções recentes</Text>
-          </View>
+<View style={s.header}>
+  <View style={s.headerLeft}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={s.backButton}
+    />
 
-          <Button
-            title={ordersQ.isRefetching || promosQ.isRefetching ? "..." : "⟳"}
-            variant="ghost"
-            onPress={() => {
-              ordersQ.refetch();
-              promosQ.refetch();
-            }}
-            style={{ minWidth: 44, height: 44, borderRadius: 12 }}
-          />
-        </View>
+    <View style={{ flex: 1 }}>
+      <Text style={s.h1}>Notificações</Text>
+      <Text style={s.sub}>Compras e promoções recentes</Text>
+    </View>
+  </View>
+
+  <Button
+    title={ordersQ.isRefetching || promosQ.isRefetching ? "..." : "⟳"}
+    variant="ghost"
+    onPress={() => {
+      ordersQ.refetch();
+      promosQ.refetch();
+    }}
+    style={{ minWidth: 44, height: 44, borderRadius: 12 }}
+  />
+</View>
 
         <View style={{ marginTop: 12, flex: 1, minHeight: 0 }}>
           {isLoading ? (
@@ -167,13 +180,26 @@ export function OwnerNotificationsScreen() {
 }
 
 const s = StyleSheet.create({
-  header: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
+header: {
+  marginTop: 8,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+},
+
+headerLeft: {
+  flex: 1,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 4,
+},
+
+backButton: {
+  minWidth: 40,
+  minHeight: 40,
+  paddingRight: 0,
+},
   h1: { color: t.colors.text, fontWeight: "900", fontSize: 22 },
   sub: { color: t.colors.text2, fontWeight: "800", marginTop: 6 },
 

@@ -16,6 +16,8 @@ import { t } from "../../ui/tokens";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { AppBackButton } from "../../ui/components/AppBackButton";
+import { useNavigation } from "@react-navigation/native";
 
 type PixKeyType = "CPF" | "CNPJ";
 
@@ -90,7 +92,7 @@ function labelForType(type: PixKeyType) {
 
 export function SellerPixDestinationScreen() {
   const qc = useQueryClient();
-
+  const nav = useNavigation<any>();
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
 
   const walletQ = useQuery<WalletAPI>({
@@ -166,15 +168,39 @@ export function SellerPixDestinationScreen() {
     <Screen>
       <Container style={{ flex: 1, paddingTop: 10 }}>
         {/* Header */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 18 }}>PIX para receber</Text>
-            <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 4 }}>
-              O admin paga suas comissões nesse PIX
-            </Text>
-          </View>
-          <Button title="Atualizar" variant="ghost" onPress={() => walletQ.refetch()} />
-        </View>
+<View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  }}
+>
+  <View style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 4 }}>
+    <AppBackButton
+      onPress={() => nav.goBack()}
+      showLabel={false}
+      color={t.colors.text}
+      iconSize={24}
+      style={{
+        minWidth: 40,
+        minHeight: 40,
+        paddingRight: 0,
+      }}
+    />
+
+    <View style={{ flex: 1 }}>
+      <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 18 }}>
+        PIX para receber
+      </Text>
+      <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 4 }}>
+        O admin paga suas comissões nesse PIX
+      </Text>
+    </View>
+  </View>
+
+  <Button title="Atualizar" variant="ghost" onPress={() => walletQ.refetch()} />
+</View>
 
         <View style={{ height: 12 }} />
 
@@ -183,7 +209,16 @@ export function SellerPixDestinationScreen() {
         ) : walletQ.isError ? (
           <ErrorState onRetry={() => walletQ.refetch()} />
         ) : (
-          <ScrollView contentContainerStyle={{ paddingBottom: 24, gap: 12 }}>
+          <ScrollView
+  style={{ flex: 1 }}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{
+    flexGrow: 1,
+    paddingBottom: 160,
+    gap: 12,
+  }}
+>
             {/* Status */}
             <Card style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>

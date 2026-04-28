@@ -2,6 +2,8 @@ import React from "react";
 import { View, Text, FlatList, Image, Pressable, StyleSheet } from "react-native";
 import { useSalonActivePromos } from "../../../core/queries/salonHome.queries";
 import { getProductImageUrl } from "../../../core/utils/productImage";
+import { resolvePromoBadgeLabel } from "../../../core/utils/promoBadge";
+import { resolvePromoPriceData } from "../../../core/utils/promoPricing";
 import { Card } from "../../../ui/components/Card";
 import { t } from "../../../ui/tokens";
 
@@ -31,7 +33,8 @@ function applyPromo(basePrice: number, promo: Promo) {
       const pct = clampMin(value, 0);
       return clampMin(basePrice * (1 - pct / 100), 0);
     }
-    case "VALUE": {
+    case "VALUE":
+    case "FIXED": {
       return clampMin(basePrice - value, 0);
     }
     case "PRICE":
@@ -41,17 +44,6 @@ function applyPromo(basePrice: number, promo: Promo) {
     default:
       return basePrice;
   }
-}
-
-function badgeText(promo: Promo, base: number, final: number) {
-  if (!(final < base)) return null;
-
-  const type = String(promo?.type || "").toUpperCase();
-  const value = toNumberBR(promo?.value);
-
-  if (type === "PCT") return `-${Math.round(value)}%`;
-  if (type === "VALUE") return `-${formatBRL(value)}`;
-  return "OFERTA";
 }
 
 function isOutOfStock(p: Product) {
@@ -83,11 +75,19 @@ export function SalonPromosSection({ onPressItem }: { onPressItem?: (productId: 
 
           const img = getProductImageUrl(product as any);
           const out = isOutOfStock(product);
-
-          const base = toNumberBR(product.price);
-          const final = applyPromo(base, promo);
-          const hasPromo = final < base;
-          const badge = badgeText(promo, base, final);
+          const promoPriceData =
+            resolvePromoPriceData(item) ??
+            resolvePromoPriceData(product, promo) ??
+            resolvePromoPriceData(promo);
+          const legacyBase = toNumberBR(product.price);
+          const legacyFinal = applyPromo(legacyBase, promo);
+          const base = promoPriceData?.originalPrice ?? legacyBase;
+          const final = promoPriceData?.price ?? legacyFinal;
+          const hasPromo = promoPriceData?.hasDiscount ?? (legacyFinal < legacyBase);
+          const badge =
+            resolvePromoBadgeLabel(item) ??
+            resolvePromoBadgeLabel(product) ??
+            resolvePromoBadgeLabel(promo);
 
           return (
             <Pressable onPress={out ? undefined : () => onPressItem?.(product.id)} style={{ width: 176 }}>
