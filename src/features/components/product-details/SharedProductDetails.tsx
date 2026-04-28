@@ -22,6 +22,8 @@ import { IosAlert } from "../../../ui/components/IosAlert";
 import { friendlyError } from "../../../core/errors/friendlyError";
 import { api } from "../../../core/api/client";
 import { endpoints } from "../../../core/api/endpoints";
+import { resolvePromoBadgeLabel } from "../../../core/utils/promoBadge";
+import { resolvePromoPriceData } from "../../../core/utils/promoPricing";
 import { ProductFavoriteButton } from "./ProductFavoriteButton";
 import { AppBackButton } from "../../../ui/components/AppBackButton";
 
@@ -275,6 +277,8 @@ function getBasePrice(item: any, viewerMode: ViewerMode) {
 }
 
 function getPromoPrice(item: any) {
+    const resolved = resolvePromoPriceData(item);
+  if (resolved?.hasDiscount) return resolved.price;
   const promoPrice =
     toNullableNumber(item?.activePromo?.promoPrice) ??
     toNullableNumber(item?.pricing?.promoPrice);
@@ -284,23 +288,42 @@ function getPromoPrice(item: any) {
 }
 
 function getPromoLabel(item: any, viewerMode: ViewerMode) {
+    const resolvedLabel = resolvePromoBadgeLabel(item);
+  if (resolvedLabel) return resolvedLabel;
   const base = getBasePrice(item, viewerMode);
   const promoPrice = getPromoPrice(item);
-  const promo = item?.activePromo;
+  const promo = item?.activePromo ?? item?.promo;
 
   if (!promo || promoPrice == null || !(promoPrice < base)) return null;
 
   const type = String(promo?.type || "").toUpperCase();
   const value = toNumber(promo?.value);
 
-if (type === "PCT" && value > 0) {
-  return `${Math.round(value)}% OFF`;
-}
+  if (type === "PCT" && value > 0) {
+    return `${Math.round(value)}% OFF`;
+  }
 
-  return "OFF";
+  if ((type === "FIXED" || type === "VALUE") && value > 0) {
+    return `${formatBRLShort(value)} OFF`;
+  }
+
+  if (type === "PRICE" || type === "FIXED_PRICE") {
+    return "Preço especial";
+  }
+
+  return null;
 }
 
 function getPriceModel(item: any, viewerMode: ViewerMode = "OWNER") {
+    const resolvedPromo = resolvePromoPriceData(item);
+  if (resolvedPromo?.hasDiscount) {
+    return {
+      oldPrice: resolvedPromo.originalPrice,
+      currentPrice: resolvedPromo.price,
+      hasPromo: true,
+      promoLabel: getPromoLabel(item, viewerMode),
+    };
+  }
   const base = getBasePrice(item, viewerMode);
   const effective =
     toNullableNumber(item?.pricing?.effectivePrice) ??
