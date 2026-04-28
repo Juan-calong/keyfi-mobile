@@ -583,9 +583,13 @@ export function SellerCartScreen() {
                     <View style={styles.footerRule} />
 
                     <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
-                      <Text style={styles.totalLabel}>Total</Text>
+                      <Text style={styles.totalLabel}>Total estimado</Text>
                       <Text style={styles.totalValue}>{formatBRL(cartTotal)}</Text>
                     </View>
+
+                    <Text style={styles.totalHint}>
+                      Valor final pode mudar após preview oficial no checkout.
+                    </Text>
 
                     <Pressable
                       onPress={() => {
@@ -800,6 +804,7 @@ const styles = StyleSheet.create({
 
   totalLabel: { color: "rgba(0,0,0,0.65)", fontWeight: "800", fontSize: 13 },
   totalValue: { color: BLACK, fontWeight: "900", fontSize: 15 },
+  totalHint: { color: "rgba(0,0,0,0.5)", fontWeight: "600", fontSize: 11, marginBottom: 10 },
 
   checkoutBtn: {
     borderWidth: 1,

@@ -250,7 +250,11 @@ export function OwnerOrderDetailsScreen() {
                   const title = ItemTitle(it, idx);
                   const qty = Number(it.qty ?? 0);
                   const unit = it.unitPrice ?? it.price ?? 0;
-                  const subtotal = it.total ?? qty * Number(unit || 0);
+                  const subtotal =
+                    it.lineTotal ??
+                    it.total ??
+                    it.lineFinal ??
+                    qty * Number(unit || 0);
 
                   return (
                     <View key={it.id ?? `${idx}`} style={m.itemRow}>

@@ -277,8 +277,13 @@ function getBasePrice(item: any, viewerMode: ViewerMode) {
 }
 
 function getPromoPrice(item: any) {
-    const resolved = resolvePromoPriceData(item);
+  const resolved = resolvePromoPriceData(item);
   if (resolved?.hasDiscount) return resolved.price;
+    const hasPromoBadge =
+    !!item?.promoBadge ||
+    !!item?.pricing?.promoBadge ||
+    !!item?.promo?.promoBadge;
+  if (hasPromoBadge) return null;
   const promoPrice =
     toNullableNumber(item?.activePromo?.promoPrice) ??
     toNullableNumber(item?.pricing?.promoPrice);
@@ -288,8 +293,13 @@ function getPromoPrice(item: any) {
 }
 
 function getPromoLabel(item: any, viewerMode: ViewerMode) {
-    const resolvedLabel = resolvePromoBadgeLabel(item);
-  if (resolvedLabel) return resolvedLabel;
+  const resolvedLabel = resolvePromoBadgeLabel(item);
+  if (resolvedLabel && resolvedLabel.toUpperCase() !== "OFF") return resolvedLabel;
+  const hasPromoBadge =
+    !!item?.promoBadge ||
+    !!item?.pricing?.promoBadge ||
+    !!item?.promo?.promoBadge;
+  if (hasPromoBadge) return null;
   const base = getBasePrice(item, viewerMode);
   const promoPrice = getPromoPrice(item);
   const promo = item?.activePromo ?? item?.promo;
@@ -315,7 +325,7 @@ function getPromoLabel(item: any, viewerMode: ViewerMode) {
 }
 
 function getPriceModel(item: any, viewerMode: ViewerMode = "OWNER") {
-    const resolvedPromo = resolvePromoPriceData(item);
+  const resolvedPromo = resolvePromoPriceData(item);
   if (resolvedPromo?.hasDiscount) {
     return {
       oldPrice: resolvedPromo.originalPrice,
