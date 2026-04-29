@@ -20,10 +20,12 @@ type Props = {
   titleStyle?: TextStyle;
   menuVariant?: "default" | "bare";
   menuIconSize?: number;
+  menuIconColor?: string;
 
   backgroundColor?: string;
   showDivider?: boolean;
   containerStyle?: ViewStyle;
+  dark?: boolean;
 };
 
 export function HeaderBar({
@@ -32,12 +34,16 @@ export function HeaderBar({
   titleStyle,
   menuVariant = "default",
   menuIconSize = 20,
+  menuIconColor = "#000000",
   backgroundColor = "transparent",
   showDivider = true,
   containerStyle,
+  dark = false
 }: Props) {
   const bare = menuVariant === "bare";
   const showLogo = String(title ?? "").trim().toUpperCase() === "KEYFI";
+  const textColor = dark ? "#F5F5F5" : "#000000";
+  const lineColor = dark ? "#FFFFFF" : "#000000";
 
   return (
     <View
@@ -54,9 +60,9 @@ export function HeaderBar({
         style={[styles.menuBtn, bare && styles.menuBtnBare]}
       >
         <View style={{ gap: 4 }}>
-          <View style={[styles.line, { width: menuIconSize }]} />
-          <View style={[styles.line, { width: menuIconSize }]} />
-          <View style={[styles.line, { width: menuIconSize }]} />
+          <View style={[styles.line, { width: menuIconSize, backgroundColor: menuIconColor }]} />
+          <View style={[styles.line, { width: menuIconSize, backgroundColor: menuIconColor }]} />
+          <View style={[styles.line, { width: menuIconSize, backgroundColor: menuIconColor }]} />
         </View>
       </Pressable>
 
@@ -68,7 +74,7 @@ export function HeaderBar({
             resizeMode="contain"
           />
         ) : (
-          <Text style={[t.text.brand, styles.title, titleStyle]} numberOfLines={1}>
+          <Text style={[t.text.brand, styles.title, { color: textColor }, titleStyle]} numberOfLines={1}>
             {title}
           </Text>
         )}
@@ -106,8 +112,8 @@ const styles = StyleSheet.create({
 },
 
 logo: {
-  width: 140,
-  height: 95,
+  width: 135,
+  height: 90,
 },
 
   divider: {
@@ -122,7 +128,6 @@ logo: {
 
 title: {
   textAlign: "center",
-  color: "#000000",
 },
 
   menuBtn: {

@@ -672,7 +672,7 @@ function PreviewGrid({
 }
 
 export function CustomerHomeScreen() {
-  const SOFT_BG = "#ffffff";
+  const DARK_BG = "#0F0F0F";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -1078,15 +1078,36 @@ export function CustomerHomeScreen() {
     promosQ.isError ||
     favoritesQ.isError;
 
+      const heroSection = (
+    <View style={styles.topHeroSection}>
+      {banners.length > 0 ? (
+        <HomeHeroCarousel
+          items={banners.map((b) => ({
+            id: b.id,
+            imageUrl: b.imageUrl,
+          }))}
+          variant="dark"
+          onPressItem={(heroItem) => {
+            const fullBanner = banners.find((b) => b.id === heroItem.id);
+            if (fullBanner) {
+              handleBannerPress(fullBanner);
+            }
+          }}
+        />
+      ) : null}
+    </View>
+  );
+
   return (
-    <Screen style={{ backgroundColor: SOFT_BG }}>
+    <Screen style={{ backgroundColor: DARK_BG }}>
       <HeaderBar
         title="KEYFI"
         onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
         titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
         menuVariant="bare"
         menuIconSize={22}
-        backgroundColor={SOFT_BG}
+        menuIconColor="#FFFFFF"
+        backgroundColor={DARK_BG}
         showDivider={false}
       />
 
@@ -1110,54 +1131,42 @@ export function CustomerHomeScreen() {
             ]}
             ListHeaderComponent={
               <View style={styles.stack}>
-                {banners.length > 0 ? (
-                  <View>
-                    <HomeHeroCarousel
-                      items={banners.map((b) => ({
-                        id: b.id,
-                        imageUrl: b.imageUrl,
-                      }))}
-                      onPressItem={(heroItem) => {
-                        const fullBanner = banners.find((b) => b.id === heroItem.id);
-                        if (fullBanner) {
-                          handleBannerPress(fullBanner);
-                        }
-                      }}
-                    />
-                  </View>
-                ) : null}
+                {heroSection}
+                <View style={styles.productsSection}>
+                  {promoPreview.length > 0 ? (
+                    <>
+                      <Hairline />
+                      <HomeSectionHeader title="Promoções" />
+                      <Hairline />
 
-                {promoPreview.length > 0 ? (
-                  <>
+                      <PreviewGrid
+                        data={promoPreview}
+                        onPressItem={(id) => goToProductDetails(id)}
+                        onAddToCart={handleAddToCart}
+                      />
+
+                      <View style={{ height: 6 }} />
+                      <Hairline />
+                    </>
+                  ) : (
                     <Hairline />
-                    <HomeSectionHeader title="Promoções" />
-                    <Hairline />
+                                      )}
+
+                  <HomeSectionHeader title="Novidades" />
+                  <Hairline />
+
+                                    {newestPreview.length === 0 ? (
+                    <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+                  ) : (
 
                     <PreviewGrid
-                      data={promoPreview}
+                      data={newestPreview}
                       onPressItem={(id) => goToProductDetails(id)}
                       onAddToCart={handleAddToCart}
                     />
 
-                    <View style={{ height: 6 }} />
-                    <Hairline />
-                  </>
-                ) : (
-                  <Hairline />
-                )}
-
-                <HomeSectionHeader title="Novidades" />
-                <Hairline />
-
-                {newestPreview.length === 0 ? (
-                  <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
-                ) : (
-                  <PreviewGrid
-                    data={newestPreview}
-                    onPressItem={(id) => goToProductDetails(id)}
-                    onAddToCart={handleAddToCart}
-                  />
-                )}
+                  )}
+                </View>
               </View>
             }
           />
@@ -1170,9 +1179,7 @@ export function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 8,
-    paddingHorizontal: 6,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#0F0F0F",
     position: "relative",
   },
 
@@ -1271,7 +1278,17 @@ const styles = StyleSheet.create({
   },
 
   stack: {
-    gap: 10,
+    gap: 0,
+  },
+
+  topHeroSection: {
+    backgroundColor: "#0F0F0F",
+  },
+
+  productsSection: {
+    backgroundColor: "#FFFFFF",
+    paddingTop: 10,
+    paddingHorizontal: 6,
   },
 
   hairline: {

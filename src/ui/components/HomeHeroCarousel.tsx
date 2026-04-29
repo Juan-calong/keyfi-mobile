@@ -20,12 +20,14 @@ type Props = {
   items: BannerItem[];
   onPressItem: (item: BannerItem) => void;
   autoSlideInterval?: number;
+  variant?: "default" | "dark";
 };
 
 export function HomeHeroCarousel({
   items,
   onPressItem,
   autoSlideInterval = 3500,
+  variant = "default",
 }: Props) {
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<BannerItem> | null>(null);
@@ -105,95 +107,150 @@ export function HomeHeroCarousel({
 
   if (!items.length) return null;
 
+  const dark = variant === "dark";
+
   if (items.length === 1) {
     const item = items[0];
 
     return (
-      <Pressable
-        onPress={() => onPressItem(item)}
-        style={[styles.singleWrap, { width: bannerWidth }]}
-      >
-        <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
-      </Pressable>
+<Pressable
+  onPress={() => onPressItem(item)}
+  style={[styles.singleWrap, dark && styles.singleWrapDark, { width: bannerWidth }]}
+>
+  <Image
+    source={{ uri: item.imageUrl }}
+    style={styles.image}
+    resizeMode="cover"
+  />
+</Pressable>
     );
   }
 
-  return (
-    <View>
-      <FlatList
-        ref={listRef}
-        data={items}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        decelerationRate="fast"
-        snapToInterval={bannerWidth}
-        snapToAlignment="start"
-        disableIntervalMomentum
-        onScrollBeginDrag={stopAutoSlide}
-        onMomentumScrollEnd={handleMomentumEnd}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        getItemLayout={(_, index) => ({
-          length: bannerWidth,
-          offset: bannerWidth * index,
-          index,
-        })}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => onPressItem(item)}
-            style={[styles.slideWrap, { width: bannerWidth }]}
-          >
-            <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" />
-          </Pressable>
-        )}
-      />
-
-      <View style={styles.dotsWrap}>
-        {items.map((_, index) => (
-          <View
-            key={index}
-            style={[styles.dot, index === activeIndex && styles.dotActive]}
+return (
+  <View style={[styles.root, dark && styles.rootDark]}>
+    <FlatList
+      ref={listRef}
+      data={items}
+      keyExtractor={(item) => item.id}
+      horizontal
+      pagingEnabled
+      showsHorizontalScrollIndicator={false}
+      decelerationRate="fast"
+      snapToInterval={bannerWidth}
+      snapToAlignment="start"
+      disableIntervalMomentum
+      onScrollBeginDrag={stopAutoSlide}
+      onMomentumScrollEnd={handleMomentumEnd}
+      onViewableItemsChanged={onViewableItemsChanged}
+      viewabilityConfig={viewabilityConfig}
+      getItemLayout={(_, index) => ({
+        length: bannerWidth,
+        offset: bannerWidth * index,
+        index,
+      })}
+      renderItem={({ item }) => (
+        <Pressable
+          onPress={() => onPressItem(item)}
+          style={[styles.slideWrap, dark && styles.slideWrapDark, { width: bannerWidth }]}
+        >
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
           />
-        ))}
-      </View>
+        </Pressable>
+      )}
+    />
+
+    <View pointerEvents="none" style={styles.dotsWrap}>
+      {items.map((_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.dot,
+            dark && styles.dotDark,
+            index === activeIndex && styles.dotActive,
+            dark && index === activeIndex && styles.dotActiveDark,
+          ]}
+        />
+      ))}
     </View>
-  );
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
-  singleWrap: {
-    height: 250,
-    borderRadius: 5,
-    overflow: "hidden",
-    backgroundColor: "#F3F4F6",
+root: {
+  height: 250,
+  backgroundColor: "#0F0F0F",
+  overflow: "hidden",
+  position: "relative",
+},
+
+  rootDark: {
+    backgroundColor: "#0F0F0F",
   },
-  slideWrap: {
-    height: 230,
-    borderRadius: 5,
-    overflow: "hidden",
-    backgroundColor: "#F3F4F6",
+
+singleWrap: {
+  height: 250,
+  borderRadius: 0,
+  overflow: "hidden",
+  backgroundColor: "#0F0F0F",
+},
+
+  singleWrapDark: {
+    borderRadius: 0,
+    backgroundColor: "#0F0F0F",
   },
+
+slideWrap: {
+  height: 250,
+  borderRadius: 0,
+  overflow: "hidden",
+  backgroundColor: "#0F0F0F",
+},
+
+  slideWrapDark: {
+    borderRadius: 0,
+    backgroundColor: "#0F0F0F",
+  },
+
   image: {
-    width: "100%",
-    height: "100%",
+    width: "106%",
+    height: "106%",
+    marginLeft: "-3%",
+    marginTop: "0%",
+    backgroundColor: "#0F0F0F",
   },
+
   dotsWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 12,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    marginTop: 10,
   },
+
   dot: {
     width: 7,
     height: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: "rgba(255,255,255,0.45)",
   },
+
+  dotDark: {
+    backgroundColor: "rgba(255,255,255,0.45)",
+  },
+
   dotActive: {
     width: 18,
-    backgroundColor: "#111",
+    backgroundColor: "#FFFFFF",
+  },
+
+  dotActiveDark: {
+    backgroundColor: "#FFFFFF",
   },
 });

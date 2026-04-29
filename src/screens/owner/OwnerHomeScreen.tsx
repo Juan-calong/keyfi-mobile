@@ -562,7 +562,7 @@ function PreviewGrid({
 }
 
 export function OwnerHomeScreen() {
-  const SOFT_BG = "#ffffff";
+  const DARK_BG = "#0F0F0F";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -936,17 +936,36 @@ export function OwnerHomeScreen() {
     promosQ.isError ||
     favoritesQ.isError;
 
-  return (
-  <Screen style={{ backgroundColor: SOFT_BG }}>
-    <BackgroundTexture />
+    const heroSection = (
+  <View style={styles.topHeroSection}>
+    {banners.length > 0 ? (
+      <HomeHeroCarousel
+        items={banners.map((b) => ({
+          id: b.id,
+          imageUrl: b.imageUrl,
+        }))}
+        variant="dark"
+        onPressItem={(heroItem) => {
+          const fullBanner = banners.find((b) => b.id === heroItem.id);
+          if (fullBanner) {
+            handleBannerPress(fullBanner);
+          }
+        }}
+      />
+    ) : null}
+  </View>
+);
 
+return (
+  <Screen style={{ backgroundColor: DARK_BG }}>
     <HeaderBar
       title="KEYFI"
       onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
       titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
       menuVariant="bare"
       menuIconSize={22}
-      backgroundColor={SOFT_BG}
+      menuIconColor="#FFFFFF"
+      backgroundColor={DARK_BG}
       showDivider={false}
     />
 
@@ -969,57 +988,44 @@ export function OwnerHomeScreen() {
             { paddingBottom: tabBarHeight + 14 },
           ]}
           ListHeaderComponent={
-            <View style={styles.stack}>
-              {banners.length > 0 ? (
-                <View>
-                  <HomeHeroCarousel
-                    items={banners.map((b) => ({
-                      id: b.id,
-                      imageUrl: b.imageUrl,
-                    }))}
-                    onPressItem={(heroItem) => {
-                      const fullBanner = banners.find((b) => b.id === heroItem.id);
-                      if (fullBanner) {
-                        handleBannerPress(fullBanner);
-                      }
-                    }}
-                  />
-                </View>
-              ) : null}
+  <View style={styles.stack}>
+    {heroSection}
 
-              {promoPreview.length > 0 ? (
-                <>
-                  <Hairline />
-                  <HomeSectionHeader title="Promoções" />
-                  <Hairline />
+    <View style={styles.productsSection}>
+      {promoPreview.length > 0 ? (
+        <>
+          <Hairline />
+          <HomeSectionHeader title="Promoções" />
+          <Hairline />
 
-                  <PreviewGrid
-                    data={promoPreview}
-                    onPressItem={(id) => goToProductDetails(id)}
-                    onAddToCart={handleAddToCart}
-                  />
+          <PreviewGrid
+            data={promoPreview}
+            onPressItem={(id) => goToProductDetails(id)}
+            onAddToCart={handleAddToCart}
+          />
 
-                  <View style={{ height: 6 }} />
-                  <Hairline />
-                </>
-              ) : (
-                <Hairline />
-              )}
+          <View style={{ height: 6 }} />
+          <Hairline />
+        </>
+      ) : (
+        <Hairline />
+      )}
 
-              <HomeSectionHeader title="Novidades" />
-              <Hairline />
+      <HomeSectionHeader title="Novidades" />
+      <Hairline />
 
-              {newestPreview.length === 0 ? (
-                <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
-              ) : (
-                <PreviewGrid
-                  data={newestPreview}
-                  onPressItem={(id) => goToProductDetails(id)}
-                  onAddToCart={handleAddToCart}
-                />
-              )}
-            </View>
-          }
+      {newestPreview.length === 0 ? (
+        <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+      ) : (
+        <PreviewGrid
+          data={newestPreview}
+          onPressItem={(id) => goToProductDetails(id)}
+          onAddToCart={handleAddToCart}
+        />
+      )}
+    </View>
+  </View>
+}
         />
       )}
     </View>
@@ -1028,21 +1034,29 @@ export function OwnerHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 8,
-    paddingHorizontal: 6,
-    backgroundColor: "#ffffff",
-    position: "relative",
-  },
+container: {
+  flex: 1,
+  backgroundColor: "#0F0F0F",
+  position: "relative",
+},
 
   content: {
     paddingBottom: 20,
   },
 
-  stack: {
-    gap: 10,
-  },
+stack: {
+  gap: 0,
+},
+
+topHeroSection: {
+  backgroundColor: "#0F0F0F",
+},
+
+productsSection: {
+  backgroundColor: "#FFFFFF",
+  paddingTop: 10,
+  paddingHorizontal: 6,
+},
 
    
   gridContent: {
