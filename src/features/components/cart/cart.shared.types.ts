@@ -8,6 +8,9 @@ export type QuantityDiscountPreview = {
   minQuantity?: number;
   discountType?: "PERCENT" | "FIXED";
   discountValue?: string | number;
+  discountPerUnit?: string | number;
+  unitPriceAfterQuantity?: string | number;
+  label?: string;
   lineDiscount?: string | number;
 };
 

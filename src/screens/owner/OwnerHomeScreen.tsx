@@ -980,6 +980,7 @@ return (
         />
       ) : (
         <FlatList
+          style={styles.list}
           data={[]}
           keyExtractor={(_, idx) => String(idx)}
           renderItem={() => null}
@@ -1036,16 +1037,25 @@ return (
 const styles = StyleSheet.create({
 container: {
   flex: 1,
-  backgroundColor: "#0F0F0F",
+  backgroundColor: "#FFFFFF",
   position: "relative",
 },
 
   content: {
-    paddingBottom: 20,
+  flexGrow: 1,
+  backgroundColor: "#FFFFFF",
+  paddingBottom: 20,
   },
 
+  list: {
+  flex: 1,
+  backgroundColor: "#FFFFFF",
+},
+
 stack: {
+  flexGrow: 1,
   gap: 0,
+  backgroundColor: "#FFFFFF",
 },
 
 topHeroSection: {
@@ -1053,9 +1063,12 @@ topHeroSection: {
 },
 
 productsSection: {
+  flexGrow: 1,
   backgroundColor: "#FFFFFF",
   paddingTop: 10,
   paddingHorizontal: 6,
+  paddingBottom: 20,
+
 },
 
    

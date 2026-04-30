@@ -23,6 +23,8 @@ export function OwnerCustomerCartRow({
   const final = toNumberBR(row.unitPriceFinal ?? row.unitPriceBase ?? "0");
   const hasPromo = final < base;
   const variant = (row.product?.sku && String(row.product.sku)) || "—";
+  const quantityDiscountLabel = String(row.quantityDiscount?.label ?? "").trim();
+  const quantityDiscountPerUnit = toNumberBR(row.quantityDiscount?.discountPerUnit ?? "0");
 
   const stop = (e?: any) => e?.stopPropagation?.();
 
@@ -50,6 +52,14 @@ export function OwnerCustomerCartRow({
         <Text numberOfLines={1} style={s.itemVariant}>
           {variant}
         </Text>
+          {row.quantityDiscount?.applied ? (
+          <Text numberOfLines={2} style={s.itemQuantityDiscount}>
+            {quantityDiscountLabel ||
+              (quantityDiscountPerUnit > 0
+                ? `Desconto por quantidade: ${formatBRL(quantityDiscountPerUnit)} por unidade`
+                : "Desconto por quantidade aplicado")}
+          </Text>
+        ) : null}
       </View>
 
       <View style={s.rowRight}>

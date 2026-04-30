@@ -116,6 +116,18 @@ export const s = StyleSheet.create({
     }),
   },
 
+    itemQuantityDiscount: {
+    marginTop: 4,
+    color: "#0F766E",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: -0.1,
+    ...Platform.select({
+      ios: { fontFamily: "System" },
+      android: { fontFamily: "sans-serif-medium" },
+    }),
+  },
+
   rowRight: { alignItems: "flex-end", gap: 10 },
 
   priceStack: { alignItems: "flex-end", gap: 2 },

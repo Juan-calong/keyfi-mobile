@@ -59,7 +59,10 @@ export type CartPreviewResponse = {
       minQuantity: number;
       discountType: string;
       discountValue: string;
+      discountPerUnit?: string;
+      unitPriceAfterQuantity?: string;
       lineDiscount: string;
+      label?: string;
     };
     promo: null | {
       id: string;

@@ -141,6 +141,13 @@ function formatBRLShort(value?: string | number | null) {
 }
 
 function buildQuantityTierBadge(tier: any) {
+  const explicitLabel = normalizeText(tier?.label);
+  if (explicitLabel) {
+    return {
+      title: "Desconto por quantidade",
+      subtitle: explicitLabel,
+    };
+  }
   const minQty = Number(
     tier?.minQty ?? tier?.qty ?? tier?.quantity ?? 0
   );
@@ -151,6 +158,9 @@ function buildQuantityTierBadge(tier: any) {
 
   const discountValue = Number(
     tier?.discountValue ?? tier?.value ?? 0
+  );
+    const unitPriceAfterQuantity = Number(
+    tier?.unitPriceAfterQuantity ?? tier?.unitPriceFinal ?? 0
   );
 
   if (!Number.isFinite(minQty) || minQty <= 0) return null;
@@ -165,9 +175,15 @@ function buildQuantityTierBadge(tier: any) {
     Number.isFinite(discountValue) &&
     discountValue > 0
   ) {
+        if (Number.isFinite(unitPriceAfterQuantity) && unitPriceAfterQuantity > 0) {
+      return {
+        title: qtyLabel,
+        subtitle: `A partir de ${minQty}: ${formatBRLShort(unitPriceAfterQuantity)}/unidade`,
+      };
+    }
     return {
       title: qtyLabel,
-      subtitle: `Ganhe ${formatBRLShort(discountValue)} OFF no valor total`,
+      subtitle: `${formatBRLShort(discountValue)} de desconto por unidade`,
     };
   }
 
@@ -178,7 +194,7 @@ function buildQuantityTierBadge(tier: any) {
   ) {
     return {
       title: qtyLabel,
-      subtitle: `Ganhe ${discountValue}% OFF no valor total`,
+       subtitle: `${discountValue}% OFF por unidade`,
     };
   }
 
@@ -375,8 +391,14 @@ function getQuantityDiscountLabel(item: any) {
   if (!qd || typeof qd !== "object") return null;
 
   if (qd.enabled === false) return null;
+  const explicitLabel = normalizeText(qd?.label);
+  if (explicitLabel) return explicitLabel;
 
   const tiersRaw = Array.isArray(qd?.tiers) ? qd.tiers : [];
+    const tierLabel = tiersRaw
+    .map((tier: any) => normalizeText(tier?.label))
+    .find(Boolean);
+  if (tierLabel) return tierLabel;
   const tiers = tiersRaw
     .map((tier: any) => {
       const minQty =
@@ -408,9 +430,6 @@ function getQuantityDiscountLabel(item: any) {
 
     return `A partir de ${first.minQty} unidades • até ${strongest.pct}% OFF`;
   }
-
-  const explicitLabel = normalizeText(qd?.label);
-  if (explicitLabel) return explicitLabel;
 
   const explicitDescription = normalizeText(qd?.description);
   if (explicitDescription) return explicitDescription;

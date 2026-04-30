@@ -2,6 +2,8 @@ export function resolvePromoBadgeLabel(item: any, mode: "short" | "full" = "shor
   const candidates =
     mode === "full"
       ? [
+          item?.quantityDiscountHighlight?.label,
+          item?.quantityDiscountHighlight?.shortLabel,
           item?.promoBadge?.label,
           item?.promoBadge?.shortLabel,
           item?.pricing?.promoBadge?.label,
@@ -10,6 +12,8 @@ export function resolvePromoBadgeLabel(item: any, mode: "short" | "full" = "shor
           item?.promo?.promoBadge?.shortLabel,
         ]
       : [
+          item?.quantityDiscountHighlight?.shortLabel,
+          item?.quantityDiscountHighlight?.label,
           item?.promoBadge?.shortLabel,
           item?.promoBadge?.label,
           item?.pricing?.promoBadge?.shortLabel,

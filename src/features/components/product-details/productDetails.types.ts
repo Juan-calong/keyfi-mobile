@@ -94,9 +94,19 @@ pricing?: {
       discountValue?: number | null;
       unitPriceAfterQuantity?: number | null;
       unitPriceFinal?: number | null;
+      label?: string | null;
     }> | null;
     label?: string | null;
     description?: string | null;
+  } | null;
+    quantityDiscountHighlight?: {
+    minQuantity?: number | null;
+    discountType?: string | null;
+    discountValue?: number | null;
+    unitPriceAfterQuantity?: number | null;
+    unitPriceFinal?: number | null;
+    label?: string | null;
+    shortLabel?: string | null;
   } | null;
 };
 

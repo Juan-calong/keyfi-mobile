@@ -673,6 +673,7 @@ function PreviewGrid({
 
 export function CustomerHomeScreen() {
   const DARK_BG = "#0F0F0F";
+  const PAGE_BG = "#FFFFFF";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -1122,6 +1123,7 @@ export function CustomerHomeScreen() {
           />
         ) : (
           <FlatList
+            style={styles.list}
             data={[]}
             keyExtractor={(_, idx) => String(idx)}
             renderItem={() => null}
@@ -1177,11 +1179,11 @@ export function CustomerHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0F0F0F",
-    position: "relative",
-  },
+container: {
+  flex: 1,
+  backgroundColor: "#FFFFFF",
+  position: "relative",
+},
 
    
 
@@ -1193,6 +1195,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
   },
+
+  
 
   cardWrap: {
     width: "49.4%",
@@ -1206,6 +1210,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
 
+  list: {
+  flex: 1,
+  backgroundColor: "#FFFFFF",
+},
    
 
   blobTopLeft: {
@@ -1274,7 +1282,9 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingBottom: 20,
+  flexGrow: 1,
+  backgroundColor: "#FFFFFF",
+  paddingBottom: 20,
   },
 
   stack: {
