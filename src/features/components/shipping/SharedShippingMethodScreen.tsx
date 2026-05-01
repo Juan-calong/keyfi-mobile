@@ -63,6 +63,7 @@ type Props = {
   onEditAddress?: () => void;
   onContinue: (params: {
     orderId: string;
+    amount: number;
     shippingOption: ShippingOption;
   }) => void;
 };
@@ -144,6 +145,74 @@ function maskCep(value: string) {
 function formatMaybeBRL(value: string | number | null | undefined) {
   return formatBRL(toNumberBR(value ?? 0));
 }
+
+function parseCurrencyLikeValue(raw: any) {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+  const text = String(raw).trim();
+  if (!text) return 0;
+  const normalized = text.replace(/[^\d,.-]/g, "").replace(/\.(?=.*\.)/g, "");
+  const commaDecimal = normalized.includes(",")
+    ? normalized.replace(/\./g, "").replace(",", ".")
+    : normalized;
+  const parsed = Number(commaDecimal);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeCandidateAmount(raw: any, isCentsField = false) {
+  const parsed = parseCurrencyLikeValue(raw);
+  if (!(parsed > 0)) return 0;
+  if (isCentsField) return parsed / 100;
+  return parsed;
+}
+
+function resolveCheckoutAmountForPayment({
+  order,
+  preview,
+  totalVisual,
+}: {
+  order: any;
+  preview: any;
+  totalVisual: any;
+}) {
+  const candidates = [
+    { value: order?.amount, cents: false },
+    { value: order?.amountDue, cents: false },
+    { value: order?.totalAmount, cents: false },
+    { value: order?.total, cents: false },
+    { value: order?.summary?.total, cents: false },
+    { value: preview?.amount, cents: false },
+    { value: preview?.amountDue, cents: false },
+    { value: preview?.totalAmount, cents: false },
+    { value: preview?.total, cents: false },
+    { value: preview?.summary?.amount, cents: false },
+    { value: preview?.summary?.amountDue, cents: false },
+    { value: preview?.summary?.totalAmount, cents: false },
+    { value: preview?.summary?.total, cents: false },
+    { value: preview?.totals?.total, cents: false },
+    { value: preview?.pricing?.total, cents: false },
+    { value: order?.amountCents, cents: true },
+    { value: order?.totalCents, cents: true },
+    { value: order?.priceCents, cents: true },
+    { value: order?.totalAmountCents, cents: true },
+    { value: order?.amountInCents, cents: true },
+    { value: preview?.amountCents, cents: true },
+    { value: preview?.totalCents, cents: true },
+    { value: preview?.priceCents, cents: true },
+    { value: preview?.totalAmountCents, cents: true },
+    { value: preview?.amountInCents, cents: true },
+    { value: totalVisual, cents: false },
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizeCandidateAmount(
+      candidate.value,
+      candidate.cents
+    );
+    if (normalized > 0) return normalized;
+  }
+  return 0;
+}
+
 
 function normalizeLabel(opt: ShippingQuoteOption) {
   const carrier = String(opt.carrier || "").toUpperCase();
@@ -956,9 +1025,32 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
       });
       return;
     }
+    
+    const previewData = previewQ.data as any;
+    const totalVisual = previewData?.summary?.total ?? "0";
+    const resolvedAmount = resolveCheckoutAmountForPayment({
+      order,
+      preview: previewData,
+      totalVisual,
+    });
+
+    console.log("[SHIPPING][CONTINUE_AMOUNT]", {
+      orderId,
+      amount: resolvedAmount,
+      orderKeys: order ? Object.keys(order) : [],
+      orderAmount: order?.amount,
+      orderAmountDue: order?.amountDue,
+      orderTotalAmount: order?.totalAmount,
+      orderTotal: order?.total,
+      orderSummaryTotal: order?.summary?.total,
+      previewKeys: previewData ? Object.keys(previewData) : [],
+      previewSummary: previewData?.summary || null,
+      previewTotal: previewData?.summary?.total || previewData?.total || null,
+    });
 
     onContinue({
       orderId,
+      amount: resolvedAmount,
       shippingOption: buildSelectedShippingPayload(
         freshSelected,
         cleanZipcode

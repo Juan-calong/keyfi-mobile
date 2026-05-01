@@ -148,6 +148,7 @@ function PaymentRow({
 export function OwnerPixPaymentScreen({ route }: any) {
   const navigation = useNavigation<any>();
   const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
+  const routeAmount = Number(route?.params?.amount || 0);
 
   const [selected, setSelected] = useState<Method>("PIX");
   const continueLock = useRef(false);
@@ -223,10 +224,31 @@ export function OwnerPixPaymentScreen({ route }: any) {
       }
 
       const methods = await PaymentsService.getPaymentMethods();
+      const resolvedAmount = Number(
+        routeAmount ||
+          env?.order?.amountDue ||
+          env?.order?.totalAmount ||
+          payment?.amount ||
+          0
+      );
+      console.log("[PAYMENT_METHODS][ROUTE_AMOUNT]", {
+        orderId,
+        routeAmount,
+        resolvedAmount,
+        routeParams: route?.params,
+      });
       if (methods?.card?.provider === "MERCADOPAGO") {
+          if (!(resolvedAmount > 0)) {
+          console.log("[PAYMENT_METHODS][AMOUNT_MISSING]", { orderId, routeAmount, resolvedAmount });
+          setModal({
+            title: "Valor indisponível",
+            message: "Não foi possível identificar o valor do pedido. Volte e tente novamente.",
+          });
+          return;
+        }
         navigation.navigate(OWNER_SCREENS.MercadoPagoCardEntry, {
           orderId,
-          amount: Number(payment?.amount || env?.order?.amountDue || env?.order?.totalAmount || 0),
+          amount: resolvedAmount,
           publicKey: methods?.card?.publicKey ?? null,
         });
         return;

@@ -57,19 +57,30 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [provider, setProvider] = useState<string | null>(null);
   const webRef = useRef<WebView>(null);
 
   useEffect(() => { (async () => {
     const methods = await PaymentsService.getPaymentMethods();
-    if (methods.card.provider !== "MERCADOPAGO" || !methods.card.publicKey) throw new Error("Mercado Pago indisponível.");
+    const cardProvider = String(methods?.card?.provider || "");
+    setProvider(cardProvider);
+    if (cardProvider !== "MERCADOPAGO" || !methods?.card?.publicKey) throw new Error("Mercado Pago indisponível.");
     if (!publicKey) setPublicKey(methods.card.publicKey);
     setMaxInstallments(Number(methods.card.maxInstallments || 1));
     if (!(amount > 0)) {
       const active = await PaymentsService.active(orderId);
       const fallback = Number((active as any)?.payment?.amount || (active as any)?.order?.amountDue || (active as any)?.order?.totalAmount || (active as any)?.amount || 0);
       if (fallback > 0) setAmount(fallback);
-      else setError("Não foi possível carregar o valor do pedido.");
+      else setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
+      console.log("[MP_CARD][INIT_AMOUNT]", {
+        orderId,
+        routeAmount,
+        amount: fallback > 0 ? fallback : amount,
+        hasAmount: (fallback > 0 ? fallback : amount) > 0,
+      });
+      return;
     }
+    console.log("[MP_CARD][INIT_AMOUNT]", { orderId, routeAmount, amount, hasAmount: amount > 0 });
   })().catch(() => setError("Não foi possível iniciar pagamento.")); }, []);
 
   const html = useMemo(() => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""), [publicKey, amount, nonce]);
@@ -124,6 +135,8 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
     finally { setProcessing(false); }
   }
 
+    const canPay = Boolean(publicKey) && amount > 0 && ready && provider === "MERCADOPAGO" && !processing;
+
   return <Screen><Container style={{ flex:1, gap:8 }}>
     <Text style={s.title}>Cartão Mercado Pago</Text>{!!error && <Text style={s.error}>{error}</Text>}{!!status && <Text>{status}</Text>}
     <TextInput placeholder="Nome no cartão" value={name} onChangeText={setName} style={s.input} />
@@ -142,7 +155,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
         return req.url.startsWith("about:blank");
       }
     }} />}
-    <Pressable onPress={onPay} disabled={processing||!ready} style={s.btn}>{processing ? <ActivityIndicator color="#fff"/> : <Text style={{ color:"#fff", fontWeight:"700" }}>Pagar</Text>}</Pressable>
+    <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && { opacity: 0.5 }]}>{processing ? <ActivityIndicator color="#fff"/> : <Text style={{ color:"#fff", fontWeight:"700" }}>Pagar</Text>}</Pressable>
   </Container></Screen>;
 }
 const s = StyleSheet.create({ title:{ fontSize:20, fontWeight:"800" }, error:{ color:"#b00020" }, input:{ borderWidth:1,borderColor:"#ddd",borderRadius:10,padding:10 }, btn:{ backgroundColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, inst:{ borderWidth:1,borderColor:"#ddd",borderRadius:8,paddingHorizontal:10,paddingVertical:6 }, instOn:{ borderColor:"#111" } });
