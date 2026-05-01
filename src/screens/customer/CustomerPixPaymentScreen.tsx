@@ -225,6 +225,7 @@ const method = String(payment?.method ?? "").toUpperCase();
       if (methods?.card?.provider === "MERCADOPAGO") {
         navigation.navigate(CUSTOMER_SCREENS.MercadoPagoCardEntry, {
           orderId,
+          amount: Number(payment?.amount || env?.order?.amountDue || env?.order?.totalAmount || 0),
           publicKey: methods?.card?.publicKey ?? null,
         });
         return;

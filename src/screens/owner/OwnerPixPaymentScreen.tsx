@@ -222,10 +222,11 @@ export function OwnerPixPaymentScreen({ route }: any) {
         return;
       }
 
-            const methods = await PaymentsService.getPaymentMethods();
+      const methods = await PaymentsService.getPaymentMethods();
       if (methods?.card?.provider === "MERCADOPAGO") {
         navigation.navigate(OWNER_SCREENS.MercadoPagoCardEntry, {
           orderId,
+          amount: Number(payment?.amount || env?.order?.amountDue || env?.order?.totalAmount || 0),
           publicKey: methods?.card?.publicKey ?? null,
         });
         return;
