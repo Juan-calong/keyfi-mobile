@@ -21,6 +21,7 @@ import { OWNER_SCREENS } from "../../navigation/owner.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { PaymentsService } from "../../core/api/services/payments.service";
 
 type Method = "PIX" | "BOLETO" | "CARD";
 
@@ -221,9 +222,16 @@ export function OwnerPixPaymentScreen({ route }: any) {
         return;
       }
 
+            const methods = await PaymentsService.getPaymentMethods();
+      if (methods?.card?.provider === "MERCADOPAGO") {
+        navigation.navigate(OWNER_SCREENS.MercadoPagoCardEntry, {
+          orderId,
+          publicKey: methods?.card?.publicKey ?? null,
+        });
+        return;
+      }
       navigation.navigate(OWNER_SCREENS.CardTokenize, {
         orderId,
-
         successRouteName: OWNER_SCREENS.CardEntry,
         cancelRouteName: OWNER_SCREENS.PixPayment,
         cancelParams: { orderId },

@@ -15,6 +15,7 @@ import { CustomerProfileMeScreen } from "../screens/customer/CustomerProfileMeSc
 import { CustomerShippingMethodScreen } from "../screens/customer/CustomerShippingMethodScreen";
 import { CustomerCheckoutAddressScreen } from "../screens/customer/CustomerCheckoutAddressScreen";
 import { ApplyReferralScreen } from "../screens/ApplyReferralScreen";
+import { MercadoPagoCardEntryScreen } from "../screens/payments/MercadoPagoCardEntryScreen";
 
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -50,6 +51,11 @@ export function CustomerStack() {
       <Stack.Screen
         name={CUSTOMER_SCREENS.CardEntry}
         component={CustomerCardEntryScreen}
+      />
+
+        <Stack.Screen
+        name={CUSTOMER_SCREENS.MercadoPagoCardEntry}
+        component={MercadoPagoCardEntryScreen}
       />
 
       <Stack.Screen

@@ -24,6 +24,7 @@ import { OwnerCheckoutAddressScreen } from "../screens/owner/OwnerCheckoutAddres
 import { OwnerCartRequestsScreen } from "../screens/owner/OwnerCartRequestsScreen";
 import { OwnerCartRequestDetailsScreen } from "../screens/owner/OwnerCartRequestDetailsScreen";
 import { OwnerReferralLinksScreen } from "../screens/owner/OwnerReferralLinksScreen";
+import { MercadoPagoCardEntryScreen } from "../screens/payments/MercadoPagoCardEntryScreen";
 
 const Stack = createNativeStackNavigator<OwnerStackParamList>();
 
@@ -40,6 +41,7 @@ export function OwnerStack() {
       <Stack.Screen name={OWNER_SCREENS.PixPayment} component={OwnerPixPaymentScreen} />
 
       <Stack.Screen name={OWNER_SCREENS.CardTokenize} component={CardTokenizeWebViewScreen} />
+      <Stack.Screen name={OWNER_SCREENS.MercadoPagoCardEntry} component={MercadoPagoCardEntryScreen} />
       <Stack.Screen name={OWNER_SCREENS.CardEntry} component={OwnerCardEntryScreen} />
 
       <Stack.Screen name={OWNER_SCREENS.OwnerSellers} component={OwnerSellersScreen} />
@@ -49,6 +51,7 @@ export function OwnerStack() {
       <Stack.Screen name={OWNER_SCREENS.ProductDetails} component={OwnerProductDetailsScreen} />
       <Stack.Screen name={OWNER_SCREENS.Promos} component={OwnerPromosScreen} />
       <Stack.Screen name={OWNER_SCREENS.BoletoPayerForm} component={OwnerBoletoPayerFormScreen} />
+      
 
       <Stack.Screen
         name={OWNER_SCREENS.CartRequests}

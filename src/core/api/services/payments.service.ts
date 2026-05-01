@@ -42,7 +42,43 @@ export type CreateIntentBody =
       };
     };
 
+    export type PaymentMethodsResponse = {
+  pix?: unknown;
+  boleto?: unknown;
+  card: {
+    enabled: boolean;
+    provider: string;
+    publicKey?: string | null;
+    maxInstallments?: number;
+  };
+};
+
 export const PaymentsService = {
+    getPaymentMethods: async (): Promise<PaymentMethodsResponse> => {
+    try {
+      const res = await api.get(endpoints.payments.methods);
+      const data = res?.data ?? {};
+      const card = data?.card ?? {};
+
+      return {
+        pix: data?.pix,
+        boleto: data?.boleto,
+        card: {
+          enabled: Boolean(card?.enabled),
+          provider: String(card?.provider || "CIELO").toUpperCase(),
+          publicKey: card?.publicKey ?? null,
+          maxInstallments:
+            typeof card?.maxInstallments === "number" ? card.maxInstallments : undefined,
+        },
+      };
+    } catch {
+      return {
+        pix: undefined,
+        boleto: undefined,
+        card: { enabled: true, provider: "CIELO", publicKey: null },
+      };
+    }
+  },
   active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
     const res = await api.get(endpoints.payments.active(orderId));
     console.log("[PAY][ACTIVE]", JSON.stringify(res.data, null, 2));
@@ -145,13 +181,28 @@ export const PaymentsService = {
     body: {
       installments: number;
       payer?: BoletoPayer;
-      card: { token: string; payment_method_id: string; issuer_id?: string };
+      card: {
+        token?: string;
+        payment_method_id?: string;
+        issuer_id?: string;
+        cardToken?: string;
+        paymentMethodId?: string;
+        issuerId?: string;
+        securityCode?: string;
+      };
     }
   ): Promise<PaymentIntentDTO> => {
+        const rawCard = body.card || {};
+    const normalizedCard: any = {
+      cardToken: rawCard.cardToken || rawCard.token,
+      paymentMethodId: rawCard.paymentMethodId || rawCard.payment_method_id,
+      issuerId: rawCard.issuerId || rawCard.issuer_id,
+    };
+    if (rawCard.securityCode) normalizedCard.securityCode = rawCard.securityCode;
     const payload: any = {
       method: "CARD",
       installments: Number(body.installments || 1),
-      card: body.card,
+      card: normalizedCard,
     };
 
     if (body.payer) payload.payer = normalizeBoletoPayer(body.payer);

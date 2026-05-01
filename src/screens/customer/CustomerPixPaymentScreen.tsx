@@ -18,6 +18,7 @@ import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { PaymentsService } from "../../core/api/services/payments.service";
 
 import { PixPaymentSheet } from "../payments/PixPaymentsSheet";
 import { BoletoPaymentSheet } from "../payments/BoletoPaymentSheet";
@@ -220,7 +221,14 @@ const method = String(payment?.method ?? "").toUpperCase();
         return;
       }
 
-      // CARD → começa no SOP (tokenização)
+      const methods = await PaymentsService.getPaymentMethods();
+      if (methods?.card?.provider === "MERCADOPAGO") {
+        navigation.navigate(CUSTOMER_SCREENS.MercadoPagoCardEntry, {
+          orderId,
+          publicKey: methods?.card?.publicKey ?? null,
+        });
+        return;
+      }
       navigation.navigate(CUSTOMER_SCREENS.CardTokenize, {
         orderId,
 

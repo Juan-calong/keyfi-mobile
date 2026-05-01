@@ -19,6 +19,7 @@ export const CUSTOMER_SCREENS = {
 
   CardEntry: "CustomerCardEntry",
   CardTokenize: "CustomerCardTokenize",
+  MercadoPagoCardEntry: "CustomerMercadoPagoCardEntry",
 
   BoletoPayerForm: "CustomerBoletoPayerForm",
   BoletoWebView: "CustomerBoletoWebView",
@@ -94,6 +95,12 @@ export type CustomerStackParamList = {
     orderId: string;
     amount?: number;
     returnTo?: "CardEntry" | "PixPayment";
+  };
+
+    [CUSTOMER_SCREENS.MercadoPagoCardEntry]: {
+    orderId: string;
+    amount?: number;
+    publicKey?: string | null;
   };
 
   [CUSTOMER_SCREENS.BoletoPayerForm]: {

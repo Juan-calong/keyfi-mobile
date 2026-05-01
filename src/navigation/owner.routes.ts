@@ -16,6 +16,7 @@ export const OWNER_SCREENS = {
 
   CardTokenize: "OwnerCardTokenize",
   CardEntry: "OwnerCardEntry",
+  MercadoPagoCardEntry: "OwnerMercadoPagoCardEntry",  
 
   BoletoPayerForm: "OwnerBoletoPayerForm",
   BoletoWebView: "OwnerBoletoWebView",
@@ -90,6 +91,12 @@ export type OwnerStackParamList = {
     brand?: string;
     cardBin?: string;
     cardLast4Digits?: string;
+  };
+
+  [OWNER_SCREENS.MercadoPagoCardEntry]: {
+    orderId: string;
+    amount?: number;
+    publicKey?: string | null;
   };
 
   [OWNER_SCREENS.BoletoPayerForm]: { orderId: string; defaultPayer?: any };
