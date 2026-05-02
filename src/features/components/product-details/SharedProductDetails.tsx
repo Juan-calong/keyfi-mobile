@@ -26,7 +26,8 @@ import { resolvePromoBadgeLabel } from "../../../core/utils/promoBadge";
 import { resolvePromoPriceData } from "../../../core/utils/promoPricing";
 import { ProductFavoriteButton } from "./ProductFavoriteButton";
 import { AppBackButton } from "../../../ui/components/AppBackButton";
-
+import { useCartStore } from "../../../stores/cart.store";
+import { ProductMediaViewerModal } from "./ProductMediaViewerModal";
 
 import type {
   Product,
@@ -739,6 +740,8 @@ export function SharedProductDetails({
     null
   );
   const [galleryIndex, setGalleryIndex] = useState(0);
+  const [mediaViewerVisible, setMediaViewerVisible] = useState(false);
+  const [mediaViewerIndex, setMediaViewerIndex] = useState(0);
   const [reviewSort, setReviewSort] = useState<ReviewSort>("recent");
   const [reviewsVisibleCount, setReviewsVisibleCount] = useState(6);
   const [draftComment, setDraftComment] = useState("");
@@ -768,6 +771,7 @@ export function SharedProductDetails({
 
   const out = product ? isOutOfStock(product) : false;
   const alreadyInCart = !!product && qtyInCart > 0;
+  const decrementCartItem = useCartStore((state) => state.dec);
 
   const galleryMedia = useMemo(
     () => normalizeGalleryMedia(product, { allowVideos }),
@@ -1028,6 +1032,10 @@ const quantityTierBadges = useMemo(() => {
     if (qtyInCart <= 0) return;
 
     try {
+        if (qtyInCart > 1) {
+        decrementCartItem(product.id, 1);
+        return;
+      }
       onRemoveFromCart(product.id);
     } catch (e: any) {
       const fe: any = friendlyError(e);
@@ -1065,6 +1073,15 @@ const quantityTierBadges = useMemo(() => {
     }
     if (!canSubmitComment) return;
     createCommentM.mutate();
+  }
+
+    function handleOpenMediaViewer(index: number) {
+    setMediaViewerIndex(index);
+    setMediaViewerVisible(true);
+  }
+
+  function handleCloseMediaViewer() {
+    setMediaViewerVisible(false);
   }
 
   const resolvedInitialFavorited = useMemo(() => {
@@ -1169,16 +1186,17 @@ const quantityTierBadges = useMemo(() => {
                       );
                       setGalleryIndex(nextIndex);
                     }}
-                    renderItem={({ item }) => {
+                    renderItem={({ item, index }) => {
                       const isVideo = item.type === "video";
                       const imageSource = item.thumbnailUrl || item.url;
 
                       return (
-                        <View
+                        <Pressable
                           style={[
                             s.galleryItem,
                             { width: galleryCardWidth, height: galleryHeight },
                           ]}
+                           onPress={() => handleOpenMediaViewer(index)}
                         >
                           {imageSource ? (
                             <Image
@@ -1200,7 +1218,7 @@ const quantityTierBadges = useMemo(() => {
                               <Text style={s.videoBadgeText}>Vídeo</Text>
                             </View>
                           ) : null}
-                        </View>
+                        </Pressable>
                       );
                     }}
                   />
@@ -2634,6 +2652,13 @@ const quantityTierBadges = useMemo(() => {
           title={modal?.title}
           message={modal?.message}
           onClose={() => setModal(null)}
+        />
+
+          <ProductMediaViewerModal
+          visible={mediaViewerVisible}
+          media={galleryMedia}
+          initialIndex={mediaViewerIndex}
+          onClose={handleCloseMediaViewer}
         />
       </Container>
     </Screen>

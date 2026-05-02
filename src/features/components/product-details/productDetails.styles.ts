@@ -867,5 +867,92 @@ emptyReviewsIconWrap: {
   justifyContent: "center",
   marginBottom: 10,
 },
+viewerRoot: {
+  flex: 1,
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+viewerBackdrop: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: "rgba(0,0,0,0.82)",
+},
+
+viewerContent: {
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+  paddingHorizontal: 12,
+},
+
+viewerHeader: {
+  width: "100%",
+  alignItems: "center",
+  marginBottom: 10,
+},
+
+viewerCounter: {
+  color: "#FFFFFF",
+  fontSize: 13,
+  fontWeight: "700",
+},
+
+viewerBody: {
+  borderRadius: 18,
+  overflow: "hidden",
+},
+
+viewerPage: {
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+viewerImageWrap: {
+  justifyContent: "center",
+  alignItems: "center",
+  overflow: "hidden",
+},
+
+viewerImage: {
+  borderRadius: 18,
+},
+
+viewerVideoCard: {
+  overflow: "hidden",
+  backgroundColor: "#000000",
+},
+
+videoWebview: {
+  flex: 1,
+  backgroundColor: "#000000",
+},
+
+viewerDotsWrap: {
+  marginTop: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+},
+
+viewerDot: {
+  width: 7,
+  height: 7,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.45)",
+},
+
+viewerDotActive: {
+  width: 18,
+  backgroundColor: "#FFFFFF",
+},
+
+viewerDotVideo: {
+  backgroundColor: "rgba(140,190,255,0.6)",
+},
+
+viewerDotVideoActive: {
+  backgroundColor: "#66A9FF",
+},
 });
 
