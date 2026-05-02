@@ -15,6 +15,7 @@ import type { ProductMedia } from "./productDetails.types";
 import { s } from "./productDetails.styles";
 import Animated, {
   runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -37,6 +38,7 @@ type ZoomableImageProps = {
   width: number;
   height: number;
   enabled: boolean;
+  panEnabled: boolean;
   resetKey: string;
   onZoomStateChange?: (zoomed: boolean) => void;
 };
@@ -46,9 +48,15 @@ function ZoomableImage({
   width,
   height,
   enabled,
+  panEnabled,
   resetKey,
   onZoomStateChange,
 }: ZoomableImageProps) {
+  const ZOOM_THRESHOLD = 1.02;
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 4;
+  const DOUBLE_TAP_SCALE = 2;
+
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -56,89 +64,124 @@ function ZoomableImage({
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
 
-  useEffect(() => {
-    scale.value = 1;
-    savedScale.value = 1;
-    translateX.value = 0;
-    translateY.value = 0;
-    savedX.value = 0;
-    savedY.value = 0;
-  }, [resetKey, scale, savedScale, translateX, translateY, savedX, savedY]);
-  useEffect(() => {
-    onZoomStateChange?.(false);
-  }, [onZoomStateChange, resetKey]);
+  function notifyZoomState(zoomed: boolean) {
+    onZoomStateChange?.(zoomed);
+  }
 
-  const pinch = Gesture.Pinch()
-    .enabled(enabled)
-    .onUpdate((e) => {
-      const next = savedScale.value * e.scale;
-      scale.value = Math.min(4, Math.max(1, next));
-    })
-.onEnd(() => {
-  savedScale.value = scale.value;
+useEffect(() => {
+  scale.value = 1;
+  savedScale.value = 1;
+  translateX.value = 0;
+  translateY.value = 0;
+  savedX.value = 0;
+  savedY.value = 0;
+  onZoomStateChange?.(false);
+}, [resetKey]);
 
-  if (savedScale.value <= 1) {
-    savedScale.value = 1;
-    scale.value = withSpring(1);
+useAnimatedReaction(
+  () => scale.value > ZOOM_THRESHOLD,
+  (isZoomed, prevIsZoomed) => {
+    if (isZoomed !== prevIsZoomed) {
+      runOnJS(notifyZoomState)(isZoomed);
+    }
+  }
+);
+
+  const resetZoom = () => {
+    "worklet";
+
+    scale.value = withSpring(MIN_SCALE);
+    savedScale.value = MIN_SCALE;
+
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
     savedX.value = 0;
     savedY.value = 0;
 
-    if (onZoomStateChange) {
-      runOnJS(onZoomStateChange)(false);
-    }
+    runOnJS(notifyZoomState)(false);
+  };
 
-    return;
-  }
+  const pinch = Gesture.Pinch()
+    .enabled(enabled)
+    .onUpdate((e) => {
+      const next = savedScale.value * e.scale;
+      scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+    })
+    .onEnd(() => {
+      if (scale.value <= ZOOM_THRESHOLD) {
+        resetZoom();
+        return;
+      }
 
-  if (onZoomStateChange) {
-    runOnJS(onZoomStateChange)(true);
-  }
-});
+      if (scale.value > MAX_SCALE) {
+        scale.value = withSpring(MAX_SCALE);
+        savedScale.value = MAX_SCALE;
+      } else {
+        savedScale.value = scale.value;
+      }
+
+      runOnJS(notifyZoomState)(true);
+    });
 
   const doubleTap = Gesture.Tap()
     .enabled(enabled)
     .numberOfTaps(2)
     .onEnd(() => {
-      const nextScale = savedScale.value > 1 ? 1 : 2;
-      scale.value = withSpring(nextScale);
-      savedScale.value = nextScale;
-if (nextScale === 1) {
-  translateX.value = withSpring(0);
-  translateY.value = withSpring(0);
-  savedX.value = 0;
-  savedY.value = 0;
-}
+      const shouldReset = scale.value > ZOOM_THRESHOLD;
 
-if (onZoomStateChange) {
-  runOnJS(onZoomStateChange)(nextScale > 1);
-}
+      if (shouldReset) {
+        resetZoom();
+        return;
+      }
+
+      scale.value = withSpring(DOUBLE_TAP_SCALE);
+      savedScale.value = DOUBLE_TAP_SCALE;
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+      savedX.value = 0;
+      savedY.value = 0;
+
+      runOnJS(notifyZoomState)(true);
     });
 
   const pan = Gesture.Pan()
     .enabled(enabled)
     .onUpdate((e) => {
-      if (scale.value <= 1) return;
-      const limitX = ((width * scale.value) - width) / 2;
-      const limitY = ((height * scale.value) - height) / 2;
+      if (scale.value <= ZOOM_THRESHOLD) {
+        translateX.value = 0;
+        translateY.value = 0;
+        return;
+      }
+
+      const limitX = (width * scale.value - width) / 2;
+      const limitY = (height * scale.value - height) / 2;
+
       const nextX = savedX.value + e.translationX;
       const nextY = savedY.value + e.translationY;
+
       translateX.value = Math.min(limitX, Math.max(-limitX, nextX));
       translateY.value = Math.min(limitY, Math.max(-limitY, nextY));
     })
     .onEnd(() => {
+      if (scale.value <= ZOOM_THRESHOLD) {
+        resetZoom();
+        return;
+      }
+
       savedX.value = translateX.value;
       savedY.value = translateY.value;
+      runOnJS(notifyZoomState)(true);
     });
 
-  const composed = Gesture.Simultaneous(pinch, pan, doubleTap);
+  const composed = panEnabled
+  ? Gesture.Simultaneous(pinch, pan, doubleTap)
+  : Gesture.Simultaneous(pinch, doubleTap);
 
   const imageStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: scale.value },
       { translateX: translateX.value },
       { translateY: translateY.value },
+      { scale: scale.value },
     ],
   }));
 
@@ -164,7 +207,7 @@ export function ProductMediaViewerModal({
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const listRef = useRef<FlatList<ProductMedia> | null>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-    const [isCurrentImageZoomed, setIsCurrentImageZoomed] = useState(false);
+  const [isCurrentImageZoomed, setIsCurrentImageZoomed] = useState(false);
 
   const viewerWidth = Math.min(screenWidth - 24, 420);
   const viewerHeight = Math.min(screenHeight * 0.62, 430);
@@ -186,6 +229,13 @@ export function ProductMediaViewerModal({
     });
   }, [visible, initialIndex, media.length]);
 
+    useEffect(() => {
+    if (!visible) {
+      setIsCurrentImageZoomed(false);
+    }
+  }, [visible]);
+  
+
   const validMedia = useMemo(() => media ?? [], [media]);
 
 function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -194,6 +244,10 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
   setCurrentIndex(next);
   setIsCurrentImageZoomed(false);
 }
+
+  useEffect(() => {
+    setIsCurrentImageZoomed(false);
+  }, [currentIndex]);
 
   function renderItem({ item, index }: { item: ProductMedia; index: number }) {
     const isVideo = item?.type === "video";
@@ -234,16 +288,17 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
             )}
           </View>
         ) : imageUri ? (
-          <ZoomableImage
-            uri={imageUri}
-            width={viewerWidth}
-            height={viewerHeight}
-            enabled={currentIndex === index}
-            resetKey={`${visible}-${currentIndex}-${item.id}`}
-            onZoomStateChange={(zoomed) => {
-              if (index === currentIndex) setIsCurrentImageZoomed(zoomed);
-            }}
-          />
+<ZoomableImage
+  uri={imageUri}
+  width={viewerWidth}
+  height={viewerHeight}
+  enabled={currentIndex === index}
+  panEnabled={currentIndex === index && isCurrentImageZoomed}
+  resetKey={`${visible}-${currentIndex}-${item.id}`}
+  onZoomStateChange={(zoomed) => {
+    if (index === currentIndex) setIsCurrentImageZoomed(zoomed);
+  }}
+/>
         ) : (
           <View
             style={{
