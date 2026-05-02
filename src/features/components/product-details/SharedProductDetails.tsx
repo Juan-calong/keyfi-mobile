@@ -896,6 +896,9 @@ const quantityTierBadges = useMemo(() => {
 
       setCommentSuccessMessage(String(msg));
       setCommentSuccessMode(mode);
+      setDraftComment("");
+      setDraftRating(0);
+
 
       await Promise.all([commentsQ.refetch(), myCommentStatusQ.refetch()]);
     },
@@ -911,49 +914,50 @@ const quantityTierBadges = useMemo(() => {
   });
 
   React.useEffect(() => {
-    const data = myCommentStatusQ.data;
+  const data = myCommentStatusQ.data;
 
-    if (!product?.id || !data) return;
+  if (!product?.id || !data) return;
 
-    if (data.hasComment && data.canEdit && data.item) {
-      setDraftComment(String(data.item.comment ?? ""));
-      setDraftRating(Number(data.item.rating ?? 0));
-      return;
-    }
-
-    if (data.canCreate || !data.item) {
-      setDraftComment("");
-      setDraftRating(0);
-    }
-  }, [
-    product?.id,
-    myCommentStatusQ.data,
-    myCommentStatusQ.data?.hasComment,
-    myCommentStatusQ.data?.canEdit,
-    myCommentStatusQ.data?.canCreate,
-    myCommentStatusQ.data?.item?.id,
-  ]);
+  if (data.canCreate || !data.item) {
+    setDraftComment("");
+    setDraftRating(0);
+  }
+}, [
+  product?.id,
+  myCommentStatusQ.data,
+  myCommentStatusQ.data?.canCreate,
+  myCommentStatusQ.data?.item?.id,
+]);
 
   const reviewStatus = myCommentStatusQ.data;
-    const reviewItem = reviewStatus?.item;
+  const reviewItem =
+    reviewStatus?.item ?? reviewStatus?.comment ?? reviewStatus?.legacyComment;
   const hasVisibleMyComment = Boolean(
     reviewItem?.id && String(reviewItem?.comment ?? "").trim()
   );
-  const canCreateReview = !!reviewStatus?.canCreate;
-  const canEditReview = !!reviewStatus?.canEdit;
-  const canWriteReview = canCreateReview || canEditReview;
+  const canCreateReview = reviewStatus?.canCreate === true;
+  const canWriteReview = canCreateReview;
 
-  const reviewCardTitle = canEditReview
-    ? "Edite sua avaliação"
-    : "Escreva sua avaliação";
+  const reviewCardTitle = "Escreva sua avaliação";
 
-  const reviewCardSubtitle = canEditReview
-    ? "Sua atualização ficará pública automaticamente."
-    : "Sua avaliação ficará pública automaticamente.";
+  const reviewCardSubtitle = "Sua avaliação ficará pública automaticamente.";
 
-  const reviewSubmitLabel = canEditReview
-    ? "Atualizar avaliação"
-    : "Enviar avaliação";
+  const reviewSubmitLabel = "Enviar avaliação";
+
+  const reviewReasonFallbackMap: Record<string, string> = {
+    NO_PURCHASE: "Você precisa comprar este produto antes de avaliá-lo.",
+    NOT_DELIVERED: "Você só pode avaliar produtos depois que receber o pedido.",
+    ALREADY_REVIEWED: "Você já avaliou este item.",
+  };
+
+  const reviewBlockedMessage =
+    reviewStatus?.message ||
+    (reviewStatus?.reason
+      ? reviewReasonFallbackMap[String(reviewStatus.reason)]
+      : undefined) ||
+    (reviewStatus?.canReview === false
+      ? "Você só pode avaliar produtos depois que receber o pedido."
+      : "Avaliação indisponível para este item.");
 
   const reviewsRaw = useMemo(
     () => extractCommentsItems(commentsQ.data),
@@ -990,7 +994,7 @@ const quantityTierBadges = useMemo(() => {
   const canSubmitComment =
     !!product?.id &&
     !myCommentStatusQ.isLoading &&
-    canWriteReview &&
+    canCreateReview &&
     draftRating >= 1 &&
     draftRating <= 5 &&
     trimmedComment.length >= 3 &&
@@ -1052,6 +1056,13 @@ const quantityTierBadges = useMemo(() => {
   }
 
   function handleSubmitComment() {
+        if (!canCreateReview) {
+      setModal({
+        title: "Avaliação indisponível",
+        message: reviewBlockedMessage,
+      });
+      return;
+    }
     if (!canSubmitComment) return;
     createCommentM.mutate();
   }
@@ -1678,8 +1689,7 @@ const quantityTierBadges = useMemo(() => {
                           lineHeight: 18,
                         }}
                       >
-                        {reviewStatus?.message ||
-                          "Este item não está disponível para avaliação."}
+                        {reviewBlockedMessage}
                       </Text>
                     </View>
                   </View>
@@ -1748,7 +1758,7 @@ const quantityTierBadges = useMemo(() => {
                     </View>
                   </View>
 
-                  {hasVisibleMyComment && !reviewStatus?.canEdit ? (
+                  {hasVisibleMyComment && !canCreateReview ? (
                     <View
                       style={{
                         marginTop: 6,
@@ -1798,8 +1808,7 @@ const quantityTierBadges = useMemo(() => {
                           ? `Você poderá editar novamente em ${formatReviewDateTime(
                               reviewStatus?.nextAllowedEditAt
                             )}`
-                          : reviewStatus?.message ||
-                            "Sua avaliação não pode ser editada no momento."}
+                            : reviewBlockedMessage}
                       </Text>
                     </View>
                   ) : null}
@@ -1925,6 +1934,32 @@ const quantityTierBadges = useMemo(() => {
                       </View>
                     </>
                   ) : null}
+                  
+
+                  {canCreateReview && reviewStatus?.eligibleOrderItem ? (
+                    <View
+                      style={{
+                        marginTop: 10,
+                        borderRadius: 12,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        backgroundColor: "#F4EEE8",
+                        borderWidth: 1,
+                        borderColor: "#E9DED4",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: COLORS.textMuted,
+                          fontWeight: "700",
+                          fontSize: 12,
+                          lineHeight: 18,
+                        }}
+                      >
+                        Produto recebido. Você já pode avaliar.
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {commentSuccessMessage ? (
                     <View
@@ -1982,7 +2017,7 @@ const quantityTierBadges = useMemo(() => {
                     </View>
                   ) : null}
                   
-                  {!canWriteReview && !hasVisibleMyComment && reviewStatus?.message ? (
+                  {!canCreateReview && !hasVisibleMyComment ? (
                     <View
                       style={{
                         marginTop: 10,
@@ -2002,7 +2037,7 @@ const quantityTierBadges = useMemo(() => {
                           lineHeight: 18,
                         }}
                       >
-                        {reviewStatus.message}
+                        {reviewBlockedMessage}
                       </Text>
                     </View>
                   ) : null}

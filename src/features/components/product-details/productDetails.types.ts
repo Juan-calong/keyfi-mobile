@@ -175,14 +175,36 @@ export type ProductComment = {
   adminResponse?: ProductCommentAdminResponse | null;
 };
 
+export type ProductCommentSummary = ProductComment;
+
+export type EligibleReviewOrderItem = {
+  id: string;
+  orderId: string;
+  productId: string;
+  deliveredAt: string | null;
+  deliveryType: "CORREIOS" | "LOCAL" | string;
+};
+
 export type MyProductCommentStatusResponse = {
   canReview?: boolean;
+  hasPurchased?: boolean;
+  hasComment?: boolean;
   canCreate?: boolean;
   canEdit?: boolean;
-  hasComment?: boolean;
   nextAllowedEditAt?: string | null;
-  message?: string;
-  item?: ProductComment | null;
+    reason?:
+    | "NO_PURCHASE"
+    | "NOT_DELIVERED"
+    | "ALREADY_REVIEWED"
+    | "OK"
+    | string
+    | null;
+  message?: string | null;
+  item?: ProductCommentSummary | null;
+  comment?: ProductCommentSummary | null;
+  legacyComment?: ProductCommentSummary | null;
+  eligibleOrderItem?: EligibleReviewOrderItem | null;
+  eligibleOrderItems?: EligibleReviewOrderItem[];
 };
 
 export type ProductCommentsResponse = {
