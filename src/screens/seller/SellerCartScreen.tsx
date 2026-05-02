@@ -19,8 +19,7 @@ import {
 } from "react-native";
 
 import { useQuery } from "@tanstack/react-query";
-import { useNavigation } from "@react-navigation/native";
-
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
 import { Loading, ErrorState, Empty } from "../../ui/components/State";
@@ -151,6 +150,7 @@ function FlatChip({
 
 export function SellerCartScreen() {
   const nav = useNavigation<any>();
+  const route = useRoute<any>();
   const listRef = useRef<FlatList<Product>>(null);
   const { width } = useWindowDimensions();
 
@@ -172,6 +172,8 @@ export function SellerCartScreen() {
   const [cartOpen, setCartOpen] = useState(false);
 
   const activeSalonId = useSellerSessionStore((s) => s.activeSalonId);
+  const setActiveSalonId = useSellerSessionStore((s) => s.setActiveSalonId);
+  const salonId = route?.params?.salonId || activeSalonId || null;
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
   const [confirm, setConfirm] = useState<null | { title: string; message: string; actions: IosConfirmAction[] }>(null);
@@ -183,13 +185,16 @@ export function SellerCartScreen() {
   }
 
   useEffect(() => {
-    if (!activeSalonId) {
+    if (route?.params?.salonId && route.params.salonId !== activeSalonId) {
+      setActiveSalonId(route.params.salonId);
+    }
+    if (!salonId) {
       setModal({
         title: "Selecione um salão",
         message: "Abra o carrinho a partir de um salão aprovado.",
       });
     }
-  }, [activeSalonId]);
+  }, [activeSalonId, route?.params?.salonId, salonId, setActiveSalonId]);
 
   const categoriesQ = useQuery({
     queryKey: ["seller-categories", { active: "true" }],
@@ -593,7 +598,7 @@ export function SellerCartScreen() {
 
                     <Pressable
                       onPress={() => {
-                        if (!activeSalonId) {
+                        if (!salonId) {
                           setModal({
                             title: "Selecione um salão",
                             message: "Você precisa estar com um salão ativo antes de continuar.",
@@ -609,7 +614,7 @@ export function SellerCartScreen() {
                         setCartOpen(false);
 
                         nav.navigate(SELLER_SCREENS.Cart, {
-                          salonId: activeSalonId,
+                          salonId,
                           items,
                         });
                       }}

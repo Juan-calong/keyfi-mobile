@@ -56,15 +56,19 @@ products: {
     salonMe: "/seller/salon-referrals/me",
   },
 
-  sellerPermissions: "/seller/permissions",
-  sellerRequestPermission: (salonId: string) => `/seller/salons/${salonId}/permission-request`,
+sellerPermissions: "/seller/permissions",
+sellerRequestPermission: (salonId: string) =>
+  `/seller/salons/${salonId}/permission-request`,
 
-  sellerCartRequests: {
-    create: (salonId: string) => `/seller/salons/${salonId}/cart-requests`,
-    list: "/seller/cart-requests",
-    byId: (id: string) => `/seller/cart-requests/${id}`,
-    send: (id: string) => `/seller/cart-requests/${id}/send`,
-  },
+sellerCreateDraftOrder: (salonId: string) =>
+  `/seller/salons/${salonId}/orders/draft`,
+
+sellerCartRequests: {
+  create: (salonId: string) => `/seller/salons/${salonId}/cart-requests`,
+  list: "/seller/cart-requests",
+  byId: (id: string) => `/seller/cart-requests/${id}`,
+  send: (id: string) => `/seller/cart-requests/${id}/send`,
+},
 
   salonCartRequests: {
     list: "/salon/cart-requests",

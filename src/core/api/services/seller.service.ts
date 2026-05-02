@@ -1,11 +1,33 @@
 import { api } from "../client";
 import { endpoints } from "../endpoints";
 
+export type SellerPermissionDTO = {
+  id?: string;
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED" | string;
+  salonId?: string;
+  salonUUID?: string;
+  salonName?: string;
+  name?: string;
+  code?: string;
+  token?: string;
+  referralCode?: string;
+  sellerCode?: string;
+  permissionCode?: string;
+  salon?: {
+    id?: string;
+    uuid?: string;
+    name?: string;
+    code?: string;
+    referralCode?: string;
+    cnpj?: string;
+  };
+  [key: string]: any;
+};
+
 export const SellerService = {
   listPermissions: async () => {
     const res = await api.get(endpoints.sellerPermissions);
-    return res.data;
-  },
+    return res.data as SellerPermissionDTO[] | { items?: SellerPermissionDTO[]; permissions?: SellerPermissionDTO[] };  },
 
   requestPermission: async (salonId: string) => {
     const id = String(salonId || "").trim();
@@ -39,7 +61,7 @@ export const SellerService = {
     return res.data;
   },
 
-  createPaymentIntent: async (orderId: string, method: "PIX" | "BOLETO" | "CARD" = "PIX") => {
+  createPaymentIntent: async (orderId: string, method: "PIX"  | "CARD" = "PIX") => {
   const id = String(orderId || "").trim();
   if (!id) throw new Error("orderId inválido");
 

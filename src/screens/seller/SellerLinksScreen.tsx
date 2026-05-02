@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,22 +18,25 @@ import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
 import { Loading, ErrorState, Empty } from "../../ui/components/State";
 
-import { SellerService } from "../../core/api/services/seller.service";
+import { SellerService, type SellerPermissionDTO } from "../../core/api/services/seller.service";
 import { useSellerSessionStore } from "../../stores/seller.session.store";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SELLER_SCREENS } from "../../navigation/seller.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 
-type SellerPermissionItem = {
-  id: string;
+type NormalizedSellerPermission = {
+  permissionId: string;
   status: "PENDING" | "APPROVED" | "REJECTED" | "REVOKED" | string;
-  salon: { id: string; name: string; cnpj?: string };
+  salonId: string | null;
+  salonName: string;
+  copyCode: string | null;
+  raw: SellerPermissionDTO;
 };
 
 type SellerLinksSection = {
   title: string;
-  data: SellerPermissionItem[];
+  data: NormalizedSellerPermission[];
 };
 
 const COLORS = {
@@ -62,9 +65,31 @@ function labelForStatus(s: string) {
   return up || "—";
 }
 
-function sortByName(a: SellerPermissionItem, b: SellerPermissionItem) {
-  const na = String(a.salon?.name ?? "");
-  const nb = String(b.salon?.name ?? "");
+function normalizeSellerPermission(item: SellerPermissionDTO): NormalizedSellerPermission {
+  const permissionId = String(item?.id ?? item?.permissionCode ?? item?.token ?? "").trim() || `missing-${Math.random()}`;
+  const status = String(item?.status ?? "").toUpperCase() || "—";
+  const salonId =
+    String(item?.salonId ?? item?.salonUUID ?? item?.salon?.id ?? item?.salon?.uuid ?? "").trim() || null;
+  const salonName =
+    String(item?.salon?.name ?? item?.salonName ?? item?.name ?? "").trim() || "Salão";
+  const copyCode =
+    String(
+      item?.code ??
+        item?.token ??
+        item?.referralCode ??
+        item?.sellerCode ??
+        item?.permissionCode ??
+        item?.salon?.code ??
+        item?.salon?.referralCode ??
+        ""
+    ).trim() || null;
+
+  return { permissionId, status, salonId, salonName, copyCode, raw: item };
+}
+
+function sortByName(a: NormalizedSellerPermission, b: NormalizedSellerPermission) {
+  const na = String(a.salonName ?? "");
+  const nb = String(b.salonName ?? "");
   return na.localeCompare(nb);
 }
 
@@ -125,13 +150,12 @@ function LinksRow({
   onCopy,
   onOpenBuy,
 }: {
-  item: SellerPermissionItem;
-  onCopy: (text: string, label?: string) => void;
-  onOpenBuy: (salonUUID: string) => void;
+  item: NormalizedSellerPermission;
+  onCopy: (item: NormalizedSellerPermission) => void;
+  onOpenBuy: (item: NormalizedSellerPermission) => void;
 }) {
   const statusUp = String(item.status).toUpperCase();
-  const salonName = item.salon?.name ?? "Salão";
-  const salonUUID = item.salon?.id ?? "";
+  const salonName = item.salonName || "Salão";
 
   return (
     <View style={s.card}>
@@ -149,9 +173,7 @@ function LinksRow({
 
       <View style={s.actions}>
         <Pressable
-          style={({ pressed }) => [s.btnOutline, pressed && { opacity: 0.85 }]}
-          onPress={() => salonUUID && onCopy(salonUUID, "Código do salão copiado")}
-          disabled={!salonUUID}
+        onPress={() => onCopy(item)}
         >
           <Text style={s.btnOutlineTxt}>Copiar código</Text>
         </Pressable>
@@ -162,12 +184,7 @@ function LinksRow({
             pressed && { opacity: 0.9 },
             statusUp !== "APPROVED" && { opacity: 0.35 },
           ]}
-          onPress={() => {
-            if (!salonUUID) return;
-            if (statusUp !== "APPROVED") return;
-            onOpenBuy(salonUUID);
-          }}
-          disabled={!salonUUID || statusUp !== "APPROVED"}
+          onPress={() => onOpenBuy(item)}
         >
           <Text style={s.btnSolidTxt}>Abrir carrinho</Text>
         </Pressable>
@@ -194,16 +211,38 @@ export function SellerLinksScreen() {
   const TAB_H = 60;
   const bottomReserve = TAB_H + insets.bottom;
 
-  const perms = useMemo(() => asArray<SellerPermissionItem>(permsQ.data), [permsQ.data]);
+ const permsRaw = useMemo(() => asArray<SellerPermissionDTO>(permsQ.data), [permsQ.data]);
+  const perms = useMemo(() => permsRaw.map(normalizeSellerPermission), [permsRaw]);
+
+  useEffect(() => {
+    console.log("[SELLER_LINKS][PERMISSIONS_RAW]", permsRaw);
+    permsRaw.forEach((item, idx) => {
+      console.log("[SELLER_LINKS][PERMISSIONS_SUMMARY]", {
+        itemId: item?.id ?? null,
+        status: item?.status ?? null,
+        salonId: item?.salonId ?? item?.salonUUID ?? null,
+        nestedSalonId: item?.salon?.id ?? item?.salon?.uuid ?? null,
+        salonName: item?.salonName ?? item?.name ?? null,
+        nestedSalonName: item?.salon?.name ?? null,
+        code: item?.code ?? item?.token ?? item?.referralCode ?? item?.sellerCode ?? item?.permissionCode ?? null,
+        nestedCode: item?.salon?.code ?? item?.salon?.referralCode ?? null,
+        keys: Object.keys(item ?? {}),
+        index: idx,
+      });
+    });
+  }, [permsRaw]);
 
   const filtered = useMemo(() => {
     const query = String(q || "").trim().toLowerCase();
     if (!query) return perms;
 
     return perms.filter((p) => {
-      const name = String(p.salon?.name ?? "").toLowerCase();
-      const cnpj = String(p.salon?.cnpj ?? "").toLowerCase();
-      return name.includes(query) || cnpj.includes(query);
+      return (
+        String(p.salonName ?? "").toLowerCase().includes(query) ||
+        String(p.copyCode ?? "").toLowerCase().includes(query) ||
+        String(p.salonId ?? "").toLowerCase().includes(query) ||
+        String(p.status ?? "").toLowerCase().includes(query)
+      );
     });
   }, [perms, q]);
 
@@ -231,15 +270,39 @@ export function SellerLinksScreen() {
     return out;
   }, [filtered]);
 
-  const copy = useCallback((text: string, label = "Copiado") => {
-    Clipboard.setString(text);
-    setModal({ title: label, message: "Já está na área de transferência." });
+  const copy = useCallback((item: NormalizedSellerPermission) => {
+    console.log("[SELLER_LINKS][COPY_PRESS]", {
+      permissionId: item.permissionId,
+      salonId: item.salonId,
+      salonName: item.salonName,
+      hasCode: !!item.copyCode,
+    });
+    if (!item.copyCode) {
+      setModal({ title: "Código indisponível", message: "Código indisponível para este vínculo." });
+      return;
+    }
+    Clipboard.setString(item.copyCode);
+    setModal({ title: "Código copiado", message: "Já está na área de transferência." });
   }, []);
 
   const handleOpenBuy = useCallback(
-    (salonUUID: string) => {
-      setActiveSalonId(salonUUID);
-      nav.navigate(SELLER_SCREENS.Buy);
+    (item: NormalizedSellerPermission) => {
+      console.log("[SELLER_LINKS][OPEN_BUY_PRESS]", {
+        permissionId: item.permissionId,
+        salonId: item.salonId,
+        salonName: item.salonName,
+        status: item.status,
+      });
+      if (String(item.status).toUpperCase() !== "APPROVED") {
+        setModal({ title: "Vínculo pendente", message: "Apenas salões aprovados podem abrir o carrinho." });
+        return;
+      }
+      if (!item.salonId) {
+        setModal({ title: "Erro", message: "Não foi possível abrir este salão. ID do salão ausente." });
+        return;
+      }
+      setActiveSalonId(item.salonId);
+      nav.navigate(SELLER_SCREENS.Buy, { salonId: item.salonId });
     },
     [nav, setActiveSalonId]
   );
@@ -257,7 +320,7 @@ export function SellerLinksScreen() {
           ) : (
             <SectionList
               sections={sections}
-              keyExtractor={(item) => String(item.id)}
+              keyExtractor={(item) => String(item.permissionId)}
               contentContainerStyle={{ paddingBottom: bottomReserve + 16, gap: 10 }}
               ListHeaderComponent={
                 <LinksHeader
@@ -303,14 +366,6 @@ export function SellerLinksScreen() {
         onClose={() => setModal(null)}
       />
     </Screen>
-  );
-}
-
-function TabIcon({ glyph }: { glyph: string }) {
-  return (
-    <Pressable style={s.tabItem} onPress={() => {}}>
-      <Text style={s.tabGlyph}>{glyph}</Text>
-    </Pressable>
   );
 }
 
@@ -487,16 +542,5 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     backgroundColor: COLORS.bg,
-  },
-  tabItem: {
-    width: 64,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 6,
-  },
-  tabGlyph: {
-    color: COLORS.text,
-    fontSize: 22,
-    opacity: 0.75,
   },
 });
