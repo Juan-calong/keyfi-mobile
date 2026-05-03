@@ -13,6 +13,7 @@ const makeNonce = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 function buildHtml(publicKey: string, amount: number, nonce: string) {
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
   <style>
     html,body{margin:0;padding:0;background:#fff;font-family:sans-serif}
     body{padding:8px}
@@ -81,6 +82,28 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
         post('MP_ERROR',{errorCode:'LOOKUP_FAIL'});
       }
     }
+      
+        function readDeviceSessionId(){
+      var hidden=document.getElementById('deviceId');
+      var candidates=[
+        window.MP_DEVICE_SESSION_ID,
+        window.deviceId,
+        hidden&&hidden.value?hidden.value:null
+      ];
+      for(var i=0;i<candidates.length;i++){
+        var value=typeof candidates[i]==='string'?candidates[i].trim():'';
+        if(value) return value;
+      }
+      return null;
+    }
+
+    function postDeviceSession(){
+      var deviceSessionId=readDeviceSessionId();
+      post('MP_DEVICE_SESSION',{
+        deviceSessionId:deviceSessionId,
+        hasDeviceSessionId:Boolean(deviceSessionId)
+      });
+    }
 
     function mountSecureFields(){
       if(!window.MercadoPago){
@@ -106,10 +129,11 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
         }
 
         post('MP_READY',{});
+        postDeviceSession();
         inspectFields();
-        setTimeout(inspectFields,500);
-        setTimeout(inspectFields,1500);
-        setTimeout(inspectFields,3000);
+        setTimeout(function(){ inspectFields(); postDeviceSession(); },500);
+        setTimeout(function(){ inspectFields(); postDeviceSession(); },1500);
+        setTimeout(function(){ inspectFields(); postDeviceSession(); },3000);
       } catch(e){
         post('MP_ERROR',{errorCode:'FIELDS_MOUNT_FAIL'});
         inspectFields();
@@ -121,14 +145,17 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
         var m=JSON.parse(ev.data||'{}');
         if(m.type!=='MP_SUBMIT'||m.nonce!==NONCE) return;
         if(!mp||!mp.fields||typeof mp.fields.createCardToken!=='function'){
+        postDeviceSession();
           post('MP_TOKEN_RESULT',{ok:false,errorCode:'MP_FIELDS_NOT_READY'});
           return;
         }
+        postDeviceSession();
         var token=await mp.fields.createCardToken({
           cardholderName:m.cardholderName,
           identificationType:m.docType,
           identificationNumber:m.docNumber
         });
+        postDeviceSession();
         post('MP_TOKEN_RESULT',{
           ok:true,
           cardToken:token&&token.id?token.id:null,
@@ -137,6 +164,7 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
           installments:state.installments
         });
       } catch(e){
+        postDeviceSession();
         post('MP_TOKEN_RESULT',{ok:false,errorCode:'TOKENIZE_FAIL'});
       }
     }
@@ -167,6 +195,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const [availableInstallments, setAvailableInstallments] = useState<number[]>([1]);
   const [pmId, setPmId] = useState<string | undefined>();
   const [issuerId, setIssuerId] = useState<string | undefined>();
+  const [deviceSessionId, setDeviceSessionId] = useState<string | undefined>();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -270,6 +299,11 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
         setAvailableInstallments(next);
         if (!next.includes(installments)) setInstallments(next[0]);
       }
+            if (msg.type === "MP_DEVICE_SESSION") {
+        const nextDeviceSessionId = typeof msg?.deviceSessionId === "string" && msg.deviceSessionId.trim() ? msg.deviceSessionId.trim() : undefined;
+        setDeviceSessionId(nextDeviceSessionId);
+        console.log("[MP_CARD][DEVICE_SESSION]", { hasDeviceSessionId: Boolean(nextDeviceSessionId) });
+      }
       if (msg.type === "MP_TOKEN_RESULT") (webRef.current as any).__tokenResult = msg;
     } catch { setError("Resposta inválida da tokenização."); }
   };
@@ -342,6 +376,7 @@ await PaymentsService.intentCARD(orderId, {
     cardToken,
     paymentMethodId,
     issuerId: tokenMsg?.issuerId || issuerId,
+    deviceSessionId,
   },
 });
       for (let i = 0; i < 20; i++) {

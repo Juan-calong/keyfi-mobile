@@ -189,6 +189,7 @@ export const PaymentsService = {
         paymentMethodId?: string;
         issuerId?: string;
         securityCode?: string;
+        deviceSessionId?: string;
       };
     }
   ): Promise<PaymentIntentDTO> => {
@@ -199,6 +200,7 @@ export const PaymentsService = {
       issuerId: rawCard.issuerId || rawCard.issuer_id,
     };
     if (rawCard.securityCode) normalizedCard.securityCode = rawCard.securityCode;
+    if (rawCard.deviceSessionId) normalizedCard.deviceSessionId = rawCard.deviceSessionId;
     const payload: any = {
       method: "CARD",
       installments: Number(body.installments || 1),
