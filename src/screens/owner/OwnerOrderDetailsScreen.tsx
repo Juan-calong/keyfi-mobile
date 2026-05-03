@@ -9,6 +9,7 @@ import { Loading, ErrorState } from "../../ui/components/State";
 
 import { OrdersService } from "../../core/api/services/orders.service";
 import { PaymentsService } from "../../core/api/services/payments.service";
+import type { ActivePaymentEnvelope } from "../../core/api/services/payments.types";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
@@ -90,6 +91,8 @@ function PillStatus({ text }: { text: string }) {
   );
 }
 
+const CARD_FAILED_STATUSES = ["FAILED", "CANCELED", "REJECTED", "DECLINED"];
+
 function ItemTitle(it: any, idx: number) {
   const title =
     it?.product?.name ||
@@ -129,9 +132,42 @@ export function OwnerOrderDetailsScreen() {
 
   const data: any = q.data;
 
+    const activePaymentQ = useQuery<ActivePaymentEnvelope | any>({
+    queryKey: ["owner-order-active-payment", orderId],
+    enabled: !!orderId,
+    retry: false,
+    queryFn: () => PaymentsService.active(orderId!),
+  });
+  const activePayment = activePaymentQ.data as ActivePaymentEnvelope | undefined;
+
   const paymentStatus = useMemo(() => normalizeStatus(data?.paymentStatus), [data?.paymentStatus]);
   const status = useMemo(() => normalizeStatus(data?.status), [data?.status]);
   const approval = useMemo(() => normalizeStatus(data?.adminApprovalStatus), [data?.adminApprovalStatus]);
+    const paymentMethod = normalizeStatus(activePayment?.payment?.method);
+  const paymentProvider = normalizeStatus(activePayment?.payment?.provider);
+  const activePaymentStatus = normalizeStatus(activePayment?.payment?.status);
+  const nextActionStatusDetail = String((activePayment?.nextAction as any)?.statusDetail ?? "").trim();
+  const isMercadoPagoCard = paymentMethod === "CARD" && paymentProvider === "MERCADOPAGO";
+  const showCardRejected = isMercadoPagoCard && CARD_FAILED_STATUSES.includes(activePaymentStatus);
+  const showCardManualReview = isMercadoPagoCard && activePaymentStatus === "PENDING" && nextActionStatusDetail === "pending_review_manual";
+
+  React.useEffect(() => {
+    const payment = activePayment?.payment;
+    const nextAction = activePayment?.nextAction as any;
+    const flags = activePayment?.flags;
+    console.log("[ORDER_DETAILS][PAYMENT_ACTIVE]", {
+      orderId: orderId || null,
+      hasPayment: Boolean(payment),
+      paymentProvider: payment?.provider || null,
+      paymentMethod: payment?.method || null,
+      paymentStatus: payment?.status || null,
+      hasExternalId: Boolean(payment?.externalId),
+      nextActionStatusDetail: nextAction?.statusDetail || null,
+      uiCode: activePayment?.ui?.code || null,
+      "flags.canRetry": flags?.canRetry,
+      "flags.shouldPoll": flags?.shouldPoll,
+    });
+  }, [activePayment, orderId]);
 
   const canPay = useMemo(() => {
     if (!paymentStatus) return false;
@@ -212,6 +248,19 @@ export function OwnerOrderDetailsScreen() {
                   <Text style={[m.kvVal, m.bold]}>{formatBRL(data.totalAmount)}</Text>
                 </View>
               </View>
+                 {showCardRejected || showCardManualReview ? (
+                <View style={m.paymentAlert}>
+                  <Text style={m.paymentAlertTitle}>{showCardRejected ? "Pagamento com cartão recusado" : "Pagamento em análise"}</Text>
+                  <Text style={m.paymentAlertMessage}>
+                    {showCardRejected
+                      ? activePayment?.ui?.message || "O Mercado Pago recusou a tentativa de pagamento. Você pode tentar outro cartão ou pagar com PIX."
+                      : activePayment?.ui?.message || "O Mercado Pago recebeu sua tentativa e está analisando a transação."}
+                  </Text>
+                  {activePayment?.payment?.externalId ? (
+                    <Text style={m.paymentAlertMeta}>Transação Mercado Pago: {activePayment.payment.externalId}</Text>
+                  ) : null}
+                </View>
+              ) : null}
 
               <View style={[m.hairline, { marginVertical: 18 }]} />
 
@@ -238,6 +287,10 @@ export function OwnerOrderDetailsScreen() {
                   </Pressable>
 
                   <Text style={m.secure}>Pagamento seguro</Text>
+                  {showCardRejected ? <Text style={m.helperText}>Você ainda pode pagar com PIX ou tentar outro cartão.</Text> : null}
+                  {showCardManualReview && activePayment?.flags?.canRetry === false ? (
+                    <Text style={m.helperText}>Seu pagamento com cartão está em análise. Aguarde antes de tentar novamente.</Text>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -357,6 +410,12 @@ pillText: {
     fontWeight: "600",
     opacity: 0.75,
   },
+
+  helperText: { marginTop: 6, textAlign: "center", color: "#334155", fontSize: 12, fontWeight: "600" },
+  paymentAlert: { marginTop: 14, borderWidth: 1, borderColor: "#FCD34D", backgroundColor: "#FFFBEB", borderRadius: 12, padding: 12 },
+  paymentAlertTitle: { fontSize: 14, fontWeight: "900", color: "#92400E" },
+  paymentAlertMessage: { marginTop: 6, fontSize: 13, lineHeight: 19, color: "#78350F" },
+  paymentAlertMeta: { marginTop: 6, fontSize: 12, color: "#92400E", fontWeight: "700" },
 
   itemRow: {
     paddingVertical: 12,
