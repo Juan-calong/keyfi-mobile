@@ -170,12 +170,18 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [statusTitle, setStatusTitle] = useState<string | null>(null);
+  const [showOrderAction, setShowOrderAction] = useState(false);
+  const [paymentAttemptLocked, setPaymentAttemptLocked] = useState(false);
   const [ready, setReady] = useState(false);
   const [provider, setProvider] = useState<string | null>(null);
   const [webLoaded, setWebLoaded] = useState(false);
   const [fieldsMounted, setFieldsMounted] = useState(false);
   const webRef = useRef<WebView>(null);
 
+    const orderDetailsRoute = String(route?.name).includes("Owner") ? OWNER_SCREENS.OrderDetails : CUSTOMER_SCREENS.OrderDetails;
+
+  const goToOrderDetails = () => navigation.replace(orderDetailsRoute, { orderId });
   useEffect(() => { (async () => {
     const methods = await PaymentsService.getPaymentMethods();
     const cardProvider = String(methods?.card?.provider || "").trim().toUpperCase();
@@ -201,8 +207,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
 
   const html = useMemo(() => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""), [publicKey, amount, nonce]);
 
-    const canPay = Boolean(publicKey) && amount > 0 && fieldsMounted && provider === "MERCADOPAGO" && !processing;
-
+    const canPay = Boolean(publicKey) && amount > 0 && fieldsMounted && provider === "MERCADOPAGO" && !processing && !paymentAttemptLocked;
   useEffect(() => {
     console.log("[MP_CARD][CAN_PAY_STATE]", {
       hasPublicKey: Boolean(publicKey),
@@ -215,7 +220,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
       fieldsMounted,
       canPay,
     });
-  }, [publicKey, amount, ready, provider, processing, canPay, fieldsMounted]);
+  }, [publicKey, amount, ready, provider, processing, canPay, fieldsMounted, paymentAttemptLocked]);
 
   useEffect(() => {
     if (!fieldsMounted && webLoaded && Boolean(publicKey) && amount > 0 && provider === "MERCADOPAGO") {
@@ -271,7 +276,12 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
 
   async function onPay() {
     if (!fieldsMounted || processing) return;
-    setProcessing(true); setError(null);
+    setProcessing(true);
+    setPaymentAttemptLocked(false);
+    setShowOrderAction(false);
+    setError(null);
+    setStatusTitle("Pagamento em processamento...");
+    setStatus("Pagamento em processamento...");
     try {
       if (!orderId) throw new Error("Pedido inválido.");
       if (!(amount > 0)) throw new Error("Não foi possível carregar o valor do pedido.");
@@ -334,17 +344,68 @@ await PaymentsService.intentCARD(orderId, {
     issuerId: tokenMsg?.issuerId || issuerId,
   },
 });
-      setStatus("Pagamento em processamento...");
-      for (let i=0;i<20;i++){ await new Promise<void>((r)=>setTimeout(()=>r(),3000)); const a=await PaymentsService.active(orderId); const st=String((a as any)?.payment?.status||"").toUpperCase();
-        if (st==="PAID") { navigation.replace(String(route?.name).includes("Owner") ? OWNER_SCREENS.OrderDetails : CUSTOMER_SCREENS.OrderDetails, { orderId }); return; }
-        if (st==="FAILED"||st==="CANCELED") { setStatus("Pagamento falhou. Tente novamente."); return; }
+      for (let i = 0; i < 20; i++) {
+        await new Promise<void>((r) => setTimeout(() => r(), 3000));
+        const a = await PaymentsService.active(orderId);
+        const payment = (a as any)?.payment || {};
+        const nextAction = (a as any)?.nextAction || {};
+        const ui = (a as any)?.ui || {};
+        const flags = (a as any)?.flags || {};
+        const st = String(payment?.status || "").toUpperCase();
+
+        console.log("[MP_CARD][POLL_RESULT]", {
+          orderId,
+          paymentStatus: st || null,
+          paymentProvider: payment?.provider || null,
+          hasPaymentExternalId: Boolean(payment?.externalId),
+          nextActionType: nextAction?.type || null,
+          nextActionStatusDetail: nextAction?.statusDetail || null,
+          uiCode: ui?.code || null,
+          uiMessage: ui?.message || null,
+          shouldPoll: flags?.shouldPoll,
+          canRetry: flags?.canRetry,
+        });
+
+        if (st === "PAID") {
+          goToOrderDetails();
+          return;
+        }
+
+        if (["FAILED", "CANCELED", "REJECTED", "DECLINED"].includes(st)) {
+          setStatusTitle("Pagamento recusado");
+          setStatus(ui?.message || "Pagamento recusado. Tente outro cartão ou outra forma de pagamento.");
+          if (flags?.canRetry === false) {
+            setPaymentAttemptLocked(true);
+            setShowOrderAction(true);
+          } else {
+            setPaymentAttemptLocked(false);
+            setShowOrderAction(false);
+          }
+          return;
+        }
+
+        if (st === "PENDING" && String(nextAction?.statusDetail || "").toLowerCase() === "pending_review_manual") {
+          setStatusTitle("Pagamento em análise");
+          setStatus(ui?.message || "Pagamento em análise. O Mercado Pago recebeu sua tentativa e está analisando a transação.");
+          setPaymentAttemptLocked(true);
+          setShowOrderAction(true);
+          return;
+        }
       }
-    } catch(e:any){ setError(e?.message || "Erro ao pagar com Mercado Pago."); }
+      setStatusTitle("Pagamento em análise");
+      setStatus("Pagamento em análise. Você pode acompanhar o status nos detalhes do pedido.");
+      setPaymentAttemptLocked(true);
+      setShowOrderAction(true);
+    } catch(e:any){
+      setStatusTitle("Erro no pagamento");
+      setStatus(null);
+      setError(e?.message || "Erro ao pagar com Mercado Pago.");
+    }
     finally { setProcessing(false); }
   }
 
   return <Screen><Container style={{ flex:1, gap:8 }}>
-    <Text style={s.title}>Cartão Mercado Pago</Text>{!!error && <Text style={s.error}>{error}</Text>}{!!status && <Text>{status}</Text>}
+        <Text style={s.title}>Cartão Mercado Pago</Text>{!!error && <Text style={s.error}>{error}</Text>}{!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}{!!status && <Text>{status}</Text>}
     <TextInput placeholder="Nome no cartão" value={name} onChangeText={setName} style={s.input} />
     <TextInput placeholder="CPF/CNPJ" keyboardType="number-pad" value={doc} onChangeText={(v)=>setDoc(onlyDigits(v).slice(0,14))} style={s.input} />
     <TextInput placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={s.input} />
@@ -371,6 +432,11 @@ ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(pro
       </Text>
     )}
     <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && { opacity: 0.5 }]}>{processing ? <ActivityIndicator color="#fff"/> : <Text style={{ color:"#fff", fontWeight:"700" }}>Pagar</Text>}</Pressable>
+        {showOrderAction && (
+      <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
+        <Text style={{ color: "#111", fontWeight: "700" }}>Ver pedido</Text>
+      </Pressable>
+    )}
   </Container></Screen>;
 }
-const s = StyleSheet.create({ title:{ fontSize:20, fontWeight:"800" }, error:{ color:"#b00020" }, input:{ borderWidth:1,borderColor:"#ddd",borderRadius:10,padding:10 }, btn:{ backgroundColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, inst:{ borderWidth:1,borderColor:"#ddd",borderRadius:8,paddingHorizontal:10,paddingVertical:6 }, instOn:{ borderColor:"#111" } });
+const s = StyleSheet.create({ title:{ fontSize:20, fontWeight:"800" }, statusTitle:{ fontSize:16, fontWeight:"700" }, error:{ color:"#b00020" }, input:{ borderWidth:1,borderColor:"#ddd",borderRadius:10,padding:10 }, btn:{ backgroundColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, secondaryBtn:{ borderWidth:1,borderColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, inst:{ borderWidth:1,borderColor:"#ddd",borderRadius:8,paddingHorizontal:10,paddingVertical:6 }, instOn:{ borderColor:"#111" } });
