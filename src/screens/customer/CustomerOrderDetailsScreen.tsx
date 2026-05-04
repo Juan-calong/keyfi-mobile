@@ -1,6 +1,6 @@
 // screens/customer/CustomerOrderDetailsScreen.tsx
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, TextInput } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -14,6 +14,8 @@ import type { ActivePaymentEnvelope } from "../../core/api/services/payments.typ
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";
+import { RefundRequestsService } from "../../core/api/services/refundRequests.service";
+import { REFUND_REASON_LABELS, REFUND_STATUS_LABELS, type RefundRequestReason } from "../../core/api/services/refundRequests.types";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { AppBackButton } from "../../ui/components/AppBackButton";
 
@@ -128,6 +130,8 @@ export function CustomerOrderDetailsScreen() {
   const orderId = (route.params?.orderId || route.params?.id) as string | undefined;
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
+  const [refundReason, setRefundReason] = useState<RefundRequestReason>("PRODUCT_DAMAGED");
+  const [refundDescription, setRefundDescription] = useState("");
 
   // banner inline (não bloqueante)
   const [banner, setBanner] = useState<null | { title: string; message: string }>(null);
@@ -152,6 +156,13 @@ export function CustomerOrderDetailsScreen() {
   });
 
   const data: any = q.data;
+
+    const refundRequestsQ = useQuery({
+    queryKey: ["refund-requests", "me"],
+    enabled: !!orderId,
+    queryFn: () => RefundRequestsService.listMine(),
+  });
+  const refundRequest = useMemo(() => (refundRequestsQ.data || []).find((r: any) => r.orderId === orderId), [refundRequestsQ.data, orderId]);
 
     const activePaymentQ = useQuery<ActivePaymentEnvelope | any>({
     queryKey: ["customer-order-active-payment", orderId],
@@ -196,6 +207,34 @@ export function CustomerOrderDetailsScreen() {
     });
   }, [activePayment, orderId]);
 
+    const createRefundMut = useMutation({
+    mutationFn: () => RefundRequestsService.create(orderId!, { reason: refundReason, description: refundDescription.trim() || undefined }),
+    onSuccess: () => {
+      setRefundDescription("");
+      setModal({ title: "Solicitação enviada", message: "Sua solicitação de reembolso foi registrada para análise." });
+      refundRequestsQ.refetch();
+    },
+    onError: (e: any) => {
+      const code = String(
+        e?.response?.data?.code ||
+        e?.response?.data?.error ||
+        e?.message ||
+        ""
+      ).toUpperCase();
+      const map: Record<string, string> = {
+        ORDER_NOT_DELIVERED: "Este pedido ainda não foi marcado como entregue.",
+        POST_DELIVERY_WINDOW_EXPIRED: "O prazo de 7 dias para solicitar reembolso terminou.",
+        ORDER_NOT_PAID: "Este pedido ainda não está pago.",
+        ORDER_CANCELED: "Este pedido foi cancelado.",
+        ORDER_ALREADY_REFUNDED_OR_PENDING: "Este pedido já possui reembolso em andamento ou concluído.",
+        COMMISSION_ALREADY_AVAILABLE_OR_PAID: "O prazo de reembolso terminou.",
+        ORDER_NOT_OWNED: "Você não tem permissão para solicitar reembolso deste pedido.",
+        OPEN_REQUEST_ALREADY_EXISTS: "Já existe uma solicitação de reembolso aberta para este pedido.",
+      };
+      setModal({ title: "Não foi possível solicitar", message: map[code] || friendlyError(e).message });
+    },
+  });
+
   const canPay = useMemo(() => {
     if (!paymentStatus) return false;
     if (paymentStatus === "PAID") return false;
@@ -221,6 +260,18 @@ export function CustomerOrderDetailsScreen() {
       setModal({ title: String(fe?.title || "Erro"), message: String(fe?.message || "Não foi possível iniciar o pagamento.") });
     },
   });
+
+    const deliveredLike = Boolean(data?.localDelivery?.deliveredAt || data?.shipment?.deliveredAt) || ["DELIVERED", "COMPLETED"].includes(status);
+  const blockedOrder = ["CANCELED", "REFUNDED"].includes(status);
+  const refundStatus = String(refundRequest?.status || "").toUpperCase();
+  const hasOpenRequest = ["REQUESTED", "UNDER_REVIEW", "APPROVED"].includes(refundStatus);
+  const hasCompletedRefund = refundStatus === "REFUNDED";
+  const canRequestRefund =
+    deliveredLike &&
+    paymentStatus === "PAID" &&
+    !blockedOrder &&
+    !hasOpenRequest &&
+    !hasCompletedRefund;
 
   const onPay = () => {
     if (payLock.current) return;
@@ -345,6 +396,38 @@ export function CustomerOrderDetailsScreen() {
                   ) : null}
                 </View>
               ) : null}
+
+              <View style={[m.hairline, { marginVertical: 18 }]} />
+
+                            <Text style={m.sectionTitle}>Solicitação de reembolso</Text>
+              <View style={{ marginTop: 12, gap: 8 }}>
+                {refundRequest ? (
+                  <View style={m.refundBox}>
+                    <Text style={m.kvVal}>Status: {REFUND_STATUS_LABELS[String(refundRequest.status).toUpperCase()] || refundRequest.status}</Text>
+                    <Text style={m.kvKey}>Motivo: {REFUND_REASON_LABELS[String(refundRequest.reason).toUpperCase()] || refundRequest.reason}</Text>
+                    {refundRequest.description ? <Text style={m.kvKey}>Descrição: {refundRequest.description}</Text> : null}
+                    {refundRequest.requestedAt ? <Text style={m.kvKey}>Solicitado em: {formatDateTime(refundRequest.requestedAt)}</Text> : null}
+                    {refundRequest.adminNote ? <Text style={m.kvKey}>Resposta: {refundRequest.adminNote}</Text> : null}
+                  </View>
+                ) : null}
+
+                {canRequestRefund ? (
+                  <View style={m.refundBox}>
+                    <Text style={m.kvKey}>Você pode solicitar reembolso até 7 dias após a entrega.</Text>
+                    <View style={m.reasonRow}>
+                      {(Object.keys(REFUND_REASON_LABELS) as RefundRequestReason[]).map((reason) => (
+                        <Pressable key={reason} onPress={() => setRefundReason(reason)} style={[m.reasonPill, refundReason === reason && m.reasonPillActive]}>
+                          <Text style={m.reasonPillText}>{REFUND_REASON_LABELS[reason]}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <TextInput placeholder="Descrição (opcional)" value={refundDescription} onChangeText={setRefundDescription} multiline style={m.refundInput} />
+                    <Pressable onPress={() => createRefundMut.mutate()} disabled={createRefundMut.isPending} style={[m.ctaBtn, { marginTop: 10 }]}>
+                      <Text style={m.ctaText}>{createRefundMut.isPending ? "..." : "Enviar solicitação"}</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
 
               <View style={[m.hairline, { marginVertical: 18 }]} />
 
@@ -484,4 +567,10 @@ pillText: {
   itemMeta: { marginTop: 4, color: "#000000", fontSize: 12, fontWeight: "600", opacity: 0.75, lineHeight: 16 },
   itemRight: { color: "#000000", fontSize: 13, fontWeight: "900", marginTop: 2 },
   itemEmpty: { color: "#000000", fontSize: 13, fontWeight: "700", opacity: 0.65 },
+    refundBox: { borderWidth: 1, borderColor: "rgba(0,0,0,0.12)", borderRadius: 12, padding: 12, gap: 6 },
+  reasonRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
+  reasonPill: { borderWidth: 1, borderColor: "rgba(0,0,0,0.2)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  reasonPillActive: { backgroundColor: "#E2E8F0", borderColor: "#94A3B8" },
+  reasonPillText: { fontSize: 12, fontWeight: "700", color: "#0F172A" },
+  refundInput: { marginTop: 10, borderWidth: 1, borderColor: "rgba(0,0,0,0.15)", borderRadius: 10, minHeight: 70, paddingHorizontal: 10, paddingVertical: 8, textAlignVertical: "top" },
 });

@@ -88,6 +88,11 @@ sellerCartRequests: {
     checkout: (id: string) => `/orders/${id}/checkout`,
   },
 
+    refundRequests: {
+    create: (orderId: string) => `/orders/${orderId}/refund-requests`,
+    mine: "/me/refund-requests",
+  },
+
   payments: {
     active: (orderId: string) => `/payments/${orderId}/active`,
     intent: (orderId: string) => `/payments/${orderId}/intent`,
