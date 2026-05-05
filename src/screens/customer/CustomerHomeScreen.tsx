@@ -672,7 +672,7 @@ function PreviewGrid({
 }
 
 export function CustomerHomeScreen() {
-  const DARK_BG = "#0F0F0F";
+  const DARK_BG = "#000000";
   const PAGE_BG = "#FFFFFF";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
@@ -1292,7 +1292,7 @@ container: {
   },
 
   topHeroSection: {
-    backgroundColor: "#0F0F0F",
+    backgroundColor: "#000000",
   },
 
   productsSection: {

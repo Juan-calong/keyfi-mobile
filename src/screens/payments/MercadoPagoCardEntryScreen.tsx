@@ -445,22 +445,65 @@ await PaymentsService.intentCARD(orderId, {
     <TextInput placeholder="CPF/CNPJ" keyboardType="number-pad" value={doc} onChangeText={(v)=>setDoc(onlyDigits(v).slice(0,14))} style={s.input} />
     <TextInput placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={s.input} />
     <View style={{ flexDirection:"row", gap:8, flexWrap:"wrap" }}>{availableInstallments.map((n)=><Pressable key={n} onPress={()=>setInstallments(n)} style={[s.inst,installments===n&&s.instOn]}><Text>{n}x</Text></Pressable>)}</View>
-    {!!html && <WebView ref={webRef} source={{ html }} onMessage={onMessage} javaScriptEnabled domStorageEnabled incognito={false} setSupportMultipleWindows={false} javaScriptCanOpenWindowsAutomatically={false} mixedContentMode="never" allowFileAccess={false} style={{ minHeight: 280, backgroundColor: "#fff" }} onLoadEnd={() => setWebLoaded(true)} onShouldStartLoadWithRequest={(req)=> {
+{!!html && (
+  <WebView
+    ref={webRef}
+    source={{
+      html,
+      baseUrl: "https://www.mercadopago.com.br/",
+    }}
+    originWhitelist={["*"]}
+    onMessage={onMessage}
+    javaScriptEnabled
+    domStorageEnabled
+    incognito={false}
+    setSupportMultipleWindows={false}
+    javaScriptCanOpenWindowsAutomatically={false}
+    mixedContentMode="never"
+    allowFileAccess={false}
+    style={{ height: 280, minHeight: 280, backgroundColor: "#fff" }}
+    onLoadEnd={() => setWebLoaded(true)}
+    onShouldStartLoadWithRequest={(req) => {
       try {
-        const host = String(req.url || "").replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
-        if (req.url.startsWith("about:blank")) return true;
+        const url = String(req.url || "");
+
+        if (url.startsWith("about:blank")) return true;
+        if (url.startsWith("data:text")) return true;
+        if (url.startsWith("blob:")) return true;
+
+        if (url === "https://mercadopago.com.br/") return true;
+        if (url === "https://www.mercadopago.com.br/") return true;
+
+        const host = url
+          .replace(/^https?:\/\//i, "")
+          .split("/")[0]
+          .toLowerCase();
+
         if (host === "sdk.mercadopago.com") return true;
-        if (host.endsWith(".mercadopago.com") || host === "mercadopago.com") return true;
-        if (host.endsWith(".mercadolibre.com") || host === "mercadolibre.com") return true;
-        if (host.endsWith(".mercadopago.com.br") || host === "mercadopago.com.br") return true;
-        if (host.endsWith(".mercadolibrestatic.com") || host === "mercadolibrestatic.com") return true;
-        if (host.endsWith(".mlstatic.com") || host === "mlstatic.com") return true;
-        console.log("[MP_CARD][WEBVIEW_BLOCKED_HOST]", { host });
+
+        if (host === "mercadopago.com") return true;
+        if (host.endsWith(".mercadopago.com")) return true;
+
+        if (host === "mercadopago.com.br") return true;
+        if (host.endsWith(".mercadopago.com.br")) return true;
+
+        if (host === "mercadolibre.com") return true;
+        if (host.endsWith(".mercadolibre.com")) return true;
+
+        if (host === "mercadolibrestatic.com") return true;
+        if (host.endsWith(".mercadolibrestatic.com")) return true;
+
+        if (host === "mlstatic.com") return true;
+        if (host.endsWith(".mlstatic.com")) return true;
+
+        console.log("[MP_CARD][WEBVIEW_BLOCKED_HOST]", { host, url });
         return false;
       } catch {
-        return req.url.startsWith("about:blank");
+        return String(req.url || "").startsWith("about:blank");
       }
-    }} />}
+    }}
+  />
+)}
         {__DEV__ && (
       <Text style={{ fontSize: 11, opacity: 0.5 }}>
 ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)} amount={String(amount)} canPay={String(canPay)}
