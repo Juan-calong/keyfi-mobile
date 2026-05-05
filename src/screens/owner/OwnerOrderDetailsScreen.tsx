@@ -133,6 +133,7 @@ export function OwnerOrderDetailsScreen() {
   const [refundDescription, setRefundDescription] = useState("");
 
   const payLock = useRef(false);
+  const didNavigateSuccessRef = useRef(false);
 
   const q = useQuery({
     queryKey: ["owner-order-detail", orderId],
@@ -174,6 +175,20 @@ export function OwnerOrderDetailsScreen() {
   const isMercadoPagoCard = paymentMethod === "CARD" && paymentProvider === "MERCADOPAGO";
   const showCardRejected = isMercadoPagoCard && CARD_FAILED_STATUSES.includes(activePaymentStatus);
   const showCardManualReview = isMercadoPagoCard && activePaymentStatus === "PENDING" && nextActionStatusDetail === "pending_review_manual";
+
+
+    React.useEffect(() => {
+    const shouldShow = route.params?.showPaymentSuccessOnPaid === true;
+    if (!shouldShow || paymentStatus !== "PAID" || didNavigateSuccessRef.current || !orderId) return;
+
+    didNavigateSuccessRef.current = true;
+    nav.replace(OWNER_SCREENS.PaymentSuccess, {
+      orderId,
+      orderCode: data?.code || data?.orderCode || data?.number,
+      total: data?.totalAmount || data?.amountDue || data?.amount,
+    });
+  }, [route.params?.showPaymentSuccessOnPaid, paymentStatus, nav, orderId, data]);
+
 
   React.useEffect(() => {
     const payment = activePayment?.payment;

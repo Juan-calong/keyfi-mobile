@@ -25,6 +25,7 @@ import { OwnerCartRequestsScreen } from "../screens/owner/OwnerCartRequestsScree
 import { OwnerCartRequestDetailsScreen } from "../screens/owner/OwnerCartRequestDetailsScreen";
 import { OwnerReferralLinksScreen } from "../screens/owner/OwnerReferralLinksScreen";
 import { MercadoPagoCardEntryScreen } from "../screens/payments/MercadoPagoCardEntryScreen";
+import { PaymentSuccessScreen } from "../screens/payments/PaymentSuccessScreen";
 
 const Stack = createNativeStackNavigator<OwnerStackParamList>();
 
@@ -65,6 +66,11 @@ export function OwnerStack() {
   name={OWNER_SCREENS.CheckoutAddress}
   component={OwnerCheckoutAddressScreen}
 />
+
+      <Stack.Screen
+        name={OWNER_SCREENS.PaymentSuccess}
+        component={PaymentSuccessScreen}
+      />
 
 <Stack.Screen
   name={OWNER_SCREENS.ShippingMethod}

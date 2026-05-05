@@ -210,7 +210,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
 
     const orderDetailsRoute = String(route?.name).includes("Owner") ? OWNER_SCREENS.OrderDetails : CUSTOMER_SCREENS.OrderDetails;
 
-  const goToOrderDetails = () => navigation.replace(orderDetailsRoute, { orderId });
+  const goToOrderDetails = () => navigation.replace(orderDetailsRoute, { orderId, showPaymentSuccessOnPaid: true });
   useEffect(() => { (async () => {
     const methods = await PaymentsService.getPaymentMethods();
     const cardProvider = String(methods?.card?.provider || "").trim().toUpperCase();

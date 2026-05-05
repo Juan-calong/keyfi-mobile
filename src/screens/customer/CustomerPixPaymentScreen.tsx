@@ -152,6 +152,7 @@ export function CustomerPixPaymentScreen({ route }: any) {
   }, [bannerKey]);
 
   const continueLock = useRef(false);
+  const didNavigateToOrderDetailsRef = useRef(false);
 
   if (!orderId) {
     return (
@@ -191,6 +192,13 @@ const hasPayment =
   !!env?.nextAction;
 
 const method = String(payment?.method ?? "").toUpperCase();
+
+React.useEffect(() => {
+  const paid = ["PAID", "APPROVED"].includes(String(payment?.status ?? "").toUpperCase());
+  if (!paid || didNavigateToOrderDetailsRef.current || !orderId) return;
+  didNavigateToOrderDetailsRef.current = true;
+  navigation.replace(CUSTOMER_SCREENS.OrderDetails, { orderId, showPaymentSuccessOnPaid: true });
+}, [navigation, orderId, payment?.status]);
 
   const createPixMut = useMutation({
     mutationFn: async () => (await api.post(endpoints.payments.intent(orderId), { method: "PIX" })).data,

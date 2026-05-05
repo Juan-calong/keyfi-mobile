@@ -30,6 +30,7 @@ export const CUSTOMER_SCREENS = {
 
   CheckoutAddress: "CustomerCheckoutAddress",
   ShippingMethod: "CustomerShippingMethod",
+  PaymentSuccess: "CustomerPaymentSuccess",
 } as const;
 
 export type CheckoutAddressPayload = {
@@ -60,7 +61,8 @@ export type CustomerStackParamList = {
   [CUSTOMER_SCREENS.Orders]: undefined;
   [CUSTOMER_SCREENS.Notifications]: undefined;
 
-  [CUSTOMER_SCREENS.OrderDetails]: { orderId: string };
+  [CUSTOMER_SCREENS.OrderDetails]: { orderId: string; showPaymentSuccessOnPaid?: boolean };
+  [CUSTOMER_SCREENS.PaymentSuccess]: { orderId?: string; orderCode?: string; total?: number | string } | undefined;
 
   [CUSTOMER_SCREENS.CheckoutAddress]: {
     items: { productId: string; qty: number }[];

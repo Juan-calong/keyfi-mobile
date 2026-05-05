@@ -16,6 +16,7 @@ import { CustomerShippingMethodScreen } from "../screens/customer/CustomerShippi
 import { CustomerCheckoutAddressScreen } from "../screens/customer/CustomerCheckoutAddressScreen";
 import { ApplyReferralScreen } from "../screens/ApplyReferralScreen";
 import { MercadoPagoCardEntryScreen } from "../screens/payments/MercadoPagoCardEntryScreen";
+import { PaymentSuccessScreen } from "../screens/payments/PaymentSuccessScreen";
 
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -76,6 +77,11 @@ export function CustomerStack() {
   name={CUSTOMER_SCREENS.CheckoutAddress}
   component={CustomerCheckoutAddressScreen}
 />
+
+      <Stack.Screen
+        name={CUSTOMER_SCREENS.PaymentSuccess}
+        component={PaymentSuccessScreen}
+      />
 
 <Stack.Screen
   name={CUSTOMER_SCREENS.ShippingMethod}

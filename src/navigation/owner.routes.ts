@@ -23,6 +23,7 @@ export const OWNER_SCREENS = {
 
   CheckoutAddress: "OwnerCheckoutAddress",
   ShippingMethod: "OwnerShippingMethod",
+  PaymentSuccess: "OwnerPaymentSuccess",
 
   OwnerSellers: "OwnerSellers",
   DebugCreate: "DebugCreate",
@@ -61,7 +62,8 @@ export type OwnerStackParamList = {
   [OWNER_SCREENS.Wallet]: undefined;
   [OWNER_SCREENS.Notifications]: undefined;
 
-  [OWNER_SCREENS.OrderDetails]: { orderId: string };
+  [OWNER_SCREENS.OrderDetails]: { orderId: string; showPaymentSuccessOnPaid?: boolean };
+  [OWNER_SCREENS.PaymentSuccess]: { orderId?: string; orderCode?: string; total?: number | string } | undefined;
 
   [OWNER_SCREENS.CheckoutAddress]: {
     items: { productId: string; qty: number }[];
