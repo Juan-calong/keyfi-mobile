@@ -223,34 +223,12 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
       const fallback = Number((active as any)?.payment?.amount || (active as any)?.order?.amountDue || (active as any)?.order?.totalAmount || (active as any)?.amount || 0);
       if (fallback > 0) setAmount(fallback);
       else setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
-      console.log("[MP_CARD][INIT_AMOUNT]", {
-        orderId,
-        routeAmount,
-        amount: fallback > 0 ? fallback : amount,
-        hasAmount: (fallback > 0 ? fallback : amount) > 0,
-      });
       return;
     }
-    console.log("[MP_CARD][INIT_AMOUNT]", { orderId, routeAmount, amount, hasAmount: amount > 0 });
   })().catch(() => setError("Não foi possível iniciar pagamento.")); }, [amount, orderId, publicKey, routeAmount]);
 
   const html = useMemo(() => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""), [publicKey, amount, nonce]);
-
     const canPay = Boolean(publicKey) && amount > 0 && fieldsMounted && provider === "MERCADOPAGO" && !processing && !paymentAttemptLocked;
-  useEffect(() => {
-    console.log("[MP_CARD][CAN_PAY_STATE]", {
-      hasPublicKey: Boolean(publicKey),
-      amount,
-      hasAmount: amount > 0,
-      ready,
-      provider,
-      isMercadoPago: provider === "MERCADOPAGO",
-      processing,
-      fieldsMounted,
-      canPay,
-    });
-  }, [publicKey, amount, ready, provider, processing, canPay, fieldsMounted, paymentAttemptLocked]);
-
   useEffect(() => {
     if (!fieldsMounted && webLoaded && Boolean(publicKey) && amount > 0 && provider === "MERCADOPAGO") {
       const t = setTimeout(() => {
@@ -264,28 +242,12 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const onMessage = (ev: WebViewMessageEvent) => {
     try {
       const msg = JSON.parse(ev.nativeEvent.data || "{}");
-        console.log("[MP_CARD][WEBVIEW_MSG]", {
-        type: msg?.type,
-        hasNonce: Boolean(msg?.nonce),
-        nonceOk: msg?.nonce === nonce,
-        hasPaymentMethodId: Boolean(msg?.paymentMethodId),
-        hasIssuerId: Boolean(msg?.issuerId),
-        hasInstallments: Array.isArray(msg?.installments),
-        ok: msg?.ok,
-        errorCode: msg?.errorCode,
-      });
       if (msg?.nonce !== nonce) return;
       if (msg.type === "MP_READY") setReady(true);
       if (msg.type === "MP_FIELDS_INSPECT") {
         const hasCardIframe = Boolean(msg?.hasCardIframe);
         const hasExpirationIframe = Boolean(msg?.hasExpirationIframe);
         const hasSecurityIframe = Boolean(msg?.hasSecurityIframe);
-        console.log("[MP_CARD][FIELDS_INSPECT]", {
-          hasCardIframe,
-          hasExpirationIframe,
-          hasSecurityIframe,
-          iframeCount: Number(msg?.iframeCount || 0),
-        });
         if (hasCardIframe && hasExpirationIframe && hasSecurityIframe) setFieldsMounted(true);
       }
       if (msg.type === "MP_ERROR") setError("Falha no formulário seguro de cartão.");
@@ -302,7 +264,6 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
             if (msg.type === "MP_DEVICE_SESSION") {
         const nextDeviceSessionId = typeof msg?.deviceSessionId === "string" && msg.deviceSessionId.trim() ? msg.deviceSessionId.trim() : undefined;
         setDeviceSessionId(nextDeviceSessionId);
-        console.log("[MP_CARD][DEVICE_SESSION]", { hasDeviceSessionId: Boolean(nextDeviceSessionId) });
       }
       if (msg.type === "MP_TOKEN_RESULT") (webRef.current as any).__tokenResult = msg;
     } catch { setError("Resposta inválida da tokenização."); }
@@ -387,19 +348,6 @@ await PaymentsService.intentCARD(orderId, {
         const ui = (a as any)?.ui || {};
         const flags = (a as any)?.flags || {};
         const st = String(payment?.status || "").toUpperCase();
-
-        console.log("[MP_CARD][POLL_RESULT]", {
-          orderId,
-          paymentStatus: st || null,
-          paymentProvider: payment?.provider || null,
-          hasPaymentExternalId: Boolean(payment?.externalId),
-          nextActionType: nextAction?.type || null,
-          nextActionStatusDetail: nextAction?.statusDetail || null,
-          uiCode: ui?.code || null,
-          uiMessage: ui?.message || null,
-          shouldPoll: flags?.shouldPoll,
-          canRetry: flags?.canRetry,
-        });
 
         if (st === "PAID") {
           goToOrderDetails();
@@ -495,8 +443,6 @@ await PaymentsService.intentCARD(orderId, {
 
         if (host === "mlstatic.com") return true;
         if (host.endsWith(".mlstatic.com")) return true;
-
-        console.log("[MP_CARD][WEBVIEW_BLOCKED_HOST]", { host, url });
         return false;
       } catch {
         return String(req.url || "").startsWith("about:blank");

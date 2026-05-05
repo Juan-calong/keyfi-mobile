@@ -32,8 +32,6 @@ export function ApplyReferralScreen() {
       linkType: "SELLER_INVITE",
       sellerReferralToken: cleanToken,
     });
-
-    console.log("[APPLY_REFERRAL][RES]", res.data);
     return res.data;
   },
 

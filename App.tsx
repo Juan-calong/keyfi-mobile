@@ -49,30 +49,14 @@ async function handleInviteUrl(url: string) {
 
     await savePendingInvite(invite);
 
-    console.log("[AIRBRIDGE][INVITE][SAVED]", {
-      inviteType: invite.inviteType,
-      tokenPreview: `${invite.token.slice(0, 6)}...`,
-      receivedAt: invite.receivedAt,
-      hydrated,
-      hasAuthToken: !!token,
-    });
-
-    if (hydrated && token) {
-      try {
-        const result = await applyPendingInvite();
-        console.log("[AIRBRIDGE][INVITE][APPLY_IMMEDIATE_RESULT]", result);
-      } catch (e) {
-        console.log("[AIRBRIDGE][INVITE][APPLY_IMMEDIATE_ERROR]", e);
-      }
-    } else {
-      console.log("[AIRBRIDGE][INVITE][DEFERRED_UNTIL_AUTH]", {
-        hydrated,
-        hasAuthToken: !!token,
-      });
-    }
-  } else {
-    console.log("[AIRBRIDGE][INVITE][IGNORED_URL]", safeUrl);
+if (hydrated && token) {
+  try {
+    await applyPendingInvite();
+  } catch {
+    // Falha ao aplicar convite não deve bloquear abertura do app.
   }
+}
+}
 
   queryClient.invalidateQueries({ queryKey: ["me"] });
 }
@@ -88,21 +72,21 @@ export default function App() {
 
   useEffect(() => {
     Airbridge.setOnDeeplinkReceived((url) => {
-      handleInviteUrl(url).catch((e) => {
-        console.log("[AIRBRIDGE][DEEPLINK][ERROR]", e);
+      handleInviteUrl(url).catch(() => {
+       // Falha no deeplink não deve bloquear o app.
       });
     });
 
     const sub = Linking.addEventListener("url", (evt) => {
-      handleInviteUrl(evt?.url || "").catch((e) => {
-        console.log("[LINKING][URL][ERROR]", e);
+      handleInviteUrl(evt?.url || "").catch(() => {
+        // Falha no link recebido não deve bloquear o app.
       });
     });
 
     Linking.getInitialURL().then((url) => {
       if (url) {
-        handleInviteUrl(url).catch((e) => {
-          console.log("[LINKING][INITIAL_URL][ERROR]", e);
+        handleInviteUrl(url).catch(() => {
+          // Falha no link inicial não deve bloquear o app.
         });
       }
     });
@@ -113,21 +97,21 @@ export default function App() {
   useEffect(() => {
     if (!hydrated || !token) return;
 
-    registerPushTokenWithBackend().catch((e) => {
-      console.log("[PUSH][REGISTER][ERROR]", e);
-    });
+registerPushTokenWithBackend().catch(() => {
+  // Falha ao registrar push token não deve bloquear sessão.
+});
 
-    applyPendingInvite().catch((e) => {
-      console.log("[REFERRAL][APPLY_PENDING][ERROR]", e);
-    });
+applyPendingInvite().catch(() => {
+  // Falha ao aplicar convite pendente não deve bloquear sessão.
+});
 
     const unsubTokenRefresh = bindPushTokenRefresh();
     const unsubForeground = bindForegroundPushListener();
     const unsubOpen = bindPushOpenListener();
 
-    handleInitialPushOpen().catch((e) => {
-      console.log("[PUSH][INITIAL_OPEN][ERROR]", e);
-    });
+handleInitialPushOpen().catch(() => {
+  // Falha ao processar abertura inicial por push não deve bloquear o app.
+});
 
     return () => {
       unsubTokenRefresh();

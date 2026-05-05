@@ -17,14 +17,6 @@ export function RootNavigator() {
   const needsOnboarding = useAuthStore((s) => s.needsOnboarding);
   const needsBiometricSetup = useAuthStore((s) => s.needsBiometricSetup);
 
-  console.log("[ROOT]", {
-    hydrated,
-    hasToken: !!token,
-    role,
-    needsOnboarding,
-    needsBiometricSetup,
-  });
-
   if (!hydrated) return null;
   if (!token) return <AuthStack />;
 

@@ -726,14 +726,6 @@ export function SharedProductDetails({
   allowVideos = false,
   viewerMode = "OWNER",
 }: Props) {
-    console.log("[PRODUCT_DETAILS][PROMO_DEBUG]", {
-    id: product?.id,
-    name: product?.name,
-    activePromo: (product as any)?.activePromo,
-    effectivePrice: (product as any)?.effectivePrice,
-    pricing: (product as any)?.pricing,
-    quantityDiscount: (product as any)?.quantityDiscount,
-  });
   const { width: screenWidth } = useWindowDimensions();
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(

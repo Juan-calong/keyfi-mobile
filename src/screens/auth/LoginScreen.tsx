@@ -127,9 +127,6 @@ export function LoginScreen() {
     try {
       setLoading(true);
       await login(email.trim(), password);
-
-      const token = useAuthStore.getState().token;
-      console.log("TOKEN", token);
     } catch (e: any) {
       showError(friendlyError(e));
       handleCooldownFromError(e);

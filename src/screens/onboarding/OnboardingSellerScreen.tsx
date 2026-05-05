@@ -19,19 +19,13 @@ export function OnboardingSellerScreen() {
     async function onSubmit() {
         try {
             setLoading(true);
+await api.post(endpoints.onboarding.seller, {
+  referralToken: referralToken.trim() ? referralToken.trim() : undefined,
+});
 
-            // 1) chama onboarding seller (token atual vai no Authorization)
-            const res = await api.post(endpoints.onboarding.seller, {
-                referralToken: referralToken.trim() ? referralToken.trim() : undefined,
-            });
-
-            console.log("[ONBOARDING_SELLER][OK]", res.data);
-
-            // 2) tenta pegar um accessToken novo (com onboardingStatus atualizado)
             try {
                 await refreshSession();
             } catch {
-                // fallback: força usuário voltar e logar de novo
                 Alert.alert(
                     "Quase lá",
                     "Cadastro concluído, mas preciso atualizar sua sessão. Faça login novamente."
@@ -45,7 +39,6 @@ export function OnboardingSellerScreen() {
         } catch (e: any) {
             const msg = e?.response?.data?.error || e?.message || "Falha ao cadastrar vendedor.";
             Alert.alert("Erro", msg);
-            console.log("[ONBOARDING_SELLER][ERR]", e?.response?.data || e);
         } finally {
             setLoading(false);
         }

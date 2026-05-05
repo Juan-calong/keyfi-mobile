@@ -7,8 +7,8 @@ import { name as appName } from "./app.json";
 
 enableScreens(true);
 
-messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-  console.log("[PUSH][BACKGROUND_MESSAGE]", remoteMessage);
+messaging().setBackgroundMessageHandler(async () => {
+  // Handler necessário para o Firebase processar mensagens em background.
 });
 
 AppRegistry.registerComponent(appName, () => App);

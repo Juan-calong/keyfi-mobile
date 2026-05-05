@@ -21,13 +21,6 @@ export function CustomerShippingMethodScreen({ route }: any) {
       deliveryAddress?.zipCode
   );
 
-  React.useEffect(() => {
-    console.log("[CUSTOMER_SHIPPING_METHOD][ROUTE_PARAMS]", route?.params);
-    console.log("[CUSTOMER_SHIPPING_METHOD][DELIVERY_ADDRESS]", deliveryAddress);
-    console.log("[CUSTOMER_SHIPPING_METHOD][ZIPCODE_RESOLVED]", zipcode);
-    console.log("[CUSTOMER_SHIPPING_METHOD][ITEMS]", items);
-  }, [route?.params, deliveryAddress, zipcode, items]);
-
   return (
     <SharedShippingMethodScreen
       role="CUSTOMER"
@@ -47,19 +40,13 @@ export function CustomerShippingMethodScreen({ route }: any) {
           zipCode: zipcode,
         })
       }
-      onContinue={({ orderId, amount, shippingOption }) => {
-        console.log("[SHIPPING_SCREEN][NAV_TO_PAYMENT]", {
-          orderId,
-          amount,
-          hasAmount: Number(amount) > 0,
-        });
-
-        nav.navigate(CUSTOMER_SCREENS.PixPayment, {
-          orderId,
-          amount,
-          shippingOption,
-        });
-      }}
+onContinue={({ orderId, amount, shippingOption }) => {
+  nav.navigate(CUSTOMER_SCREENS.PixPayment, {
+    orderId,
+    amount,
+    shippingOption,
+  });
+}}
     />
   );
 }

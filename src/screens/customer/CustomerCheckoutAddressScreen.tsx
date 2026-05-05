@@ -36,25 +36,11 @@ export function CustomerCheckoutAddressScreen() {
 
  const { items, couponCode, deliveryAddress } = route.params;
 
-  React.useEffect(() => {
-    console.log("[CUSTOMER_CHECKOUT_ADDRESS][MOUNT]", {
-      params: route.params,
-      itemsLength: items?.length ?? 0,
-      couponCode,
-    });
-  }, [route.params, items, couponCode]);
 
   const handleContinue = (nextDeliveryAddress: CheckoutAddressValues) => {
     const normalizedZipcode = onlyDigits(
       nextDeliveryAddress?.zipcode || nextDeliveryAddress?.zipCode
     );
-
-    console.log("[CUSTOMER_CHECKOUT_ADDRESS][CONTINUE]", {
-      items,
-      couponCode,
-      deliveryAddress,
-      normalizedZipcode,
-    });
 
     navigation.dispatch(
       CommonActions.navigate({

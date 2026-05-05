@@ -239,15 +239,8 @@ export function OwnerPixPaymentScreen({ route }: any) {
           payment?.amount ||
           0
       );
-      console.log("[PAYMENT_METHODS][ROUTE_AMOUNT]", {
-        orderId,
-        routeAmount,
-        resolvedAmount,
-        routeParams: route?.params,
-      });
       if (methods?.card?.provider === "MERCADOPAGO") {
           if (!(resolvedAmount > 0)) {
-          console.log("[PAYMENT_METHODS][AMOUNT_MISSING]", { orderId, routeAmount, resolvedAmount });
           setModal({
             title: "Valor indisponível",
             message: "Não foi possível identificar o valor do pedido. Volte e tente novamente.",

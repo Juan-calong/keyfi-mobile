@@ -187,16 +187,10 @@ export function OwnerBoletoPayerFormScreen({ route, navigation }: any) {
       // ✅ abre dentro do app (WebView) e remove o form da pilha
       navigation.replace(OWNER_SCREENS.BoletoWebView, { url });
     },
-    onError: (e: any) => {
-      console.log("[BOLETO][ERROR]", {
-        status: e?.response?.status,
-        data: e?.response?.data,
-        message: e?.message,
-      });
-
-      const fe = friendlyError(e);
-      setModal({ title: fe.title || "Erro", message: fe.message || "Falha ao gerar boleto." });
-    },
+onError: (e: any) => {
+  const fe = friendlyError(e);
+  setModal({ title: fe.title || "Erro", message: fe.message || "Falha ao gerar boleto." });
+},
   });
 
   return (

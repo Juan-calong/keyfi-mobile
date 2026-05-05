@@ -4,15 +4,10 @@ import { useAuthStore } from "../../stores/auth.store";
 import { apiLog, apiWarn } from "./logger";
 import { endpoints } from "./endpoints";
 
-console.log("[ ENV ] [ RAW ]", Config);
-console.log("[ ENV ] [ API_BASE_URL ]", Config);
-
 const baseURL = (Config.API_BASE_URL || "").trim();
 
 if (!baseURL) {
   apiWarn("[ENV] API_BASE_URL está vazio. Verifique react-native-config e rebuild.");
-} else {
-  apiLog("[ENV] API_BASE_URL =", baseURL);
 }
 
 function isPublicRoute(url: string) {
@@ -33,10 +28,26 @@ function reqId() {
   return `rn_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function tokenPreview(token: string | null | undefined) {
-  if (!token) return null;
-  if (token.length <= 20) return token;
-  return `${token.slice(0, 12)}...${token.slice(-8)}`;
+function safeApiPath(value: unknown) {
+  return String(value ?? "").split("?")[0].trim();
+}
+
+function summarizeResponseData(data: any) {
+  if (!data || typeof data !== "object") {
+    return {
+      hasData: data != null,
+      dataType: typeof data,
+    };
+  }
+
+  return {
+    hasData: true,
+    dataType: Array.isArray(data) ? "array" : "object",
+    keys: Object.keys(data).slice(0, 10),
+    keysCount: Object.keys(data).length,
+    hasError: Boolean(data?.error),
+    hasMessage: Boolean(data?.message),
+  };
 }
 
 export function apiErrorMessage(e: any) {
@@ -166,31 +177,30 @@ api.interceptors.request.use((config) => {
       ? config.headers.get("Authorization")
       : (config.headers as any)?.Authorization;
 
+if (__DEV__) {
   apiLog("[API][REQ]", {
     method,
-    url,
-    fullUrl: `${config.baseURL || ""}${url}`,
+    path: safeApiPath(url),
     public: publicRoute,
     role,
-    hasTokenInStore: !!token,
-    tokenPreview: tokenPreview(token),
-    hasAuthorizationHeader: !!authHeader,
-    authHeaderPreview:
-      typeof authHeader === "string" ? `${authHeader.slice(0, 20)}...` : null,
+    hasTokenInStore: Boolean(token),
+    hasAuthorizationHeader: Boolean(authHeader),
     rid,
   });
+}
 
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-    apiLog("[API][RES][OK]", {
-      status: res.status,
-      url: res.config?.url,
-      fullUrl: `${res.config?.baseURL || ""}${res.config?.url || ""}`,
-      data: res.data,
-    });
+if (__DEV__) {
+  apiLog("[API][RES][OK]", {
+    status: res.status,
+    path: safeApiPath(res.config?.url),
+    dataSummary: summarizeResponseData(res.data),
+  });
+}
     return res;
   },
   async (err) => {
@@ -199,24 +209,27 @@ api.interceptors.response.use(
     const config = err?.config;
     const path = String(config?.url || "");
 
-    apiLog("[API][RES][ERROR]", {
-      status,
-      url: path,
-      fullUrl: `${config?.baseURL || ""}${path}`,
-      data,
-      message: err?.message,
-      code: err?.code,
-      isAxiosError: !!err?.isAxiosError,
-      hasResponse: !!err?.response,
-      hasRequest: !!err?.request,
-      retry: !!config?._retry,
-    });
+if (__DEV__) {
+  apiLog("[API][RES][ERROR]", {
+    status,
+    path: safeApiPath(path),
+    dataSummary: summarizeResponseData(data),
+    message: err?.message,
+    code: err?.code,
+    isAxiosError: Boolean(err?.isAxiosError),
+    hasResponse: Boolean(err?.response),
+    hasRequest: Boolean(err?.request),
+    retry: Boolean(config?._retry),
+  });
+}
 
     if (status === 403) {
-      apiLog("[API][403]", {
-        path,
-        action: "forbidden_no_recursive_sync",
-      });
+if (__DEV__) {
+  apiLog("[API][403]", {
+    path: safeApiPath(path),
+    action: "forbidden_no_recursive_sync",
+  });
+}
 
       return Promise.reject(err);
     }
@@ -227,11 +240,13 @@ api.interceptors.response.use(
     if (status === 401 && !isAuthRoute && !alreadyRetried) {
       (config as any)._retry = true;
 
-      apiLog("[API][401]", {
-        path,
-        hasRefreshPromise: !!refreshPromise,
-        action: "trying_refresh_with_queue",
-      });
+if (__DEV__) {
+  apiLog("[API][401]", {
+    path: safeApiPath(path),
+    hasRefreshPromise: Boolean(refreshPromise),
+    action: "trying_refresh_with_queue",
+  });
+}
 
       try {
         if (!refreshPromise) {
@@ -239,11 +254,13 @@ api.interceptors.response.use(
             .getState()
             .refreshSession()
             .catch(async (refreshErr: any) => {
-              apiLog("[API][401][REFRESH_FAIL]", {
-                message: refreshErr?.message,
-                status: refreshErr?.response?.status,
-                data: refreshErr?.response?.data,
-              });
+if (__DEV__) {
+  apiLog("[API][401][REFRESH_FAIL]", {
+    message: refreshErr?.message,
+    status: refreshErr?.response?.status,
+    dataSummary: summarizeResponseData(refreshErr?.response?.data),
+  });
+}
 
               await useAuthStore.getState().resetSession();
               throw refreshErr;
@@ -255,9 +272,11 @@ api.interceptors.response.use(
 
         await refreshPromise;
 
-        apiLog("[API][401][REFRESH_OK]", {
-          retrying: path,
-        });
+if (__DEV__) {
+  apiLog("[API][401][REFRESH_OK]", {
+    retrying: safeApiPath(path),
+  });
+}
 
         return api(config);
       } catch (refreshErr) {

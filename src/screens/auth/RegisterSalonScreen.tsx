@@ -261,14 +261,10 @@ export function RegisterSalonScreen() {
           const normalized = normalizeToken(invite.token);
           if (normalized) {
             setReferralToken((prev) => prev || normalized);
-            console.log("[REGISTER_SALON][PREFILL_REFERRAL]", {
-              inviteType: invite.inviteType,
-              tokenPreview: `${normalized.slice(0, 6)}...`,
-            });
           }
         }
       } catch (e) {
-        console.log("[REGISTER_SALON][PREFILL_REFERRAL][ERROR]", e);
+        // Falha ao carregar convite pendente não deve bloquear o cadastro.
       } finally {
         pendingInvitePrefilledRef.current = true;
       }
@@ -636,8 +632,6 @@ export function RegisterSalonScreen() {
         const fe = friendlyError(e);
         showModal(fe.title, fe.message);
       }
-
-      console.log("[REGISTER_SALON][ERR]", e?.response?.data || e);
     } finally {
       setLoading(false);
       submittingRef.current = false;

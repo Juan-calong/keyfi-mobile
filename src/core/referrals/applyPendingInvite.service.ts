@@ -15,12 +15,6 @@ export async function applyPendingInvite() {
 
   const token = normalizeToken(invite.token);
 
-  console.log("[REFERRAL][APPLY_PENDING][START]", {
-    inviteType: invite.inviteType,
-    tokenPreview: `${token.slice(0, 6)}...`,
-    receivedAt: invite.receivedAt,
-  });
-
   if (invite.inviteType === "SELLER") {
     const res = await api.post(endpoints.referrals.applyInviteForCurrentUser, {
       linkType: "SELLER_INVITE",
@@ -29,9 +23,6 @@ export async function applyPendingInvite() {
 
     if (res.data?.ok && res.data?.applied) {
       await clearPendingInvite();
-      console.log("[REFERRAL][APPLY_PENDING][CLEARED_AFTER_SUCCESS]", res.data);
-    } else {
-      console.log("[REFERRAL][APPLY_PENDING][KEPT_PENDING]", res.data);
     }
 
     return res.data;
@@ -45,9 +36,6 @@ export async function applyPendingInvite() {
 
     if (res.data?.ok && res.data?.applied) {
       await clearPendingInvite();
-      console.log("[REFERRAL][APPLY_PENDING][CLEARED_AFTER_SUCCESS]", res.data);
-    } else {
-      console.log("[REFERRAL][APPLY_PENDING][KEPT_PENDING]", res.data);
     }
 
     return res.data;

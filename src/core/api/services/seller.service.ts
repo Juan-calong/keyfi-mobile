@@ -46,18 +46,14 @@ export const SellerService = {
     couponCode?: string
   ) => {
     const body: any = { items };
-    console.log("[DRAFT] POST", `/seller/salons/${salonId}/orders/draft`);
     const code = String(couponCode ?? "").trim();
-    console.log("[DRAFT] POST", `/seller/salons/${salonId}/orders/draft`);
     if (code) body.couponCode = code;
-    console.log("[DRAFT] POST", `/seller/salons/${salonId}/orders/draft`);
     const res = await api.post(
       endpoints.sellerCreateDraftOrder(salonId),
       body,
       { headers: { "Idempotency-Key": `draft-${salonId}-${Date.now()}` } }
       
     );
-    console.log("[DRAFT] POST", `/seller/salons/${salonId}/orders/draft`);
     return res.data;
   },
 

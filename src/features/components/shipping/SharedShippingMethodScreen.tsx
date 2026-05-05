@@ -818,11 +818,6 @@ if (selectedShipping.quoteId) {
   payload.shippingOption = selectedShipping;
 }
 
-      console.log(
-        "[SHARED_SHIPPING_METHOD][CREATE_ORDER_PAYLOAD]",
-        JSON.stringify(payload, null, 2)
-      );
-
       const { data } = await api.post(endpoints.orders.create, payload, {
   headers: { "Idempotency-Key": idempotencyKey },
 });
@@ -907,27 +902,6 @@ const isContinueBusy =
     !quoteQ.isError &&
     quoteOptions.length === 0;
 
-    React.useEffect(() => {
-  console.log(
-    "[SHIPPING][QUOTE_OPTIONS]",
-    (quoteQ.data?.options || []).map((opt) => ({
-      id: opt.id,
-      quoteId: opt.quoteId,
-      carrier: opt.carrier,
-      serviceCode: opt.serviceCode,
-      label: opt.label,
-      available: opt.available,
-      reason: opt.reason,
-      isLocalDelivery: opt.isLocalDelivery,
-      deliveryMode: opt.deliveryMode,
-      minSubtotal: opt.minSubtotal,
-      qualifiesMinSubtotal: opt.qualifiesMinSubtotal,
-      qualifiesFreeShipping: opt.qualifiesFreeShipping,
-      meta: opt.meta,
-    }))
-  );
-}, [quoteQ.data?.options]);
-
   const emptyMessage =
     quoteErrors[0] ||
     "Nenhuma transportadora retornou cotação válida para este endereço agora.";
@@ -973,23 +947,6 @@ const handleContinue = async () => {
     }
 
     const currentKey = resolveOptionStableKey(selected);
-    console.log("[SHIPPING][CONTINUE_COMPARE]", {
-  selected: {
-    id: selected?.id,
-    quoteId: selected?.quoteId,
-    carrier: selected?.carrier,
-    serviceCode: selected?.serviceCode,
-    key: resolveOptionSelectionKey(selected),
-  },
-  availableOptions: availableOptions.map((opt) => ({
-    id: opt.id,
-    quoteId: opt.quoteId,
-    carrier: opt.carrier,
-    serviceCode: opt.serviceCode,
-    key: resolveOptionSelectionKey(opt),
-  })),
-});
-
 const freshSelected =
   availableOptions.find(
     (opt) => resolveOptionStableKey(opt) === currentKey
@@ -1033,21 +990,6 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
       preview: previewData,
       totalVisual,
     });
-
-    console.log("[SHIPPING][CONTINUE_AMOUNT]", {
-      orderId,
-      amount: resolvedAmount,
-      orderKeys: order ? Object.keys(order) : [],
-      orderAmount: order?.amount,
-      orderAmountDue: order?.amountDue,
-      orderTotalAmount: order?.totalAmount,
-      orderTotal: order?.total,
-      orderSummaryTotal: order?.summary?.total,
-      previewKeys: previewData ? Object.keys(previewData) : [],
-      previewSummary: previewData?.summary || null,
-      previewTotal: previewData?.summary?.total || previewData?.total || null,
-    });
-
     onContinue({
       orderId,
       amount: resolvedAmount,

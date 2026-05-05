@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -213,25 +213,6 @@ export function SellerLinksScreen() {
 
  const permsRaw = useMemo(() => asArray<SellerPermissionDTO>(permsQ.data), [permsQ.data]);
   const perms = useMemo(() => permsRaw.map(normalizeSellerPermission), [permsRaw]);
-
-  useEffect(() => {
-    console.log("[SELLER_LINKS][PERMISSIONS_RAW]", permsRaw);
-    permsRaw.forEach((item, idx) => {
-      console.log("[SELLER_LINKS][PERMISSIONS_SUMMARY]", {
-        itemId: item?.id ?? null,
-        status: item?.status ?? null,
-        salonId: item?.salonId ?? item?.salonUUID ?? null,
-        nestedSalonId: item?.salon?.id ?? item?.salon?.uuid ?? null,
-        salonName: item?.salonName ?? item?.name ?? null,
-        nestedSalonName: item?.salon?.name ?? null,
-        code: item?.code ?? item?.token ?? item?.referralCode ?? item?.sellerCode ?? item?.permissionCode ?? null,
-        nestedCode: item?.salon?.code ?? item?.salon?.referralCode ?? null,
-        keys: Object.keys(item ?? {}),
-        index: idx,
-      });
-    });
-  }, [permsRaw]);
-
   const filtered = useMemo(() => {
     const query = String(q || "").trim().toLowerCase();
     if (!query) return perms;
@@ -271,12 +252,6 @@ export function SellerLinksScreen() {
   }, [filtered]);
 
   const copy = useCallback((item: NormalizedSellerPermission) => {
-    console.log("[SELLER_LINKS][COPY_PRESS]", {
-      permissionId: item.permissionId,
-      salonId: item.salonId,
-      salonName: item.salonName,
-      hasCode: !!item.copyCode,
-    });
     if (!item.copyCode) {
       setModal({ title: "Código indisponível", message: "Código indisponível para este vínculo." });
       return;
@@ -287,12 +262,6 @@ export function SellerLinksScreen() {
 
   const handleOpenBuy = useCallback(
     (item: NormalizedSellerPermission) => {
-      console.log("[SELLER_LINKS][OPEN_BUY_PRESS]", {
-        permissionId: item.permissionId,
-        salonId: item.salonId,
-        salonName: item.salonName,
-        status: item.status,
-      });
       if (String(item.status).toUpperCase() !== "APPROVED") {
         setModal({ title: "Vínculo pendente", message: "Apenas salões aprovados podem abrir o carrinho." });
         return;

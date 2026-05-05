@@ -130,7 +130,6 @@ const safeVideoUrl = typeof videoUrl === "string" && videoUrl.trim().length > 0 
                 onError={(e) => {
                   setLoading(false);
                   setError("Não foi possível carregar este vídeo.");
-                  console.log("[TRAINING_VIDEO_PLAYER][ERROR]", e);
                 }}
               />
 

@@ -85,11 +85,6 @@ export function SellerProfileScreen() {
   const loadInviteLink = useCallback(async () => {
     try {
       setInviteLoading(true);
-      console.log("[INVITE][LOAD][START]", {
-  baseURL: Config.API_BASE_URL,
-  hasToken: !!token,
-});
-
       const res = await api.get("/seller/invite-link", {
         headers: token
           ? {
@@ -97,7 +92,6 @@ export function SellerProfileScreen() {
             }
           : undefined,
       });
-      console.log("[INVITE][LOAD][RESPONSE]", res?.data);
 
       const url = String(res.data?.url || "").trim();
 
@@ -108,11 +102,6 @@ export function SellerProfileScreen() {
       setInviteUrl(url);
       return url;
     } catch (err: any) {
-      console.log("[INVITE][LOAD][ERROR]", {
-  message: err?.message,
-  status: err?.response?.status,
-  data: err?.response?.data,
-});
       setModal({
         title: "Erro ao carregar link",
         message:
@@ -196,11 +185,6 @@ export function SellerProfileScreen() {
             isBlocked={isBlocked}
             onOpenDetails={() => setView("DETAILS")}
             onOpenToken={async () => {
-                console.log("[INVITE][UI][OPEN_TOKEN]", {
-    inviteUrl,
-    inviteLoading,
-    referralToken,
-  });
               setView("TOKEN");
               if (!inviteUrl && !inviteLoading) {
                 await loadInviteLink();

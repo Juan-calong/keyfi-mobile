@@ -26,15 +26,11 @@ function decodeJwtPayload(token: string): any | null {
     const json = atob(padded);
     return JSON.parse(json);
   } catch {
+    // Intencional: falha silenciosa para não bloquear fluxo de autenticação.
     return null;
   }
 }
 
-function tokenPreview(token: string | null | undefined) {
-  if (!token) return null;
-  if (token.length <= 20) return token;
-  return `${token.slice(0, 12)}...${token.slice(-8)}`;
-}
 
 function isJwtExpired(token: string): boolean {
   const payload = decodeJwtPayload(token);
@@ -63,31 +59,20 @@ function syncAirbridgeUserSafe(me: any) {
     const userId = resolveAirbridgeUserId(me);
 
     if (!userId) {
-      console.log("[AIRBRIDGE][AUTH][SYNC_USER][SKIP_NO_USER_ID]");
       return;
     }
 
     Airbridge.setUserID(userId);
-
-    console.log("[AIRBRIDGE][AUTH][SYNC_USER][DONE]", {
-      userId,
-    });
-  } catch (e: any) {
-    console.log("[AIRBRIDGE][AUTH][SYNC_USER][ERROR]", {
-      message: e?.message,
-    });
+  } catch {
+    // Intencional: falha silenciosa para não bloquear fluxo de autenticação.
   }
 }
 
 function clearAirbridgeUserSafe() {
   try {
     Airbridge.clearUser();
-
-    console.log("[AIRBRIDGE][AUTH][CLEAR_USER][DONE]");
-  } catch (e: any) {
-    console.log("[AIRBRIDGE][AUTH][CLEAR_USER][ERROR]", {
-      message: e?.message,
-    });
+  } catch {
+    // Não bloqueia logout/reset se Airbridge falhar.
   }
 }
 
@@ -140,11 +125,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const token = await loadToken();
 
-      console.log("[AUTH][HYDRATE]", {
-        hasToken: !!token,
-        tokenPreview: tokenPreview(token),
-      });
-
       if (!token) {
         clearAirbridgeUserSafe();
 
@@ -160,7 +140,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (isJwtExpired(token)) {
-        console.log("[AUTH][HYDRATE] access token expirado, tentando refresh");
 
         try {
           await get().refreshSession();
@@ -168,12 +147,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           try {
             await get().syncMe();
           } catch (e: any) {
-            console.log("[AUTH][HYDRATE][SYNC_ME_AFTER_REFRESH_ERROR]", {
-              message: e?.message,
-              status: e?.response?.status,
-              data: e?.response?.data,
-            });
-
             await clearToken();
             clearAirbridgeUserSafe();
 
@@ -193,12 +166,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
           return;
         } catch (e: any) {
-          console.log("[AUTH][HYDRATE][REFRESH_FAIL]", {
-            message: e?.message,
-            status: e?.response?.status,
-            data: e?.response?.data,
-          });
-
           await clearToken();
           clearAirbridgeUserSafe();
 
@@ -215,8 +182,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const payload = decodeJwtPayload(token);
-      console.log("[AUTH][HYDRATE][JWT_PAYLOAD]", payload);
-
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
@@ -236,12 +201,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hydrated: true,
         });
       } catch (e: any) {
-        console.log("[AUTH][HYDRATE][SYNC_ME_ERROR]", {
-          message: e?.message,
-          status: e?.response?.status,
-          data: e?.response?.data,
-        });
-
         await clearToken();
         clearAirbridgeUserSafe();
 
@@ -255,10 +214,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
       }
     } catch (e: any) {
-      console.log("[AUTH][HYDRATE][FATAL_ERROR]", {
-        message: e?.message,
-      });
-
       await clearToken();
       clearAirbridgeUserSafe();
 
@@ -277,15 +232,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setNeedsOnboarding: (v) => set({ needsOnboarding: v }),
 
   setSession: async (token, role = null) => {
-    console.log("[AUTH][SET_SESSION]", {
-      role,
-      tokenPreview: tokenPreview(token),
-    });
-
     await saveToken(token);
 
     const payload = decodeJwtPayload(token);
-    console.log("[AUTH][SET_SESSION][JWT_PAYLOAD]", payload);
 
     const resolvedRole = ((payload?.role as Role) ?? role) || null;
     const onboardingStatus = String(payload?.onboardingStatus || "");
@@ -301,45 +250,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await get().syncMe();
     } catch (e: any) {
-      console.log("[AUTH][SET_SESSION][SYNC_ME_ERROR]", {
-        message: e?.message,
-        status: e?.response?.status,
-        data: e?.response?.data,
-      });
-
       clearAirbridgeUserSafe();
     }
   },
 
   login: async (email, password) => {
-    console.log("[AUTH][LOGIN][START]", { email });
 
     try {
       const data = await AuthService.login(email, password);
       const token = data.accessToken ?? data.token;
-
-      console.log("[AUTH][LOGIN][RESPONSE]", {
-        hasAccessToken: !!data?.accessToken,
-        hasToken: !!data?.token,
-        userRole: data?.user?.role,
-      });
-
       if (!token) throw new Error("Login não retornou token.");
 
       await get().setSession(token, data?.user?.role ?? null);
     } catch (e: any) {
-      console.log("[AUTH][LOGIN][ERROR]", {
-        message: e?.message,
-        status: e?.response?.status,
-        data: e?.response?.data,
-      });
       throw e;
     }
   },
 
   loginWithBiometrics: async () => {
-    console.log("[AUTH][BIO][LOGIN][START]");
-
     try {
       const creds = await loadTokenWithBiometrics();
       const token = creds?.token;
@@ -363,17 +291,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await saveToken(token);
 
       if (isJwtExpired(token)) {
-        console.log("[AUTH][BIO][LOGIN] token expirado, tentando refresh");
-
         try {
           await get().refreshSession();
         } catch (e: any) {
-          console.log("[AUTH][BIO][LOGIN][REFRESH_FAIL]", {
-            message: e?.message,
-            status: e?.response?.status,
-            data: e?.response?.data,
-          });
-
           await clearToken();
           await disableBiometricLogin();
           clearAirbridgeUserSafe();
@@ -395,11 +315,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         await get().syncMe();
       } catch (e: any) {
-        console.log("[AUTH][BIO][LOGIN][SYNC_ME_ERROR]", {
-          message: e?.message,
-          status: e?.response?.status,
-          data: e?.response?.data,
-        });
 
         await clearToken();
         clearAirbridgeUserSafe();
@@ -415,11 +330,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw e;
       }
     } catch (e: any) {
-      console.log("[AUTH][BIO][LOGIN][ERROR]", {
-        message: e?.message,
-        status: e?.response?.status,
-        data: e?.response?.data,
-      });
       throw e;
     }
   },
@@ -428,7 +338,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
-      console.log("[AUTH][BIO][QUEUE_SETUP] email inválido");
       set({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
@@ -439,15 +348,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const status = await getBiometricStatus();
 
-      console.log("[AUTH][BIO][QUEUE_SETUP][STATUS]", status);
-
       if (!status.available || status.enabled) {
-        console.log("[AUTH][BIO][QUEUE_SETUP] não vai mostrar tela", {
-          reason: !status.available
-            ? "biometria_indisponivel"
-            : "biometria_ja_ativada",
-        });
-
         set({
           needsBiometricSetup: false,
           pendingBiometricEmail: null,
@@ -455,19 +356,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      console.log("[AUTH][BIO][QUEUE_SETUP] vai mostrar tela de setup", {
-        email: normalizedEmail,
-      });
-
       set({
         needsBiometricSetup: true,
         pendingBiometricEmail: normalizedEmail,
       });
     } catch (e: any) {
-      console.log("[AUTH][BIO][QUEUE_SETUP][ERROR]", {
-        message: e?.message,
-      });
-
       set({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
@@ -486,8 +379,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const fallbackEmail = get().pendingBiometricEmail ?? "";
     const normalizedEmail = String(email ?? fallbackEmail).trim().toLowerCase();
 
-    console.log("[AUTH][BIO][ENABLE][START]", { email: normalizedEmail });
-
     if (!normalizedEmail) {
       throw new Error("Email inválido para ativar biometria.");
     }
@@ -499,7 +390,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (isJwtExpired(token)) {
-      console.log("[AUTH][BIO][ENABLE] token expirado, tentando refresh");
 
       await get().refreshSession();
       token = get().token;
@@ -519,11 +409,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       pendingBiometricEmail: null,
     });
 
-    console.log("[AUTH][BIO][ENABLE][DONE]");
   },
 
   disableBiometricsForCurrentSession: async () => {
-    console.log("[AUTH][BIO][DISABLE][START]");
     await disableBiometricLogin();
 
     set({
@@ -531,24 +419,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       pendingBiometricEmail: null,
     });
 
-    console.log("[AUTH][BIO][DISABLE][DONE]");
   },
 
   refreshSession: async () => {
-    console.log("[AUTH][REFRESH][START]");
 
     const data = await AuthService.refresh();
-
-    console.log("[AUTH][REFRESH][RESPONSE]", {
-      hasAccessToken: !!data?.accessToken,
-    });
-
     if (!data?.accessToken) {
       throw new Error("Refresh não retornou accessToken.");
     }
 
     const payload = decodeJwtPayload(data.accessToken);
-    console.log("[AUTH][REFRESH][JWT_PAYLOAD]", payload);
 
     const role = (payload?.role as Role) ?? null;
     const onboardingStatus = String(payload?.onboardingStatus || "");
@@ -568,21 +448,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   syncMe: async () => {
     const token = get().token;
-
-    console.log("[AUTH][SYNC_ME][START]", {
-      hasToken: !!token,
-      tokenPreview: tokenPreview(token),
-      activeRole: get().activeRole,
-    });
-
     if (!token) {
       clearAirbridgeUserSafe();
       return false;
     }
 
     const me = await ProfilesService.me();
-
-    console.log("[AUTH][SYNC_ME][ME]", me);
 
     syncAirbridgeUserSafe(me);
 
@@ -602,7 +473,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: async () => {
-    console.log("[AUTH][RESET_SESSION]");
     await clearToken();
     clearAirbridgeUserSafe();
 
@@ -616,14 +486,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    console.log("[AUTH][LOGOUT][START]");
     try {
       await AuthService.logout();
     } catch (e: any) {
-      console.log("[AUTH][LOGOUT][ERROR]", {
-        message: e?.message,
-        status: e?.response?.status,
-      });
     }
 
     await removePushTokenFromBackend();

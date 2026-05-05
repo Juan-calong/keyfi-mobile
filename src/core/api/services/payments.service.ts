@@ -79,11 +79,10 @@ export const PaymentsService = {
       };
     }
   },
-  active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
-    const res = await api.get(endpoints.payments.active(orderId));
-    console.log("[PAY][ACTIVE]", JSON.stringify(res.data, null, 2));
-    return res.data;
-  },
+active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
+  const res = await api.get(endpoints.payments.active(orderId));
+  return res.data;
+},
 
   // ✅ AGORA não exige payment_method_id
   cardToken: async (body: {
@@ -126,7 +125,6 @@ export const PaymentsService = {
     };
 
     const r = await api.post("/payments/card/token", payload);
-    console.log("[CARD_TOKEN][OK] data:", JSON.stringify(r.data, null, 2));
 
     const tk = r.data?.token;
     const iss = r.data?.issuer_id ?? null;

@@ -3,7 +3,6 @@ import messaging from "@react-native-firebase/messaging";
 import notifee, { AndroidImportance } from "@notifee/react-native";
 
 import { api } from "../api/client";
-import { apiLog } from "../api/logger";
 
 type DevicePlatform = "ANDROID" | "IOS";
 
@@ -35,15 +34,9 @@ async function requestIosNotificationPermission() {
 
 async function requestLocalNotificationPermission() {
   try {
-    const settings = await notifee.requestPermission();
-
-    apiLog("[PUSH][LOCAL_PERMISSION]", {
-      authorizationStatus: settings.authorizationStatus,
-    });
-
+    await notifee.requestPermission();
     return true;
-  } catch (error) {
-    console.log("[PUSH][LOCAL_PERMISSION][ERROR]", error);
+  } catch {
     return false;
   }
 }
@@ -57,7 +50,6 @@ async function ensureAndroidChannel() {
     importance: AndroidImportance.HIGH,
   });
 
-  apiLog("[PUSH][CHANNEL_READY]", { channelId });
 
   return channelId;
 }
@@ -86,14 +78,8 @@ async function displayForegroundNotification(remoteMessage: any) {
         },
       },
     });
-
-    apiLog("[PUSH][FOREGROUND_DISPLAYED]", {
-      title,
-      hasBody: !!body,
-      data: remoteMessage?.data ?? null,
-    });
-  } catch (error) {
-    console.log("[PUSH][FOREGROUND_DISPLAY][ERROR]", error);
+  } catch {
+    // Falha ao exibir notificação local não deve quebrar o app.
   }
 }
 
@@ -101,45 +87,21 @@ export async function ensurePushPermission() {
   const androidOk = await requestAndroidNotificationPermission();
   const iosOk = await requestIosNotificationPermission();
   const localOk = await requestLocalNotificationPermission();
-
-  apiLog("[PUSH][PERMISSION]", {
-    androidOk,
-    iosOk,
-    localOk,
-    platform: Platform.OS,
-  });
-
   return androidOk && iosOk && localOk;
 }
 
 export async function registerPushTokenWithBackend() {
   const allowed = await ensurePushPermission();
   if (!allowed) {
-    apiLog("[PUSH][REGISTER] permission denied");
     return null;
   }
 
   await messaging().registerDeviceForRemoteMessages();
   await ensureAndroidChannel();
-
   const token = await messaging().getToken();
-
-  apiLog("[PUSH][TOKEN][GET]", {
-    hasToken: !!token,
-    tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
-    platform: getPlatform(),
-  });
-
   if (!token) return null;
-
   await api.post("/devices/push-token", {
     token,
-    platform: getPlatform(),
-  });
-
-  apiLog("[PUSH][TOKEN][REGISTERED_BACKEND]", {
-    hasToken: !!token,
-    tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
     platform: getPlatform(),
   });
 
@@ -155,48 +117,32 @@ export async function removePushTokenFromBackend() {
     }
 
     await messaging().deleteToken();
-
-    apiLog("[PUSH][TOKEN][REMOVE]", {
-      hadToken: !!token,
-    });
-  } catch (error) {
-    console.log("[PUSH][TOKEN][REMOVE][ERROR]", error);
+  } catch {
+    // Falha ao remover token não deve bloquear logout/reset local.
   }
 }
 
 export function bindPushTokenRefresh() {
   return messaging().onTokenRefresh(async (token) => {
     try {
-      apiLog("[PUSH][TOKEN][REFRESH]", {
-        hasToken: !!token,
-        tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
-      });
-
       await api.post("/devices/push-token", {
         token,
         platform: getPlatform(),
       });
-
-      apiLog("[PUSH][TOKEN][REFRESH][REGISTERED_BACKEND]", {
-        hasToken: !!token,
-        tokenPreview: token ? `${token.slice(0, 12)}...${token.slice(-8)}` : null,
-      });
-    } catch (error) {
-      console.log("[PUSH][TOKEN][REFRESH][ERROR]", error);
+    } catch {
+      // Falha ao registrar refresh do token será tentada novamente em outro ciclo.
     }
   });
 }
 
 export function bindForegroundPushListener() {
   return messaging().onMessage(async (remoteMessage) => {
-    console.log("[PUSH][FOREGROUND_MESSAGE]", remoteMessage);
     await displayForegroundNotification(remoteMessage);
   });
 }
 
 export function bindPushOpenListener(onOpen?: (remoteMessage: any) => void) {
   return messaging().onNotificationOpenedApp((remoteMessage) => {
-    console.log("[PUSH][OPENED_FROM_BACKGROUND]", remoteMessage);
     onOpen?.(remoteMessage);
   });
 }
@@ -205,8 +151,6 @@ export async function handleInitialPushOpen(onOpen?: (remoteMessage: any) => voi
   const initialNotification = await messaging().getInitialNotification();
 
   if (!initialNotification) return null;
-
-  console.log("[PUSH][OPENED_FROM_QUIT]", initialNotification);
   onOpen?.(initialNotification);
 
   return initialNotification;

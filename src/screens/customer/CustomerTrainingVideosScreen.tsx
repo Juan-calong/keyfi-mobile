@@ -152,8 +152,6 @@ export function CustomerTrainingVideosScreen() {
     retry: false,
   });
 
-  console.log("[TRAINING_VIDEOS][DATA]", JSON.stringify(videosQ.data, null, 2));
-
   const items = useMemo(() => {
     const base = videosQ.data?.items ?? [];
     if (!search.trim()) return base;

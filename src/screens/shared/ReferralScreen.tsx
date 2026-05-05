@@ -49,7 +49,6 @@ export function ReferralScreen() {
         queryKey: ["me"],
         queryFn: async () => {
             const data = (await api.get<MeDTO>(endpoints.profiles.me)).data;
-            console.log("ME DATA =>", data);
             return data;
         },
         enabled: hydrated && !!token,
@@ -66,9 +65,6 @@ export function ReferralScreen() {
     const role = meQ.data?.role ?? "—";
     const salonCode = meQ.data?.salon?.referralToken ?? null;
     const sellerCode = meQ.data?.seller?.referralToken ?? null;
-    console.log("ME:", meQ.data);
-    console.log("role:", role, "sellerCode:", sellerCode, "salonCode:", salonCode);
-
     const isSalonOwner = role === "SALON_OWNER";
 
     const copy = (value: string) => {
@@ -91,8 +87,6 @@ export function ReferralScreen() {
       { referralToken: code },
       { headers: { "Idempotency-Key": `apply-ref-${Date.now()}` } }
     );
-
-    console.log("[OWNER_REFERRAL][RES]", res.data);
     return res.data;
   },
 

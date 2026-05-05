@@ -81,7 +81,6 @@ function toNum(v: any) {
 }
 
 export function SellerHomeScreen() {
-  console.log("SellerHomeScreen OLD loaded");
   const qc = useQueryClient();
   const nav = useNavigation<any>();
 

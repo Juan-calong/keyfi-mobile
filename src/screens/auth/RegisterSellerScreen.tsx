@@ -231,8 +231,6 @@ await queueBiometricSetup(normalizedEmail);
         const fe = friendlyError(e);
         showModal(fe.title, fe.message);
       }
-
-      console.log("[REGISTER_SELLER][ERR]", e?.response?.data || e);
     } finally {
       setLoading(false);
       submittingRef.current = false;

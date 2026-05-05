@@ -474,8 +474,6 @@ await queueBiometricSetup(normalizedEmail);
       } else {
         showModal(fe.title, fe.message);
       }
-
-      console.log("[REGISTER_CUSTOMER][ERR]", e?.response?.data || e);
     } finally {
       setLoading(false);
       submittingRef.current = false;

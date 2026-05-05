@@ -159,16 +159,10 @@ export function OwnerOrderDetailsScreen() {
   });
   const activePayment = activePaymentQ.data as ActivePaymentEnvelope | undefined;
 
-    React.useEffect(() => {
-  if (data?.items) {
-    console.log("[ORDER_DETAIL_ITEMS]", JSON.stringify(data.items, null, 2));
-  }
-}, [data?.items]);
-
   const paymentStatus = useMemo(() => normalizeStatus(data?.paymentStatus), [data?.paymentStatus]);
   const status = useMemo(() => normalizeStatus(data?.status), [data?.status]);
   const approval = useMemo(() => normalizeStatus(data?.adminApprovalStatus), [data?.adminApprovalStatus]);
-    const paymentMethod = normalizeStatus(activePayment?.payment?.method);
+  const paymentMethod = normalizeStatus(activePayment?.payment?.method);
   const paymentProvider = normalizeStatus(activePayment?.payment?.provider);
   const activePaymentStatus = normalizeStatus(activePayment?.payment?.status);
   const nextActionStatusDetail = String((activePayment?.nextAction as any)?.statusDetail ?? "").trim();
@@ -188,25 +182,6 @@ export function OwnerOrderDetailsScreen() {
       total: data?.totalAmount || data?.amountDue || data?.amount,
     });
   }, [route.params?.showPaymentSuccessOnPaid, paymentStatus, nav, orderId, data]);
-
-
-  React.useEffect(() => {
-    const payment = activePayment?.payment;
-    const nextAction = activePayment?.nextAction as any;
-    const flags = activePayment?.flags;
-    console.log("[ORDER_DETAILS][PAYMENT_ACTIVE]", {
-      orderId: orderId || null,
-      hasPayment: Boolean(payment),
-      paymentProvider: payment?.provider || null,
-      paymentMethod: payment?.method || null,
-      paymentStatus: payment?.status || null,
-      hasExternalId: Boolean(payment?.externalId),
-      nextActionStatusDetail: nextAction?.statusDetail || null,
-      uiCode: activePayment?.ui?.code || null,
-      "flags.canRetry": flags?.canRetry,
-      "flags.shouldPoll": flags?.shouldPoll,
-    });
-  }, [activePayment, orderId]);
 
     const createRefundMut = useMutation({
     mutationFn: () => RefundRequestsService.create(orderId!, { reason: refundReason, description: refundDescription.trim() || undefined }),
