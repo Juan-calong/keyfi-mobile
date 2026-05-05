@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
 logo: {
   width: 135,
   height: 90,
+  backgroundColor: "transparent",
 },
 
   divider: {
