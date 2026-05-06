@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { t } from "../tokens";
 
-import KEYFI_LOGO from "../../assets/logo/keyfi-img.jpeg";
+import KEYFI_LOGO from "../../assets/logo/keyfi-img.png";
 
 type Props = {
   title?: string;

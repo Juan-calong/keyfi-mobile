@@ -147,6 +147,13 @@ sellerCartRequests: {
   removePushToken: "/devices/push-token/remove",
 },
 
+notifications: {
+  me: "/notifications/me",
+  unreadCount: "/notifications/me/unread-count",
+  readOne: (id: string) => `/notifications/me/${id}/read`,
+  readAll: "/notifications/me/read-all",
+},
+
 salon: {
   inviteLink: "/salon/invite-link",
 },

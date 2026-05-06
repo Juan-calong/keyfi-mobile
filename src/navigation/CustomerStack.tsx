@@ -12,6 +12,7 @@ import { CustomerBoletoWebViewScreen } from "../screens/customer/CustomerBoletoW
 import { CustomerProductDetailsScreen } from "../screens/customer/CustomerProductDetailsScreen";
 import { CardTokenizeWebViewScreen } from "../screens/payments/CardTokenizeWebViewScreen";
 import { CustomerProfileMeScreen } from "../screens/customer/CustomerProfileMeScreen";
+import { CustomerNotificationsScreen } from "../screens/customer/CustomerNotificationsScreen";
 import { CustomerShippingMethodScreen } from "../screens/customer/CustomerShippingMethodScreen";
 import { CustomerCheckoutAddressScreen } from "../screens/customer/CustomerCheckoutAddressScreen";
 import { ApplyReferralScreen } from "../screens/ApplyReferralScreen";
@@ -42,6 +43,11 @@ export function CustomerStack() {
       <Stack.Screen
         name={CUSTOMER_SCREENS.OrderDetails}
         component={CustomerOrderDetailsScreen}
+      />
+
+        <Stack.Screen
+        name={CUSTOMER_SCREENS.Notifications}
+        component={CustomerNotificationsScreen}
       />
 
       <Stack.Screen

@@ -1,4 +1,5 @@
 import React from "react";
+import { Alert } from "react-native";
 import { CommonActions, useNavigation, useRoute } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 
@@ -22,6 +23,7 @@ export function CustomerProductDetailsScreen() {
   const cartRemove = useCartStore((state) => state.remove);
 
   const productId = route.params?.productId as string | undefined;
+  const intent = route.params?.intent as string | undefined;
 
   const q = useQuery({
     queryKey: ["customer-product", productId],
@@ -49,6 +51,10 @@ export function CustomerProductDetailsScreen() {
   });
 
   const product = q.data;
+    React.useEffect(() => {
+    if (intent !== "REVIEW" || !product?.id) return;
+    Alert.alert("Avalie este produto", "Role até a seção de avaliações e comentários para enviar sua avaliação.");
+  }, [intent, product?.id]);
   const qtyInCart = product ? (qtyById?.[product.id] ?? 0) : 0;
 
   return (

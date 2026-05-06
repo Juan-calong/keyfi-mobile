@@ -11,6 +11,7 @@ import { CustomerTabs } from "./customerTabs";
 
 import { CustomerOrdersScreen } from "../screens/customer/CustomerOrdersScreen";
 import { CustomerProfileMe } from "../screens/customer/CustomerProfileMe";
+import { CustomerNotificationsScreen } from "../screens/customer/CustomerNotificationsScreen";
 import { useAuthStore } from "../stores/auth.store";
 
 const Drawer = createDrawerNavigator();
@@ -87,6 +88,12 @@ function CustomerDrawerContent(props: any) {
             onPress={() => props.navigation.navigate(CUSTOMER_SCREENS.Orders)}
           />
 
+            <DrawerMenuItem
+            icon="notifications-outline"
+            label="Notificações"
+            onPress={() => props.navigation.navigate(CUSTOMER_SCREENS.Notifications)}
+          />
+
           <DrawerMenuItem
             icon="person-circle-outline"
             label="Minha conta"
@@ -144,6 +151,12 @@ export function CustomerDrawer() {
         name={CUSTOMER_SCREENS.Orders}
         component={CustomerOrdersScreen}
         options={{ title: "Pedidos" }}
+      />
+
+        <Drawer.Screen
+        name={CUSTOMER_SCREENS.Notifications}
+        component={CustomerNotificationsScreen}
+        options={{ title: "Notificações" }}
       />
 
       <Drawer.Screen

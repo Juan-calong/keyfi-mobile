@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { CommonActions, NavigationContainer } from "@react-navigation/native";
+import { navigationRef } from "./src/navigation/navigationRef";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActivityIndicator, Linking, View } from "react-native";
@@ -15,6 +16,7 @@ import {
   handleInitialPushOpen,
   registerPushTokenWithBackend,
 } from "./src/core/push/push.service";
+import { handleNotificationClick } from "./src/core/notifications/notification-actions";
 import {
   parseInviteFromUrl,
   savePendingInvite,
@@ -62,9 +64,23 @@ if (hydrated && token) {
 }
 
 export default function App() {
+  const pendingPushOpenRef = React.useRef<any | null>(null);
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
   const role = useAuthStore((s) => s.activeRole);
+
+  const navigateFromNotification = React.useCallback((screen: string, params?: any) => {
+  if (!navigationRef.isReady()) return false;
+
+  navigationRef.dispatch(
+    CommonActions.navigate({
+      name: screen,
+      params,
+    })
+  );
+
+  return true;
+}, []);
 
   useEffect(() => {
     useAuthStore.getState().hydrate();
@@ -107,9 +123,17 @@ applyPendingInvite().catch(() => {
 
     const unsubTokenRefresh = bindPushTokenRefresh();
     const unsubForeground = bindForegroundPushListener();
-    const unsubOpen = bindPushOpenListener();
+        const onPushOpen = (remoteMessage: any) => {
+      if (!navigationRef.isReady()) {
+        pendingPushOpenRef.current = remoteMessage;
+        return;
+      }
+      handleNotificationClick(remoteMessage, navigateFromNotification);
+    };
 
-handleInitialPushOpen().catch(() => {
+    const unsubOpen = bindPushOpenListener(onPushOpen);
+
+handleInitialPushOpen(onPushOpen).catch(() => {
   // Falha ao processar abertura inicial por push não deve bloquear o app.
 });
 
@@ -135,7 +159,16 @@ handleInitialPushOpen().catch(() => {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer key={navKey}>
+        <NavigationContainer
+          key={navKey}
+          ref={navigationRef}
+          onReady={() => {
+            const pending = pendingPushOpenRef.current;
+            if (!pending) return;
+            pendingPushOpenRef.current = null;
+            handleNotificationClick(pending, navigateFromNotification);
+          }}
+        >
           <RootNavigator />
         </NavigationContainer>
       </QueryClientProvider>

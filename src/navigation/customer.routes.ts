@@ -113,7 +113,9 @@ export type CustomerStackParamList = {
   [CUSTOMER_SCREENS.BoletoWebView]: { url: string };
   [CUSTOMER_SCREENS.ApplyReferral]: undefined;
 
-  [CUSTOMER_SCREENS.ProductDetails]: { productId: string } | { product: any };
+  [CUSTOMER_SCREENS.ProductDetails]:
+    | { productId: string; intent?: "REVIEW"; orderId?: string; orderItemId?: string; source?: string }
+    | { product: any };
 
   [CUSTOMER_SCREENS.ProductComments]: {
     productId: string;
