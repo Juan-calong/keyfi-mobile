@@ -13,10 +13,12 @@ import {
   bindForegroundPushListener,
   bindPushOpenListener,
   bindPushTokenRefresh,
+  bindNotifeePushOpenListener,
   handleInitialPushOpen,
   registerPushTokenWithBackend,
 } from "./src/core/push/push.service";
-import { handleNotificationClick } from "./src/core/notifications/notification-actions";
+import { handleNotificationClick, normalizePayload } from "./src/core/notifications/notification-actions";
+import { CUSTOMER_SCREENS } from "./src/navigation/customer.routes";
 import {
   parseInviteFromUrl,
   savePendingInvite,
@@ -123,24 +125,43 @@ applyPendingInvite().catch(() => {
 
     const unsubTokenRefresh = bindPushTokenRefresh();
     const unsubForeground = bindForegroundPushListener();
-        const onPushOpen = (remoteMessage: any) => {
+    const processPushOpen = (remoteMessage: any) => {
+      console.log("[PUSH_OPEN][RECEIVED]");
+      const payload = normalizePayload(remoteMessage);
+      console.log("[PUSH_OPEN][DATA]", payload);
+
+      const handled = handleNotificationClick(remoteMessage, navigateFromNotification);
+
+      if (handled) {
+        console.log("[PUSH_OPEN][HANDLED_TRUE]");
+        return;
+      }
+
+      console.log("[PUSH_OPEN][HANDLED_FALSE]");
+      navigateFromNotification(CUSTOMER_SCREENS.Notifications);
+    };
+
+    const onPushOpen = (remoteMessage: any) => {
       if (!navigationRef.isReady()) {
+        console.log("[PUSH_OPEN][NAV_NOT_READY_PENDING]");
         pendingPushOpenRef.current = remoteMessage;
         return;
       }
-      handleNotificationClick(remoteMessage, navigateFromNotification);
+      processPushOpen(remoteMessage);
     };
 
     const unsubOpen = bindPushOpenListener(onPushOpen);
+    const unsubNotifeeOpen = bindNotifeePushOpenListener(onPushOpen);
 
-handleInitialPushOpen(onPushOpen).catch(() => {
-  // Falha ao processar abertura inicial por push não deve bloquear o app.
-});
+    handleInitialPushOpen(onPushOpen).catch(() => {
+        // Falha ao processar abertura inicial por push não deve bloquear o app.
+    });
 
     return () => {
       unsubTokenRefresh();
       unsubForeground();
       unsubOpen();
+      unsubNotifeeOpen();
     };
   }, [hydrated, token]);
 
@@ -165,8 +186,16 @@ handleInitialPushOpen(onPushOpen).catch(() => {
           onReady={() => {
             const pending = pendingPushOpenRef.current;
             if (!pending) return;
+            console.log("[PUSH_OPEN][NAV_READY_PROCESS_PENDING]");
+            const handled = handleNotificationClick(pending, navigateFromNotification);
+
+            if (handled) {
+              console.log("[PUSH_OPEN][HANDLED_TRUE]");
+            } else {
+              console.log("[PUSH_OPEN][HANDLED_FALSE]");
+              navigateFromNotification(CUSTOMER_SCREENS.Notifications);
+            }
             pendingPushOpenRef.current = null;
-            handleNotificationClick(pending, navigateFromNotification);
           }}
         >
           <RootNavigator />

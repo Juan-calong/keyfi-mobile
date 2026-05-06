@@ -1,6 +1,6 @@
 import { PermissionsAndroid, Platform } from "react-native";
 import messaging from "@react-native-firebase/messaging";
-import notifee, { AndroidImportance } from "@notifee/react-native";
+import notifee, { AndroidImportance, EventType } from "@notifee/react-native";
 
 import { api } from "../api/client";
 
@@ -141,6 +141,14 @@ export function bindForegroundPushListener() {
   });
 }
 
+export function bindNotifeePushOpenListener(onOpen?: (remoteMessage: any) => void) {
+  return notifee.onForegroundEvent(({ type, detail }) => {
+    if (type !== EventType.PRESS && type !== EventType.ACTION_PRESS) return;
+    onOpen?.({ detail });
+  });
+}
+
+
 export function bindPushOpenListener(onOpen?: (remoteMessage: any) => void) {
   return messaging().onNotificationOpenedApp((remoteMessage) => {
     onOpen?.(remoteMessage);
@@ -148,7 +156,15 @@ export function bindPushOpenListener(onOpen?: (remoteMessage: any) => void) {
 }
 
 export async function handleInitialPushOpen(onOpen?: (remoteMessage: any) => void) {
-  const initialNotification = await messaging().getInitialNotification();
+  const [firebaseInitial, notifeeInitial] = await Promise.all([
+    messaging().getInitialNotification(),
+    notifee.getInitialNotification().catch(() => null),
+  ]);
+
+  const initialNotification =
+    firebaseInitial ?? (notifeeInitial ? { detail: notifeeInitial } : null);
+
+  
 
   if (!initialNotification) return null;
   onOpen?.(initialNotification);

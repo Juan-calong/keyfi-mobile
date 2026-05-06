@@ -6,7 +6,7 @@ export type NotificationAction =
   | "OPEN_ORDER"
   | "OPEN_ORDER_REVIEW";
 
-type NotificationPayload = {
+export type NotificationPayload = {
   action?: string;
   productId?: string;
   orderId?: string;
@@ -15,10 +15,24 @@ type NotificationPayload = {
   screen?: string;
 };
 
-function normalizePayload(raw: any): NotificationPayload {
-  const data = raw?.data ?? raw ?? {};
+export function normalizePayload(raw: any): NotificationPayload {
+  const data =
+    raw?.data ??
+    raw?.notification?.data ??
+    raw?.detail?.notification?.data ??
+    raw?.detail?.data ??
+    raw ?? {};
+
+  const actionFromPress =
+    typeof raw?.detail?.pressAction?.id === "string" ? raw.detail.pressAction.id : undefined;
+
   return {
-    action: typeof data.action === "string" ? data.action : undefined,
+        action:
+      typeof data.action === "string"
+        ? data.action
+        : typeof data.type === "string"
+          ? data.type
+          : actionFromPress,
     productId: typeof data.productId === "string" ? data.productId : undefined,
     orderId: typeof data.orderId === "string" ? data.orderId : undefined,
     orderItemId: typeof data.orderItemId === "string" ? data.orderItemId : undefined,
