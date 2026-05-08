@@ -464,3 +464,4 @@ ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(pro
   </Container></Screen>;
 }
 const s = StyleSheet.create({ title:{ fontSize:20, fontWeight:"800" }, statusTitle:{ fontSize:16, fontWeight:"700" }, error:{ color:"#b00020" }, input:{ borderWidth:1,borderColor:"#ddd",borderRadius:10,padding:10 }, btn:{ backgroundColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, secondaryBtn:{ borderWidth:1,borderColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, inst:{ borderWidth:1,borderColor:"#ddd",borderRadius:8,paddingHorizontal:10,paddingVertical:6 }, instOn:{ borderColor:"#111" } });
+//Este é oque está sendo usado hoje, mas o ideal é migrar para a nova tela que tem uma experiência de pagamento melhor e mais fluida

@@ -20,6 +20,8 @@ function isPublicRoute(url: string) {
     url === "/auth/register/customer" ||
     url === "/auth/email/verify/confirm" ||
     url === "/auth/email/verify/request" ||
+    url === "/auth/password/forgot" ||
+    url === "/auth/password/reset" ||
     url === "/health" ||
     url === "/ready" ||
     url.startsWith("/docs")

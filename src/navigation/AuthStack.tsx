@@ -7,6 +7,8 @@ import { RegisterSalonScreen } from "../screens/auth/RegisterSalonScreen";
 import { RegisterChooseRoleScreen } from "../screens/auth/RegisterChooseRoleScreen";
 import { RegisterCustomerScreen } from "../screens/auth/RegisterCustomerScreen";
 import { VerifyEmailScreen } from "../screens/auth/VerifyEmailScreen";
+import { ForgotPasswordScreen } from "../screens/auth/ForgotPasswordScreen";
+import { ResetPasswordScreen } from "../screens/auth/ResetPasswordScreen";
 
 export type AuthStackParamList = {
   Login: { email?: string; message?: string } | undefined;
@@ -14,7 +16,9 @@ export type AuthStackParamList = {
   RegisterSeller: undefined;
   RegisterSalon: undefined;
   RegisterCustomer: undefined;
-    VerifyEmail: {
+  ForgotPassword: { email?: string } | undefined;
+  ResetPassword: { email?: string } | undefined;
+  VerifyEmail: {
     email: string;
     source?: "register" | "login";
   };
@@ -30,6 +34,8 @@ export function AuthStack() {
       <Stack.Screen name="RegisterSeller" component={RegisterSellerScreen} />
       <Stack.Screen name="RegisterSalon" component={RegisterSalonScreen} />
       <Stack.Screen name="RegisterCustomer" component={RegisterCustomerScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
     </Stack.Navigator>
   );

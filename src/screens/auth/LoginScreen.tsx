@@ -185,9 +185,8 @@ if (requiresEmailVerification) {
   }
 
   function onForgot() {
-    showError({
-      title: "Esqueci minha senha",
-      message: "Implementar fluxo de recuperação aqui.",
+    nav.navigate("ForgotPassword", {
+      email: email.trim().toLowerCase() || undefined,
     });
   }
 
@@ -330,25 +329,6 @@ if (requiresEmailVerification) {
                 <Text style={styles.dividerText}>OU CONTINUE COM</Text>
                 <View style={styles.dividerLine} />
               </View>
-
-              <View style={styles.socialRow}>
-                <Pressable 
-                  style={styles.socialBtn}
-                  onPress={() => showError({ title: "Google Login", message: "Fluxo social pendente" })}
-                >
-                  <Ionicons name="logo-google" size={20} color="#DB4437" />
-                  <Text style={styles.socialBtnText}>Entrar com Google</Text>
-                </Pressable>
-
-                <Pressable 
-                  style={styles.socialBtn}
-                  onPress={() => showError({ title: "Apple Login", message: "Fluxo social pendente" })}
-                >
-                  <Ionicons name="logo-apple" size={20} color="#000000" />
-                  <Text style={styles.socialBtnText}>Entrar com Apple</Text>
-                </Pressable>
-              </View>
-
             </View>
           </Container>
         </ScrollView>
