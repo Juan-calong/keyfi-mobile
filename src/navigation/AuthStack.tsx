@@ -5,14 +5,19 @@ import { LoginScreen } from "../screens/auth/LoginScreen";
 import { RegisterSellerScreen } from "../screens/auth/RegisterSellerScreen";
 import { RegisterSalonScreen } from "../screens/auth/RegisterSalonScreen";
 import { RegisterChooseRoleScreen } from "../screens/auth/RegisterChooseRoleScreen";
-import { RegisterCustomerScreen } from "../screens/auth/RegisterCustomerScreen"
+import { RegisterCustomerScreen } from "../screens/auth/RegisterCustomerScreen";
+import { VerifyEmailScreen } from "../screens/auth/VerifyEmailScreen";
 
 export type AuthStackParamList = {
-  Login: undefined;
+  Login: { email?: string; message?: string } | undefined;
   RegisterChooseRole: undefined;
   RegisterSeller: undefined;
   RegisterSalon: undefined;
   RegisterCustomer: undefined;
+    VerifyEmail: {
+    email: string;
+    source?: "register" | "login";
+  };
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();

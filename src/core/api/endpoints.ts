@@ -11,6 +11,8 @@ export const endpoints = {
     registerSeller: "/auth/register/seller",
     registerSalon: "/auth/register/salon",
     registerCustomer: "/auth/register/customer",
+    emailVerifyConfirm: "/auth/email/verify/confirm",
+    emailVerifyRequest: "/auth/email/verify/request",
   },
 
   onboarding: {

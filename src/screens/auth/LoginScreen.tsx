@@ -11,7 +11,8 @@ import {
   StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { Screen } from "../../ui/components/Screen";
@@ -20,14 +21,18 @@ import { useAuthStore } from "../../stores/auth.store";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { getBiometricStatus } from "../../core/security/keychain";
+import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
   return s.includes("@") && s.includes(".");
 }
 
+type LoginRouteProps = NativeStackScreenProps<AuthStackParamList, "Login">;
+
 export function LoginScreen() {
   const nav = useNavigation<any>();
+  const route = useRoute<LoginRouteProps["route"]>();
   const insets = useSafeAreaInsets();
 
   const login = useAuthStore((s) => s.login);
@@ -58,6 +63,11 @@ export function LoginScreen() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [cooldownUntil]);
+
+  useEffect(() => {
+    if (route.params?.email) setEmail(route.params.email);
+    if (route.params?.message) showError({ title: "Aviso", message: route.params.message });
+  }, [route.params?.email, route.params?.message]);
 
   useEffect(() => {
     let mounted = true;
@@ -129,11 +139,25 @@ export function LoginScreen() {
       setLoading(true);
       await login(email.trim(), password);
     } catch (e: any) {
+const status = e?.response?.status;
+const code = String(e?.response?.data?.code ?? "").toUpperCase();
+const requiresEmailVerification =
+  status === 403 &&
+  (
+    code === "EMAIL_NOT_VERIFIED" ||
+    e?.response?.data?.requiresEmailVerification === true ||
+    e?.response?.data?.nextStep === "VERIFY_EMAIL"
+  );
+
+if (requiresEmailVerification) {
+  nav.navigate("VerifyEmail", {
+    email: email.trim().toLowerCase(),
+    source: "login",
+  });
+  return;
+}
       showError(friendlyError(e));
       handleCooldownFromError(e);
-
-      const code = String(e?.response?.data?.code ?? "").toUpperCase();
-      const status = e?.response?.status;
 
       if (code === "INVALID_CREDENTIALS" || status === 401) {
         setTouched({ email: true, password: true });

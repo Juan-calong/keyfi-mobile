@@ -208,7 +208,7 @@ export function RegisterSellerScreen() {
       Keyboard.dismiss();
       setLoading(true);
 
-      await api.post(endpoints.auth.registerSeller, {
+      const response = await api.post(endpoints.auth.registerSeller, {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
@@ -216,6 +216,18 @@ export function RegisterSellerScreen() {
       });
 
       const normalizedEmail = email.trim().toLowerCase();
+        const requiresEmailVerification =
+        response?.data?.requiresEmailVerification === true ||
+        response?.data?.nextStep === "VERIFY_EMAIL";
+
+      if (requiresEmailVerification) {
+        showModal("Verificação de email", "Verifique seu email para continuar.");
+        nav.navigate("VerifyEmail", {
+          email: response?.data?.user?.email || normalizedEmail,
+          source: "register",
+        });
+        return;
+      }
 
       await login(normalizedEmail, password);
       setNeedsOnboarding(false);

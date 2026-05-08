@@ -590,7 +590,7 @@ export function RegisterSalonScreen() {
       Keyboard.dismiss();
       setLoading(true);
 
-      await api.post(endpoints.auth.registerSalon, {
+      const response = await api.post(endpoints.auth.registerSalon, {
         owner: {
           name: ownerName.trim(),
           email: ownerEmail.trim().toLowerCase(),
@@ -614,6 +614,19 @@ export function RegisterSalonScreen() {
       await clearPendingInvite();
 
       const normalizedEmail = ownerEmail.trim().toLowerCase();
+
+        const requiresEmailVerification =
+        response?.data?.requiresEmailVerification === true ||
+        response?.data?.nextStep === "VERIFY_EMAIL";
+
+      if (requiresEmailVerification) {
+        showModal("Verificação de email", "Verifique seu email para continuar.");
+        nav.navigate("VerifyEmail", {
+          email: response?.data?.user?.email || normalizedEmail,
+          source: "register",
+        });
+        return;
+      }
 
       await login(normalizedEmail, ownerPassword);
       setNeedsOnboarding(false);
