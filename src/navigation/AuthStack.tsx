@@ -30,6 +30,7 @@ export function AuthStack() {
       <Stack.Screen name="RegisterSeller" component={RegisterSellerScreen} />
       <Stack.Screen name="RegisterSalon" component={RegisterSalonScreen} />
       <Stack.Screen name="RegisterCustomer" component={RegisterCustomerScreen} />
+      <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
     </Stack.Navigator>
   );
 }

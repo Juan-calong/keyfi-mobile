@@ -78,14 +78,23 @@ export function VerifyEmailScreen({ navigation, route }: Props) {
     }
   }
 
-  return (
-    <Screen style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+return (
+  <Screen style={styles.screen}>
+    <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.flex}>
         <Container>
           <View style={styles.content}>
             <Text style={styles.title}>Verifique seu email</Text>
-            <Text style={styles.subtitle}>Digite o código de 6 dígitos enviado para {email}</Text>
+
+            <Text style={styles.subtitle}>
+              Digite o código de 6 dígitos enviado para {email}
+            </Text>
+
             <TextInput
               value={code}
               onChangeText={(value) => setCode(normalizeCode(value))}
@@ -95,34 +104,107 @@ export function VerifyEmailScreen({ navigation, route }: Props) {
               maxLength={6}
             />
 
-            <Pressable style={[styles.button, !canConfirm && styles.buttonDisabled]} onPress={onConfirm} disabled={!canConfirm}>
-              <Text style={styles.buttonText}>{loading ? "Confirmando..." : "Confirmar"}</Text>
+            <Pressable
+              style={[styles.button, !canConfirm && styles.buttonDisabled]}
+              onPress={onConfirm}
+              disabled={!canConfirm}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? "Confirmando..." : "Confirmar"}
+              </Text>
             </Pressable>
 
-            <Pressable style={[styles.linkButton, resendLoading && styles.buttonDisabled]} onPress={onResend} disabled={resendLoading}>
-              <Text style={styles.linkText}>{resendLoading ? "Reenviando..." : "Reenviar código"}</Text>
+            <Pressable
+              style={[styles.linkButton, resendLoading && styles.buttonDisabled]}
+              onPress={onResend}
+              disabled={resendLoading}
+            >
+              <Text style={styles.linkText}>
+                {resendLoading ? "Reenviando..." : "Reenviar código"}
+              </Text>
             </Pressable>
 
-            <Pressable style={styles.linkButton} onPress={() => navigation.navigate("Login", { email })}>
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => navigation.navigate("Login", { email })}
+            >
               <Text style={styles.linkText}>Voltar para login</Text>
             </Pressable>
           </View>
         </Container>
-      </KeyboardAvoidingView>
-      <IosAlert visible={!!alert} title={alert?.title} message={alert?.message} onClose={() => setAlert(null)} />
-    </Screen>
-  );
+      </View>
+    </KeyboardAvoidingView>
+
+    <IosAlert
+      visible={!!alert}
+      title={alert?.title}
+      message={alert?.message}
+      onClose={() => setAlert(null)}
+    />
+  </Screen>
+);
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#FAFAFA" },
-  content: { flex: 1, justifyContent: "center", gap: 12 },
-  title: { fontSize: 28, fontWeight: "800", color: "#0F172A" },
-  subtitle: { fontSize: 14, color: "#475569" },
-  input: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: "#FFF", fontSize: 18, letterSpacing: 6 },
-  button: { backgroundColor: "#006175", borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#FFF", fontWeight: "700" },
-  linkButton: { paddingVertical: 8, alignItems: "center" },
-  linkText: { color: "#006175", fontWeight: "700" },
+  screen: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
+  },
+  flex: {
+    flex: 1,
+  },
+  content: {
+    flexGrow: 1,
+    minHeight: "100%",
+    justifyContent: "center",
+    paddingVertical: 32,
+    gap: 12,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#475569",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#FFF",
+    fontSize: 18,
+    letterSpacing: 6,
+    textAlign: "center",
+    color: "#0F172A",
+  },
+  button: {
+    backgroundColor: "#006175",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: "#FFF",
+    fontWeight: "700",
+  },
+  linkButton: {
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  linkText: {
+    color: "#006175",
+    fontWeight: "700",
+  },
 });
