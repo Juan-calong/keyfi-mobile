@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  ScrollView,
+} from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
+
 import { Screen } from "../../ui/components/Screen";
-import { Container } from "../../ui/components/Container";
 import { PaymentsService } from "../../core/api/services/payments.service";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
@@ -77,13 +85,17 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
           normalizeInstallments(inst);
         }
 
-        post('MP_LOOKUPS_RESULT',{paymentMethodId:state.paymentMethodId,issuerId:state.issuerId,installments:state.installments});
+        post('MP_LOOKUPS_RESULT',{
+          paymentMethodId:state.paymentMethodId,
+          issuerId:state.issuerId,
+          installments:state.installments
+        });
       } catch(e){
         post('MP_ERROR',{errorCode:'LOOKUP_FAIL'});
       }
     }
-      
-        function readDeviceSessionId(){
+
+    function readDeviceSessionId(){
       var hidden=document.getElementById('deviceId');
       var candidates=[
         window.MP_DEVICE_SESSION_ID,
@@ -113,6 +125,7 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
 
       try{
         mp=new MercadoPago(${JSON.stringify(publicKey)});
+
         if(!mp.fields||typeof mp.fields.create!=='function'||typeof mp.fields.createCardToken!=='function'){
           post('MP_ERROR',{errorCode:'MP_FIELDS_UNAVAILABLE'});
           return;
@@ -131,6 +144,7 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
         post('MP_READY',{});
         postDeviceSession();
         inspectFields();
+
         setTimeout(function(){ inspectFields(); postDeviceSession(); },500);
         setTimeout(function(){ inspectFields(); postDeviceSession(); },1500);
         setTimeout(function(){ inspectFields(); postDeviceSession(); },3000);
@@ -143,19 +157,25 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
     async function onMessage(ev){
       try{
         var m=JSON.parse(ev.data||'{}');
+
         if(m.type!=='MP_SUBMIT'||m.nonce!==NONCE) return;
+
         if(!mp||!mp.fields||typeof mp.fields.createCardToken!=='function'){
-        postDeviceSession();
+          postDeviceSession();
           post('MP_TOKEN_RESULT',{ok:false,errorCode:'MP_FIELDS_NOT_READY'});
           return;
         }
+
         postDeviceSession();
+
         var token=await mp.fields.createCardToken({
           cardholderName:m.cardholderName,
           identificationType:m.docType,
           identificationNumber:m.docNumber
         });
+
         postDeviceSession();
+
         post('MP_TOKEN_RESULT',{
           ok:true,
           cardToken:token&&token.id?token.id:null,
@@ -184,164 +204,306 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const orderId = String(route?.params?.orderId || "");
   const routePublicKey = route?.params?.publicKey;
   const routeAmount = Number(route?.params?.amount || 0);
+
   const nonce = useMemo(() => makeNonce(), []);
+
   const [publicKey, setPublicKey] = useState<string | null>(routePublicKey ?? null);
   const [amount, setAmount] = useState<number>(routeAmount);
+
   const [name, setName] = useState("");
   const [doc, setDoc] = useState("");
   const [email, setEmail] = useState("");
+
   const [installments, setInstallments] = useState(1);
   const [maxInstallments, setMaxInstallments] = useState(1);
   const [availableInstallments, setAvailableInstallments] = useState<number[]>([1]);
+
   const [pmId, setPmId] = useState<string | undefined>();
   const [issuerId, setIssuerId] = useState<string | undefined>();
   const [deviceSessionId, setDeviceSessionId] = useState<string | undefined>();
+
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [statusTitle, setStatusTitle] = useState<string | null>(null);
   const [showOrderAction, setShowOrderAction] = useState(false);
   const [paymentAttemptLocked, setPaymentAttemptLocked] = useState(false);
+
   const [ready, setReady] = useState(false);
   const [provider, setProvider] = useState<string | null>(null);
   const [webLoaded, setWebLoaded] = useState(false);
   const [fieldsMounted, setFieldsMounted] = useState(false);
+
   const webRef = useRef<WebView>(null);
 
-    const orderDetailsRoute = String(route?.name).includes("Owner") ? OWNER_SCREENS.OrderDetails : CUSTOMER_SCREENS.OrderDetails;
+  const orderDetailsRoute = String(route?.name).includes("Owner")
+    ? OWNER_SCREENS.OrderDetails
+    : CUSTOMER_SCREENS.OrderDetails;
 
-  const goToOrderDetails = () => navigation.replace(orderDetailsRoute, { orderId, showPaymentSuccessOnPaid: true });
-  useEffect(() => { (async () => {
-    const methods = await PaymentsService.getPaymentMethods();
-    const cardProvider = String(methods?.card?.provider || "").trim().toUpperCase();
-    setProvider(cardProvider);
-    if (cardProvider !== "MERCADOPAGO" || !methods?.card?.publicKey) throw new Error("Mercado Pago indisponível.");
-    if (!publicKey) setPublicKey(methods.card.publicKey);
-    setMaxInstallments(Number(methods.card.maxInstallments || 1));
-    if (!(amount > 0)) {
-      const active = await PaymentsService.active(orderId);
-      const fallback = Number((active as any)?.payment?.amount || (active as any)?.order?.amountDue || (active as any)?.order?.totalAmount || (active as any)?.amount || 0);
-      if (fallback > 0) setAmount(fallback);
-      else setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
-      return;
-    }
-  })().catch(() => setError("Não foi possível iniciar pagamento.")); }, [amount, orderId, publicKey, routeAmount]);
+  const goToOrderDetails = () =>
+    navigation.replace(orderDetailsRoute, {
+      orderId,
+      showPaymentSuccessOnPaid: true,
+    });
 
-  const html = useMemo(() => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""), [publicKey, amount, nonce]);
-    const canPay = Boolean(publicKey) && amount > 0 && fieldsMounted && provider === "MERCADOPAGO" && !processing && !paymentAttemptLocked;
+  useEffect(() => {
+    (async () => {
+      const methods = await PaymentsService.getPaymentMethods();
+      const cardProvider = String(methods?.card?.provider || "").trim().toUpperCase();
+
+      setProvider(cardProvider);
+
+      if (cardProvider !== "MERCADOPAGO" || !methods?.card?.publicKey) {
+        throw new Error("Mercado Pago indisponível.");
+      }
+
+      if (!publicKey) {
+        setPublicKey(methods.card.publicKey);
+      }
+
+      setMaxInstallments(Number(methods.card.maxInstallments || 1));
+
+      if (!(amount > 0)) {
+        const active = await PaymentsService.active(orderId);
+
+        const fallback = Number(
+          (active as any)?.payment?.amount ||
+            (active as any)?.order?.amountDue ||
+            (active as any)?.order?.totalAmount ||
+            (active as any)?.amount ||
+            0
+        );
+
+        if (fallback > 0) {
+          setAmount(fallback);
+        } else {
+          setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
+        }
+      }
+    })().catch(() => setError("Não foi possível iniciar pagamento."));
+  }, [amount, orderId, publicKey]);
+
+  const html = useMemo(
+    () => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""),
+    [publicKey, amount, nonce]
+  );
+
+  const canPay =
+    Boolean(publicKey) &&
+    amount > 0 &&
+    fieldsMounted &&
+    provider === "MERCADOPAGO" &&
+    !processing &&
+    !paymentAttemptLocked;
+
   useEffect(() => {
     if (!fieldsMounted && webLoaded && Boolean(publicKey) && amount > 0 && provider === "MERCADOPAGO") {
       const t = setTimeout(() => {
         setError((prev) => prev || "Não foi possível carregar o formulário seguro do cartão. Tente novamente.");
       }, 5000);
+
       return () => clearTimeout(t);
     }
+
     return;
   }, [fieldsMounted, webLoaded, publicKey, amount, provider]);
 
   const onMessage = (ev: WebViewMessageEvent) => {
     try {
       const msg = JSON.parse(ev.nativeEvent.data || "{}");
+
       if (msg?.nonce !== nonce) return;
-      if (msg.type === "MP_READY") setReady(true);
+
+      if (msg.type === "MP_READY") {
+        setReady(true);
+      }
+
       if (msg.type === "MP_FIELDS_INSPECT") {
         const hasCardIframe = Boolean(msg?.hasCardIframe);
         const hasExpirationIframe = Boolean(msg?.hasExpirationIframe);
         const hasSecurityIframe = Boolean(msg?.hasSecurityIframe);
-        if (hasCardIframe && hasExpirationIframe && hasSecurityIframe) setFieldsMounted(true);
+
+        if (hasCardIframe && hasExpirationIframe && hasSecurityIframe) {
+          setFieldsMounted(true);
+        }
       }
-      if (msg.type === "MP_ERROR") setError("Falha no formulário seguro de cartão.");
+
+      if (msg.type === "MP_ERROR") {
+        setError("Falha no formulário seguro de cartão.");
+      }
+
       if (msg.type === "MP_LOOKUPS_RESULT") {
-        if (msg.paymentMethodId) setPmId(String(msg.paymentMethodId));
-        if (msg.issuerId) setIssuerId(String(msg.issuerId));
+        if (msg.paymentMethodId) {
+          setPmId(String(msg.paymentMethodId));
+        }
+
+        if (msg.issuerId) {
+          setIssuerId(String(msg.issuerId));
+        }
+
         const raw = Array.isArray(msg.installments) ? msg.installments : [];
-        const normalized: number[] = Array.from(new Set(raw.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n) && n >= 1) as number[])).sort((a: number, b: number) => a - b);
+
+        const normalized: number[] = Array.from(
+          new Set(
+            raw
+              .map((n: any) => Number(n))
+              .filter((n: number) => Number.isFinite(n) && n >= 1) as number[]
+          )
+        ).sort((a: number, b: number) => a - b);
+
         const filtered = normalized.filter((n) => n <= maxInstallments);
         const next = filtered.length ? filtered : [1];
+
         setAvailableInstallments(next);
-        if (!next.includes(installments)) setInstallments(next[0]);
+
+        if (!next.includes(installments)) {
+          setInstallments(next[0]);
+        }
       }
-            if (msg.type === "MP_DEVICE_SESSION") {
-        const nextDeviceSessionId = typeof msg?.deviceSessionId === "string" && msg.deviceSessionId.trim() ? msg.deviceSessionId.trim() : undefined;
+
+      if (msg.type === "MP_DEVICE_SESSION") {
+        const nextDeviceSessionId =
+          typeof msg?.deviceSessionId === "string" && msg.deviceSessionId.trim()
+            ? msg.deviceSessionId.trim()
+            : undefined;
+
         setDeviceSessionId(nextDeviceSessionId);
       }
-      if (msg.type === "MP_TOKEN_RESULT") (webRef.current as any).__tokenResult = msg;
-    } catch { setError("Resposta inválida da tokenização."); }
+
+      if (msg.type === "MP_TOKEN_RESULT") {
+        (webRef.current as any).__tokenResult = msg;
+      }
+    } catch {
+      setError("Resposta inválida da tokenização.");
+    }
   };
 
   async function onPay() {
     if (!fieldsMounted || processing) return;
+
     setProcessing(true);
     setPaymentAttemptLocked(false);
     setShowOrderAction(false);
     setError(null);
     setStatusTitle("Pagamento em processamento...");
     setStatus("Pagamento em processamento...");
+
     try {
-      if (!orderId) throw new Error("Pedido inválido.");
-      if (!(amount > 0)) throw new Error("Não foi possível carregar o valor do pedido.");
-      if (onlyDigits(doc).length < 11 || !email.includes("@") || !name.trim()) throw new Error("Preencha os dados do pagador.");
+      if (!orderId) {
+        throw new Error("Pedido inválido.");
+      }
+
+      if (!(amount > 0)) {
+        throw new Error("Não foi possível carregar o valor do pedido.");
+      }
+
+      const cardholderName = name.trim();
+      const emailValue = email.trim().toLowerCase();
+      const docDigits = onlyDigits(doc);
+
+      const isCpf = docDigits.length === 11;
+      const isCnpj = docDigits.length === 14;
+      const docType = isCnpj ? "CNPJ" : "CPF";
+
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
+
+      if (!cardholderName) {
+        throw new Error("Informe o nome do titular do cartão.");
+      }
+
+      if (!isCpf && !isCnpj) {
+        throw new Error("Informe um CPF ou CNPJ válido.");
+      }
+
+      if (!isEmailValid) {
+        throw new Error("Informe um email válido.");
+      }
+
       (webRef.current as any).__tokenResult = null;
-      webRef.current?.postMessage(JSON.stringify({ type: "MP_SUBMIT", nonce, cardholderName: name.trim(), docType: onlyDigits(doc).length === 14 ? "CNPJ" : "CPF", docNumber: onlyDigits(doc) }));
+
+      webRef.current?.postMessage(
+        JSON.stringify({
+          type: "MP_SUBMIT",
+          nonce,
+          cardholderName,
+          docType,
+          docNumber: docDigits,
+        })
+      );
+
       const start = Date.now();
+
       while (!(webRef.current as any).__tokenResult) {
-        if (Date.now() - start > 20000) throw new Error("Tempo esgotado ao tokenizar cartão.");
+        if (Date.now() - start > 20000) {
+          throw new Error("Tempo esgotado ao tokenizar cartão.");
+        }
+
         await new Promise<void>((r) => setTimeout(() => r(), 200));
       }
-const tokenMsg = (webRef.current as any).__tokenResult;
-const cardToken = tokenMsg?.cardToken;
-const paymentMethodId = tokenMsg?.paymentMethodId || pmId;
 
-if (!cardToken) throw new Error("Token de cartão ausente.");
-if (!paymentMethodId) throw new Error("Método de pagamento do cartão não identificado.");
+      const tokenMsg = (webRef.current as any).__tokenResult;
 
-const docDigits = onlyDigits(doc);
-const docType = docDigits.length === 14 ? "CNPJ" : "CPF";
+      if (tokenMsg?.ok === false) {
+        throw new Error("Não foi possível tokenizar o cartão. Verifique os dados e tente novamente.");
+      }
 
-const nameParts = name.trim().split(/\s+/).filter(Boolean);
-const firstName = nameParts[0] || name.trim();
-const lastName = nameParts.slice(1).join(" ") || firstName || "-";
+      const cardToken = tokenMsg?.cardToken;
+      const paymentMethodId = tokenMsg?.paymentMethodId || pmId;
 
-const payer = {
-  email: email.trim(),
+      if (!cardToken) {
+        throw new Error("Token de cartão ausente.");
+      }
 
-  cpf: docDigits,
-  doc: docDigits,
-  document: docDigits,
-  docDigits,
-  docType,
+      if (!paymentMethodId) {
+        throw new Error("Método de pagamento do cartão não identificado.");
+      }
 
-  identification: {
-    type: docType,
-    number: docDigits,
-  },
+      const nameParts = cardholderName.split(/\s+/).filter(Boolean);
+      const firstName = nameParts[0] || cardholderName;
+      const lastName = nameParts.slice(1).join(" ") || firstName || "-";
 
-  firstName,
-  lastName,
-  name: name.trim(),
+      const payer = {
+        email: emailValue,
 
-  address: {
-    zipCode: "",
-    streetName: "",
-    streetNumber: "",
-    neighborhood: "",
-    city: "",
-    federalUnit: "",
-  },
-};
+        cpf: docDigits,
+        doc: docDigits,
+        document: docDigits,
+        docDigits,
+        docType,
 
-await PaymentsService.intentCARD(orderId, {
-  installments,
-  payer,
-  card: {
-    cardToken,
-    paymentMethodId,
-    issuerId: tokenMsg?.issuerId || issuerId,
-    deviceSessionId,
-  },
-});
+        identification: {
+          type: docType,
+          number: docDigits,
+        },
+
+        firstName,
+        lastName,
+        name: cardholderName,
+
+        address: {
+          zipCode: "",
+          streetName: "",
+          streetNumber: "",
+          neighborhood: "",
+          city: "",
+          federalUnit: "",
+        },
+      };
+
+      await PaymentsService.intentCARD(orderId, {
+        installments,
+        payer,
+        card: {
+          cardToken,
+          paymentMethodId,
+          issuerId: tokenMsg?.issuerId || issuerId,
+          deviceSessionId,
+        },
+      });
+
       for (let i = 0; i < 20; i++) {
         await new Promise<void>((r) => setTimeout(() => r(), 3000));
+
         const a = await PaymentsService.active(orderId);
         const payment = (a as any)?.payment || {};
         const nextAction = (a as any)?.nextAction || {};
@@ -357,6 +519,7 @@ await PaymentsService.intentCARD(orderId, {
         if (["FAILED", "CANCELED", "REJECTED", "DECLINED"].includes(st)) {
           setStatusTitle("Pagamento recusado");
           setStatus(ui?.message || "Pagamento recusado. Tente outro cartão ou outra forma de pagamento.");
+
           if (flags?.canRetry === false) {
             setPaymentAttemptLocked(true);
             setShowOrderAction(true);
@@ -364,104 +527,248 @@ await PaymentsService.intentCARD(orderId, {
             setPaymentAttemptLocked(false);
             setShowOrderAction(false);
           }
+
           return;
         }
 
-        if (st === "PENDING" && String(nextAction?.statusDetail || "").toLowerCase() === "pending_review_manual") {
+        if (
+          st === "PENDING" &&
+          String(nextAction?.statusDetail || "").toLowerCase() === "pending_review_manual"
+        ) {
           setStatusTitle("Pagamento em análise");
-          setStatus(ui?.message || "Pagamento em análise. O Mercado Pago recebeu sua tentativa e está analisando a transação.");
+          setStatus(
+            ui?.message ||
+              "Pagamento em análise. O Mercado Pago recebeu sua tentativa e está analisando a transação."
+          );
           setPaymentAttemptLocked(true);
           setShowOrderAction(true);
           return;
         }
       }
+
       setStatusTitle("Pagamento em análise");
       setStatus("Pagamento em análise. Você pode acompanhar o status nos detalhes do pedido.");
       setPaymentAttemptLocked(true);
       setShowOrderAction(true);
-    } catch(e:any){
+    } catch (e: any) {
       setStatusTitle("Erro no pagamento");
       setStatus(null);
       setError(e?.message || "Erro ao pagar com Mercado Pago.");
+    } finally {
+      setProcessing(false);
     }
-    finally { setProcessing(false); }
   }
 
-  return <Screen><Container style={{ flex:1, gap:8 }}>
-        <Text style={s.title}>Cartão Mercado Pago</Text>{!!error && <Text style={s.error}>{error}</Text>}{!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}{!!status && <Text>{status}</Text>}
-    <TextInput placeholder="Nome no cartão" value={name} onChangeText={setName} style={s.input} />
-    <TextInput placeholder="CPF/CNPJ" keyboardType="number-pad" value={doc} onChangeText={(v)=>setDoc(onlyDigits(v).slice(0,14))} style={s.input} />
-    <TextInput placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} style={s.input} />
-    <View style={{ flexDirection:"row", gap:8, flexWrap:"wrap" }}>{availableInstallments.map((n)=><Pressable key={n} onPress={()=>setInstallments(n)} style={[s.inst,installments===n&&s.instOn]}><Text>{n}x</Text></Pressable>)}</View>
-{!!html && (
-  <WebView
-    ref={webRef}
-    source={{
-      html,
-      baseUrl: "https://www.mercadopago.com.br/",
-    }}
-    originWhitelist={["*"]}
-    onMessage={onMessage}
-    javaScriptEnabled
-    domStorageEnabled
-    incognito={false}
-    setSupportMultipleWindows={false}
-    javaScriptCanOpenWindowsAutomatically={false}
-    mixedContentMode="never"
-    allowFileAccess={false}
-    style={{ height: 280, minHeight: 280, backgroundColor: "#fff" }}
-    onLoadEnd={() => setWebLoaded(true)}
-    onShouldStartLoadWithRequest={(req) => {
-      try {
-        const url = String(req.url || "");
+  return (
+    <Screen>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={s.content}
+      >
+        <Text style={s.title}>Cartão Mercado Pago</Text>
 
-        if (url.startsWith("about:blank")) return true;
-        if (url.startsWith("data:text")) return true;
-        if (url.startsWith("blob:")) return true;
+        {!!error && <Text style={s.error}>{error}</Text>}
+        {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
+        {!!status && <Text>{status}</Text>}
 
-        if (url === "https://mercadopago.com.br/") return true;
-        if (url === "https://www.mercadopago.com.br/") return true;
+        <TextInput
+          placeholder="Nome no cartão"
+          value={name}
+          onChangeText={setName}
+          style={s.input}
+          autoCapitalize="words"
+          autoCorrect={false}
+        />
 
-        const host = url
-          .replace(/^https?:\/\//i, "")
-          .split("/")[0]
-          .toLowerCase();
+        <TextInput
+          placeholder="CPF/CNPJ"
+          keyboardType="number-pad"
+          value={doc}
+          onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
+          style={s.input}
+          maxLength={14}
+        />
 
-        if (host === "sdk.mercadopago.com") return true;
+        <TextInput
+          placeholder="Email"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          style={s.input}
+        />
 
-        if (host === "mercadopago.com") return true;
-        if (host.endsWith(".mercadopago.com")) return true;
+        <View style={s.installmentsRow}>
+          {availableInstallments.map((n) => (
+            <Pressable
+              key={n}
+              onPress={() => setInstallments(n)}
+              style={[s.inst, installments === n && s.instOn]}
+            >
+              <Text>{n}x</Text>
+            </Pressable>
+          ))}
+        </View>
 
-        if (host === "mercadopago.com.br") return true;
-        if (host.endsWith(".mercadopago.com.br")) return true;
+        {!!html && (
+          <WebView
+            ref={webRef}
+            source={{
+              html,
+              baseUrl: "https://www.mercadopago.com.br/",
+            }}
+            originWhitelist={["*"]}
+            onMessage={onMessage}
+            javaScriptEnabled
+            domStorageEnabled
+            incognito={false}
+            setSupportMultipleWindows={false}
+            javaScriptCanOpenWindowsAutomatically={false}
+            mixedContentMode="never"
+            allowFileAccess={false}
+            style={s.webview}
+            onLoadEnd={() => setWebLoaded(true)}
+            onShouldStartLoadWithRequest={(req) => {
+              try {
+                const url = String(req.url || "");
 
-        if (host === "mercadolibre.com") return true;
-        if (host.endsWith(".mercadolibre.com")) return true;
+                if (url.startsWith("about:blank")) return true;
+                if (url.startsWith("data:text")) return true;
+                if (url.startsWith("blob:")) return true;
 
-        if (host === "mercadolibrestatic.com") return true;
-        if (host.endsWith(".mercadolibrestatic.com")) return true;
+                if (url === "https://mercadopago.com.br/") return true;
+                if (url === "https://www.mercadopago.com.br/") return true;
 
-        if (host === "mlstatic.com") return true;
-        if (host.endsWith(".mlstatic.com")) return true;
-        return false;
-      } catch {
-        return String(req.url || "").startsWith("about:blank");
-      }
-    }}
-  />
-)}
+                const host = url
+                  .replace(/^https?:\/\//i, "")
+                  .split("/")[0]
+                  .toLowerCase();
+
+                if (host === "sdk.mercadopago.com") return true;
+
+                if (host === "mercadopago.com") return true;
+                if (host.endsWith(".mercadopago.com")) return true;
+
+                if (host === "mercadopago.com.br") return true;
+                if (host.endsWith(".mercadopago.com.br")) return true;
+
+                if (host === "mercadolibre.com") return true;
+                if (host.endsWith(".mercadolibre.com")) return true;
+
+                if (host === "mercadolibrestatic.com") return true;
+                if (host.endsWith(".mercadolibrestatic.com")) return true;
+
+                if (host === "mlstatic.com") return true;
+                if (host.endsWith(".mlstatic.com")) return true;
+
+                return false;
+              } catch {
+                return String(req.url || "").startsWith("about:blank");
+              }
+            }}
+          />
+        )}
+
         {__DEV__ && (
-      <Text style={{ fontSize: 11, opacity: 0.5 }}>
-ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)} amount={String(amount)} canPay={String(canPay)}
-      </Text>
-    )}
-    <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && { opacity: 0.5 }]}>{processing ? <ActivityIndicator color="#fff"/> : <Text style={{ color:"#fff", fontWeight:"700" }}>Pagar</Text>}</Pressable>
+          <Text style={s.debug}>
+            ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)}{" "}
+            amount={String(amount)} canPay={String(canPay)}
+          </Text>
+        )}
+
+        <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && s.btnDisabled]}>
+          {processing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={s.btnText}>Pagar</Text>
+          )}
+        </Pressable>
+
         {showOrderAction && (
-      <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
-        <Text style={{ color: "#111", fontWeight: "700" }}>Ver pedido</Text>
-      </Pressable>
-    )}
-  </Container></Screen>;
+          <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
+            <Text style={s.secondaryBtnText}>Ver pedido</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+    </Screen>
+  );
 }
-const s = StyleSheet.create({ title:{ fontSize:20, fontWeight:"800" }, statusTitle:{ fontSize:16, fontWeight:"700" }, error:{ color:"#b00020" }, input:{ borderWidth:1,borderColor:"#ddd",borderRadius:10,padding:10 }, btn:{ backgroundColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, secondaryBtn:{ borderWidth:1,borderColor:"#111", padding:12,borderRadius:10,alignItems:"center" }, inst:{ borderWidth:1,borderColor:"#ddd",borderRadius:8,paddingHorizontal:10,paddingVertical:6 }, instOn:{ borderColor:"#111" } });
-//Este é oque está sendo usado hoje, mas o ideal é migrar para a nova tela que tem uma experiência de pagamento melhor e mais fluida
+
+const s = StyleSheet.create({
+  content: {
+    flexGrow: 1,
+    padding: 16,
+    gap: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  error: {
+    color: "#b00020",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    padding: 10,
+    width: "100%",
+    minHeight: 50,
+    backgroundColor: "#fff",
+    color: "#111",
+  },
+  installmentsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  inst: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  instOn: {
+    borderColor: "#111",
+  },
+  webview: {
+    height: 280,
+    minHeight: 280,
+    backgroundColor: "#fff",
+  },
+  debug: {
+    fontSize: 11,
+    opacity: 0.5,
+  },
+  btn: {
+    backgroundColor: "#111",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+  btnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  secondaryBtn: {
+    borderWidth: 1,
+    borderColor: "#111",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  secondaryBtnText: {
+    color: "#111",
+    fontWeight: "700",
+  },
+});
