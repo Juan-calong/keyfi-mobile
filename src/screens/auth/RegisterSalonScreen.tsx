@@ -20,7 +20,6 @@ import { fetchAddressByCep, formatCep } from "../../core/utils/cep";
 import { fetchCompanyByCnpj } from "../../core/utils/cnpj";
 
 import Ionicons from "react-native-vector-icons/Ionicons";
-import LinearGradient from "react-native-linear-gradient";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -48,22 +47,22 @@ type CompanyInfo = {
 const TOKEN_RE = /^[A-HJ-NP-Z2-9]{8}$/;
 
 const COLORS = {
-  bg: "#FFFFFF",
-  card: "#FFFFFF",
+  bg: "#FAFAFA",
+  card: "#FAFAFA",
   text: "#0F172A",
-  sub: "#64748B",
+  sub: "#475569",
   placeholder: "#94A3B8",
   border: "#E2E8F0",
   borderStrong: "#CBD5E1",
-  focus: "#2E6BFF",
-  inputBg: "#F8FAFC",
-  inputBgFocus: "#FFFFFF",
+  focus: "#006175",
+  inputBg: "#FFFFFF",
+  inputBgFocus: "#F0FDF4",
   error: "#DC2626",
   errorBorder: "#FCA5A5",
   errorBg: "#FFF7F7",
-  primaryA: "#2E6BFF",
-  primaryB: "#1F4FDB",
-  successBg: "#F8FAFC",
+  primary: "#006175",
+  primaryText: "#FFFFFF",
+  successBg: "#F1F5F9",
 };
 
 function isEmail(v: string) {
@@ -79,12 +78,12 @@ function normalizeToken(v: string) {
   return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
-function normalizeCEP(v: string) {
-  return onlyDigits(v).slice(0, 8);
-}
-
 function normalizeUF(v: string) {
   return String(v ?? "").trim().toUpperCase().slice(0, 2);
+}
+
+function normalizeCEP(v: string) {
+  return onlyDigits(v).slice(0, 8);
 }
 
 function maskCNPJ(digits: string) {
@@ -664,8 +663,8 @@ export function RegisterSalonScreen() {
     : step === 1
     ? "Próximo"
     : inCooldown
-    ? `Tente novamente em ${formatLeft(left)}`
-    : "Criar conta";
+    ? `Aguarde ${formatLeft(left)}`
+    : "Criar minha conta";
 
   return (
     <Screen style={{ backgroundColor: COLORS.bg }}>
@@ -685,20 +684,14 @@ export function RegisterSalonScreen() {
                 style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
               >
                 <Ionicons name="chevron-back" size={18} color={COLORS.text} />
-                <Text style={styles.backText}>Back</Text>
+                <Text style={styles.backText}>Voltar</Text>
               </Pressable>
-
-              <Text numberOfLines={1} style={styles.navTitle}>
-                Criar conta
-              </Text>
 
               <View style={styles.navRight}>
                 <Text style={styles.stepBadge}>{step}/2</Text>
               </View>
             </View>
           </View>
-
-          <View style={styles.hairline} />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -711,18 +704,26 @@ export function RegisterSalonScreen() {
           >
             <Container>
               <View style={styles.header}>
-                <Text style={styles.h1}>Salão</Text>
+                <View style={styles.logoContainer}>
+                  <View style={styles.logoTextWrapper}>
+                    <Text style={styles.logoText}>KeyFi</Text>
+                    <Text style={styles.logoSubText}>Salão</Text>
+                  </View>
+                </View>
+                <Text style={styles.h1}>
+                  {step === 1 ? "Dados do Responsável" : "Dados do Salão"}
+                </Text>
                 <Text style={styles.sub}>
-                  Preencha os dados abaixo para criar sua conta
+                  {step === 1 
+                    ? "Comece preenchendo as informações de quem gerenciará a conta." 
+                    : "Agora, informe os dados oficiais do seu estabelecimento."}
                 </Text>
               </View>
 
               <View style={styles.formCard}>
                 {step === 1 ? (
                   <>
-                    <Text style={styles.sectionTitle}>Responsável</Text>
-
-                    <FieldLabel icon="person-outline" label="Nome do responsável" />
+                    <FieldLabel icon="person-outline" label="Nome completo" />
                     <InputRow
                       inputRef={ownerNameRef}
                       value={ownerName}
@@ -732,7 +733,7 @@ export function RegisterSalonScreen() {
                         setFocused((s) => ({ ...s, ownerName: false }));
                         setTouched((s) => ({ ...s, ownerName: true }));
                       }}
-                      placeholder="Nome completo"
+                      placeholder="Ex: Maria Oliveira"
                       error={showOwnerNameErr}
                       focused={focused.ownerName}
                       returnKeyType="next"
@@ -743,7 +744,7 @@ export function RegisterSalonScreen() {
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="mail-outline" label="Email" />
+                    <FieldLabel icon="mail-outline" label="Email de acesso" />
                     <InputRow
                       inputRef={ownerEmailRef}
                       value={ownerEmail}
@@ -753,7 +754,7 @@ export function RegisterSalonScreen() {
                         setFocused((s) => ({ ...s, ownerEmail: false }));
                         setTouched((s) => ({ ...s, ownerEmail: true }));
                       }}
-                      placeholder="email@exemplo.com"
+                      placeholder="seuemail@exemplo.com"
                       error={showOwnerEmailErr}
                       focused={focused.ownerEmail}
                       keyboardType="email-address"
@@ -768,7 +769,7 @@ export function RegisterSalonScreen() {
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="lock-closed-outline" label="Senha" />
+                    <FieldLabel icon="lock-closed-outline" label="Crie sua senha" />
                     <InputRow
                       inputRef={ownerPasswordRef}
                       value={ownerPassword}
@@ -778,7 +779,7 @@ export function RegisterSalonScreen() {
                         setFocused((s) => ({ ...s, ownerPassword: false }));
                         setTouched((s) => ({ ...s, ownerPassword: true }));
                       }}
-                      placeholder="Crie uma senha"
+                      placeholder="Mínimo 8 caracteres"
                       error={showOwnerPassErr}
                       focused={focused.ownerPassword}
                       autoCapitalize="none"
@@ -796,7 +797,7 @@ export function RegisterSalonScreen() {
                         >
                           <Ionicons
                             name={ownerSecure ? "eye-outline" : "eye-off-outline"}
-                            size={18}
+                            size={20}
                             color={COLORS.sub}
                           />
                         </Pressable>
@@ -806,53 +807,7 @@ export function RegisterSalonScreen() {
                   </>
                 ) : (
                   <>
-                    <Text style={styles.sectionTitle}>Salão</Text>
-
-                    <FieldLabel icon="business-outline" label="Nome do salão" />
-                    <InputRow
-                      inputRef={salonNameRef}
-                      value={salonName}
-                      onChangeText={(text) => {
-                        salonNameManuallyEditedRef.current = true;
-                        setSalonName(text);
-                      }}
-                      onFocus={() => setFocused((s) => ({ ...s, salonName: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, salonName: false }));
-                        setTouched((s) => ({ ...s, salonName: true }));
-                      }}
-                      placeholder="Nome do salão"
-                      error={showSalonNameErr}
-                      focused={focused.salonName}
-                      returnKeyType="next"
-                      onSubmitEditing={() => salonEmailRef.current?.focus()}
-                    />
-                    <ErrorText show={showSalonNameErr} text="Nome muito curto." />
-
-                    <View style={styles.gap} />
-
-                    <FieldLabel icon="mail-outline" label="Email do salão" />
-                    <InputRow
-                      inputRef={salonEmailRef}
-                      value={salonEmail}
-                      onChangeText={setSalonEmail}
-                      onFocus={() => setFocused((s) => ({ ...s, salonEmail: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, salonEmail: false }));
-                        setTouched((s) => ({ ...s, salonEmail: true }));
-                      }}
-                      placeholder="salon@exemplo.com"
-                      error={showSalonEmailErr}
-                      focused={focused.salonEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                      onSubmitEditing={() => cnpjRef.current?.focus()}
-                    />
-                    <ErrorText show={showSalonEmailErr} text="Email inválido." />
-
-                    <View style={styles.gap} />
+                    <Text style={styles.sectionTitle}>Identificação</Text>
 
                     <FieldLabel icon="briefcase-outline" label="CNPJ" />
                     <InputRow
@@ -869,26 +824,70 @@ export function RegisterSalonScreen() {
                       focused={focused.cnpj}
                       keyboardType="numeric"
                       returnKeyType="next"
-                      onSubmitEditing={() => cepRef.current?.focus()}
+                      onSubmitEditing={() => salonNameRef.current?.focus()}
                     />
                     <ErrorText show={showCnpjErr} text="CNPJ inválido." />
 
                     {companyInfo ? (
-                      <>
-                        <View style={styles.gap} />
-                        <View style={styles.infoCard}>
-                          <Text style={styles.infoCardTitle}>Dados encontrados</Text>
-                          <InfoItem label="Razão social" value={companyInfo.companyName} />
-                          <InfoItem label="Nome fantasia" value={companyInfo.tradeName} />
-                          <InfoItem label="Status" value={companyInfo.status} />
-                          <InfoItem label="CNAE principal" value={companyInfo.cnae} />
-                          <Text style={styles.infoHelp}>
-                            Se o nome do salão ou endereço vierem errados, você pode ajustar
-                            manualmente abaixo.
-                          </Text>
+                      <View style={styles.infoCard}>
+                        <View style={styles.infoTitleRow}>
+                           <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
+                           <Text style={styles.infoCardTitle}>Empresa identificada</Text>
                         </View>
-                      </>
+                        <InfoItem label="Razão social" value={companyInfo.companyName} />
+                        <InfoItem label="Nome fantasia" value={companyInfo.tradeName} />
+                        <InfoItem label="Status" value={companyInfo.status} />
+                        <Text style={styles.infoHelp}>
+                          Endereço e nome abaixo foram preenchidos automaticamente. Ajuste se necessário.
+                        </Text>
+                      </View>
                     ) : null}
+
+                    <View style={styles.gap} />
+
+                    <FieldLabel icon="business-outline" label="Nome do salão" />
+                    <InputRow
+                      inputRef={salonNameRef}
+                      value={salonName}
+                      onChangeText={(text) => {
+                        salonNameManuallyEditedRef.current = true;
+                        setSalonName(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, salonName: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, salonName: false }));
+                        setTouched((s) => ({ ...s, salonName: true }));
+                      }}
+                      placeholder="Nome fantasia ou Comercial"
+                      error={showSalonNameErr}
+                      focused={focused.salonName}
+                      returnKeyType="next"
+                      onSubmitEditing={() => salonEmailRef.current?.focus()}
+                    />
+                    <ErrorText show={showSalonNameErr} text="Nome muito curto." />
+
+                    <View style={styles.gap} />
+
+                    <FieldLabel icon="mail-outline" label="Email de contato (Salão)" />
+                    <InputRow
+                      inputRef={salonEmailRef}
+                      value={salonEmail}
+                      onChangeText={setSalonEmail}
+                      onFocus={() => setFocused((s) => ({ ...s, salonEmail: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, salonEmail: false }));
+                        setTouched((s) => ({ ...s, salonEmail: true }));
+                      }}
+                      placeholder="contato@salao.com"
+                      error={showSalonEmailErr}
+                      focused={focused.salonEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      returnKeyType="next"
+                      onSubmitEditing={() => cepRef.current?.focus()}
+                    />
+                    <ErrorText show={showSalonEmailErr} text="Email inválido." />
 
                     <View style={styles.divider} />
 
@@ -915,7 +914,7 @@ export function RegisterSalonScreen() {
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="map-outline" label="Rua" />
+                    <FieldLabel icon="map-outline" label="Logradouro" />
                     <InputRow
                       inputRef={streetRef}
                       value={street}
@@ -928,7 +927,7 @@ export function RegisterSalonScreen() {
                         setFocused((s) => ({ ...s, street: false }));
                         setTouched((s) => ({ ...s, street: true }));
                       }}
-                      placeholder="Rua / Avenida"
+                      placeholder="Rua, Avenida, Travessa..."
                       error={showStreetErr}
                       focused={focused.street}
                       returnKeyType="next"
@@ -936,99 +935,100 @@ export function RegisterSalonScreen() {
                     />
                     <ErrorText show={showStreetErr} text="Rua muito curta." />
 
-                    <View style={styles.gap} />
-
-                    <FieldLabel icon="pin-outline" label="Número" />
-                    <InputRow
-                      inputRef={numberRef}
-                      value={number}
-                      onChangeText={(text) => {
-                        markAddressEdited();
-                        setNumber(text);
-                      }}
-                      onFocus={() => setFocused((s) => ({ ...s, number: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, number: false }));
-                        setTouched((s) => ({ ...s, number: true }));
-                      }}
-                      placeholder="Número"
-                      error={showNumberErr}
-                      focused={focused.number}
-                      returnKeyType="next"
-                      onSubmitEditing={() => districtRef.current?.focus()}
-                    />
-                    <ErrorText show={showNumberErr} text="Informe o número." />
-
-                    <View style={styles.gap} />
-
-                    <FieldLabel icon="home-outline" label="Bairro" />
-                    <InputRow
-                      inputRef={districtRef}
-                      value={district}
-                      onChangeText={(text) => {
-                        markAddressEdited();
-                        setDistrict(text);
-                      }}
-                      onFocus={() => setFocused((s) => ({ ...s, district: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, district: false }));
-                        setTouched((s) => ({ ...s, district: true }));
-                      }}
-                      placeholder="Bairro"
-                      error={showDistrictErr}
-                      focused={focused.district}
-                      returnKeyType="next"
-                      onSubmitEditing={() => cityRef.current?.focus()}
-                    />
-                    <ErrorText show={showDistrictErr} text="Bairro muito curto." />
-
-                    <View style={styles.gap} />
-
-                    <FieldLabel icon="business-outline" label="Cidade" />
-                    <InputRow
-                      inputRef={cityRef}
-                      value={city}
-                      onChangeText={(text) => {
-                        markAddressEdited();
-                        setCity(text);
-                      }}
-                      onFocus={() => setFocused((s) => ({ ...s, city: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, city: false }));
-                        setTouched((s) => ({ ...s, city: true }));
-                      }}
-                      placeholder="Cidade"
-                      error={showCityErr}
-                      focused={focused.city}
-                      returnKeyType="next"
-                      onSubmitEditing={() => stateRef.current?.focus()}
-                    />
-                    <ErrorText show={showCityErr} text="Cidade muito curta." />
+                    <View style={styles.row}>
+                      <View style={{ flex: 1 }}>
+                        <FieldLabel icon="pin-outline" label="Número" />
+                        <InputRow
+                          inputRef={numberRef}
+                          value={number}
+                          onChangeText={(text) => {
+                            markAddressEdited();
+                            setNumber(text);
+                          }}
+                          onFocus={() => setFocused((s) => ({ ...s, number: true }))}
+                          onBlur={() => {
+                            setFocused((s) => ({ ...s, number: false }));
+                            setTouched((s) => ({ ...s, number: true }));
+                          }}
+                          placeholder="Ex: 123"
+                          error={showNumberErr}
+                          focused={focused.number}
+                          returnKeyType="next"
+                          onSubmitEditing={() => districtRef.current?.focus()}
+                        />
+                      </View>
+                      <View style={{ width: 12 }} />
+                      <View style={{ flex: 1 }}>
+                         <FieldLabel icon="home-outline" label="Bairro" />
+                         <InputRow
+                            inputRef={districtRef}
+                            value={district}
+                            onChangeText={(text) => {
+                                markAddressEdited();
+                                setDistrict(text);
+                            }}
+                            onFocus={() => setFocused((s) => ({ ...s, district: true }))}
+                            onBlur={() => {
+                                setFocused((s) => ({ ...s, district: false }));
+                                setTouched((s) => ({ ...s, district: true }));
+                            }}
+                            placeholder="Bairro"
+                            error={showDistrictErr}
+                            focused={focused.district}
+                            returnKeyType="next"
+                            onSubmitEditing={() => cityRef.current?.focus()}
+                            />
+                      </View>
+                    </View>
 
                     <View style={styles.gap} />
 
-                    <FieldLabel icon="flag-outline" label="UF" />
-                    <InputRow
-                      inputRef={stateRef}
-                      value={state}
-                      onChangeText={(text) => {
-                        markAddressEdited();
-                        setState(normalizeUF(text));
-                      }}
-                      onFocus={() => setFocused((s) => ({ ...s, state: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, state: false }));
-                        setTouched((s) => ({ ...s, state: true }));
-                      }}
-                      placeholder="UF"
-                      error={showStateErr}
-                      focused={focused.state}
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                      onSubmitEditing={() => complementRef.current?.focus()}
-                    />
-                    <ErrorText show={showStateErr} text="UF inválida." />
+                    <View style={styles.row}>
+                       <View style={{ flex: 2 }}>
+                          <FieldLabel icon="business-outline" label="Cidade" />
+                          <InputRow
+                            inputRef={cityRef}
+                            value={city}
+                            onChangeText={(text) => {
+                                markAddressEdited();
+                                setCity(text);
+                            }}
+                            onFocus={() => setFocused((s) => ({ ...s, city: true }))}
+                            onBlur={() => {
+                                setFocused((s) => ({ ...s, city: false }));
+                                setTouched((s) => ({ ...s, city: true }));
+                            }}
+                            placeholder="Cidade"
+                            error={showCityErr}
+                            focused={focused.city}
+                            returnKeyType="next"
+                            onSubmitEditing={() => stateRef.current?.focus()}
+                            />
+                       </View>
+                       <View style={{ width: 12 }} />
+                       <View style={{ flex: 1 }}>
+                          <FieldLabel icon="flag-outline" label="UF" />
+                          <InputRow
+                            inputRef={stateRef}
+                            value={state}
+                            onChangeText={(text) => {
+                                markAddressEdited();
+                                setState(normalizeUF(text));
+                            }}
+                            onFocus={() => setFocused((s) => ({ ...s, state: true }))}
+                            onBlur={() => {
+                                setFocused((s) => ({ ...s, state: false }));
+                                setTouched((s) => ({ ...s, state: true }));
+                            }}
+                            placeholder="UF"
+                            error={showStateErr}
+                            focused={focused.state}
+                            autoCapitalize="characters"
+                            returnKeyType="next"
+                            onSubmitEditing={() => complementRef.current?.focus()}
+                            />
+                       </View>
+                    </View>
 
                     <View style={styles.gap} />
 
@@ -1045,7 +1045,7 @@ export function RegisterSalonScreen() {
                         setFocused((s) => ({ ...s, complement: false }));
                         setTouched((s) => ({ ...s, complement: true }));
                       }}
-                      placeholder="Complemento (opcional)"
+                      placeholder="Bloco, apto, sala... (opcional)"
                       focused={focused.complement}
                       returnKeyType="next"
                       onSubmitEditing={() => referralRef.current?.focus()}
@@ -1053,9 +1053,7 @@ export function RegisterSalonScreen() {
 
                     <View style={styles.divider} />
 
-                    <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Indicação</Text>
-
-                    <FieldLabel icon="gift-outline" label="Código de indicação" />
+                    <FieldLabel icon="gift-outline" label="Código de Indicação" />
                     <InputRow
                       inputRef={referralRef}
                       value={referralToken}
@@ -1067,15 +1065,10 @@ export function RegisterSalonScreen() {
                       }}
                       placeholder="Opcional"
                       autoCapitalize="characters"
-                      autoCorrect={false}
                       error={showTokenErr}
                       focused={focused.referralToken}
                       returnKeyType="done"
                       onSubmitEditing={submit}
-                    />
-                    <ErrorText
-                      show={showTokenErr}
-                      text="Código inválido. Use 8 caracteres válidos."
                     />
                   </>
                 )}
@@ -1099,18 +1092,15 @@ export function RegisterSalonScreen() {
                 pressed && !ctaDisabled && styles.btnPressed,
               ]}
             >
-              <LinearGradient
-                colors={[COLORS.primaryA, COLORS.primaryB]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
               <Text style={styles.btnText}>{ctaText}</Text>
+              {!loading && !inCooldown && (
+                 <Ionicons name="arrow-forward" size={20} color={COLORS.primaryText} style={styles.btnIcon} />
+              )}
             </Pressable>
 
             <View style={styles.bottomLine}>
               <Text style={styles.bottomText}>Já tem conta? </Text>
-              <Pressable onPress={goLogin} hitSlop={10}>
+              <Pressable onPress={goLogin} hitSlop={10} style={({ pressed }) => pressed && styles.pressed}>
                 <Text style={styles.bottomLink}>Entrar</Text>
               </Pressable>
             </View>
@@ -1132,7 +1122,7 @@ const styles = StyleSheet.create({
   navbar: {
     backgroundColor: COLORS.bg,
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
 
   navRow: {
@@ -1143,118 +1133,129 @@ const styles = StyleSheet.create({
   },
 
   backBtn: {
-    minWidth: 64,
-    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
   },
 
   backText: {
     marginLeft: 2,
-    fontSize: 13,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-
-  navTitle: {
-    flex: 1,
-    textAlign: "center",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
     color: COLORS.text,
-    letterSpacing: -0.2,
   },
 
   navRight: {
-    width: 64,
-    minHeight: 40,
-    alignItems: "flex-end",
     justifyContent: "center",
   },
 
   stepBadge: {
-    minWidth: 40,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     height: 28,
-    borderRadius: 999,
-    backgroundColor: COLORS.inputBg,
-    color: COLORS.text,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "900",
     textAlign: "center",
-    textAlignVertical: "center",
-    overflow: "hidden",
-    includeFontPadding: false,
     lineHeight: 28,
-  },
-
-  hairline: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.border,
+    overflow: "hidden",
   },
 
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 40,
   },
 
   header: {
     alignItems: "center",
     paddingTop: 18,
-    paddingBottom: 14,
+    paddingBottom: 20,
+  },
+
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  logoIcon: {
+    marginRight: 8,
+  },
+
+  logoTextWrapper: {
+    alignItems: "flex-start",
+  },
+
+  logoText: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#1E293B",
+    letterSpacing: -0.5,
+    lineHeight: 26,
+  },
+
+  logoSubText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+    letterSpacing: 0.5,
   },
 
   h1: {
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: "900",
-    letterSpacing: -0.7,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.5,
     color: COLORS.text,
+    textAlign: "center",
   },
 
   sub: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: COLORS.sub,
     textAlign: "center",
+    paddingHorizontal: 20,
+    lineHeight: 20,
   },
 
   formCard: {
     backgroundColor: COLORS.card,
     borderRadius: 20,
-    paddingTop: 4,
-    paddingBottom: 8,
   },
 
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "900",
+    fontSize: 15,
+    fontWeight: "800",
     color: COLORS.text,
     marginTop: 8,
-    marginBottom: 6,
+    marginBottom: 12,
     letterSpacing: -0.2,
   },
 
   divider: {
     height: 1,
     backgroundColor: COLORS.border,
+    marginVertical: 24,
+  },
+
+  row: {
+    flexDirection: "row",
     marginTop: 16,
-    marginBottom: 2,
   },
 
   fieldLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 8,
+    gap: 6,
+    marginTop: 12,
     marginBottom: 7,
   },
 
   label: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     color: COLORS.text,
-    letterSpacing: -0.1,
   },
 
   inputWrap: {
@@ -1263,9 +1264,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    minHeight: 50,
+    minHeight: 52,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
 
   inputWrapFocused: {
@@ -1279,17 +1285,16 @@ const styles = StyleSheet.create({
   },
 
   inputWrapReadonly: {
-    opacity: 0.72,
+    opacity: 0.6,
   },
 
   input: {
     flex: 1,
-    height: 50,
+    height: 52,
     fontSize: 15,
     color: COLORS.text,
     paddingVertical: 0,
     backgroundColor: "transparent",
-    includeFontPadding: false,
     textAlignVertical: "center",
   },
 
@@ -1315,32 +1320,40 @@ const styles = StyleSheet.create({
   },
 
   gap: {
-    height: 10,
+    height: 4,
   },
 
   infoCard: {
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.successBg,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+  },
+
+  infoTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
   },
 
   infoCardTitle: {
     color: COLORS.text,
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: "800",
   },
 
   infoItem: {
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   infoLabel: {
     color: COLORS.sub,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    textTransform: "uppercase",
     marginBottom: 2,
   },
 
@@ -1351,16 +1364,15 @@ const styles = StyleSheet.create({
   },
 
   infoHelp: {
-    marginTop: 8,
+    marginTop: 4,
     color: COLORS.sub,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    fontStyle: "italic",
+    lineHeight: 16,
   },
 
   cta: {
     backgroundColor: COLORS.bg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingHorizontal: 16,
     paddingTop: 10,
   },
@@ -1370,51 +1382,58 @@ const styles = StyleSheet.create({
   },
 
   btn: {
-    height: 52,
-    borderRadius: 16,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
     elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 5 },
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    marginBottom: 16,
   },
 
   btnDisabled: {
     opacity: 0.55,
+    elevation: 0,
+    shadowOpacity: 0,
   },
 
   btnPressed: {
-    opacity: 0.94,
+    opacity: 0.92,
     transform: [{ scale: 0.995 }],
   },
 
   btnText: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "800",
     color: "#FFFFFF",
-    letterSpacing: -0.2,
+  },
+
+  btnIcon: {
+    marginLeft: 8,
   },
 
   bottomLine: {
-    marginTop: 10,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 8,
   },
 
   bottomText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
     color: COLORS.sub,
   },
 
   bottomLink: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: COLORS.primaryA,
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.primary,
   },
 
   pressed: {

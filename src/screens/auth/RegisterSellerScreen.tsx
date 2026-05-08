@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { cnpj as cnpjValidator } from "cpf-cnpj-validator";
 
-import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 import { Screen } from "../../ui/components/Screen";
@@ -30,21 +29,21 @@ import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
 
 const COLORS = {
-  bg: "#FFFFFF",
-  card: "#FFFFFF",
+  bg: "#FAFAFA",
+  card: "#FAFAFA",
   text: "#0F172A",
-  sub: "#64748B",
+  sub: "#475569",
   placeholder: "#94A3B8",
   border: "#E2E8F0",
   borderStrong: "#CBD5E1",
-  focus: "#2E6BFF",
-  inputBg: "#F8FAFC",
-  inputBgFocus: "#FFFFFF",
+  focus: "#006175",
+  inputBg: "#FFFFFF",
+  inputBgFocus: "#F0FDF4",
   error: "#DC2626",
   errorBorder: "#FCA5A5",
   errorBg: "#FFF7F7",
-  primaryA: "#2E6BFF",
-  primaryB: "#1F4FDB",
+  primary: "#006175", // Azul Petróleo da KeyFi
+  primaryText: "#FFFFFF",
 };
 
 function isEmail(v: string) {
@@ -90,9 +89,9 @@ export function RegisterSellerScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-const login = useAuthStore((s) => s.login);
-const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
-const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+  const login = useAuthStore((s) => s.login);
+  const queueBiometricSetup = useAuthStore((s) => s.queueBiometricSetup);
+  const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
   function showModal(title: string, message: string) {
@@ -216,11 +215,11 @@ const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
         cnpj: cnpjDigits,
       });
 
-const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = email.trim().toLowerCase();
 
-await login(normalizedEmail, password);
-setNeedsOnboarding(false);
-await queueBiometricSetup(normalizedEmail);
+      await login(normalizedEmail, password);
+      setNeedsOnboarding(false);
+      await queueBiometricSetup(normalizedEmail);
     } catch (e: any) {
       handleCooldownFromError(e);
 
@@ -249,8 +248,8 @@ await queueBiometricSetup(normalizedEmail);
   const btnText = loading
     ? "Criando..."
     : inCooldown
-    ? `Tente novamente em ${formatLeft(left)}`
-    : "Criar conta";
+    ? `Aguarde ${formatLeft(left)}`
+    : "Criar minha conta";
 
   return (
     <Screen style={{ backgroundColor: COLORS.bg }}>
@@ -270,18 +269,10 @@ await queueBiometricSetup(normalizedEmail);
                 style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
               >
                 <Ionicons name="chevron-back" size={18} color={COLORS.text} />
-                <Text style={styles.backText}>Back</Text>
+                <Text style={styles.backText}>Voltar</Text>
               </Pressable>
-
-              <Text numberOfLines={1} style={styles.navTitle}>
-                Criar conta
-              </Text>
-
-              <View style={styles.navSideSpacer} />
             </View>
           </View>
-
-          <View style={styles.hairline} />
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -294,8 +285,16 @@ await queueBiometricSetup(normalizedEmail);
           >
             <Container>
               <View style={styles.header}>
-                <Text style={styles.h1}>Seller</Text>
-                <Text style={styles.sub}>Crie sua conta para começar</Text>
+                <View style={styles.logoContainer}>
+                  <View style={styles.logoTextWrapper}>
+                    <Text style={styles.logoText}>KeyFi</Text>
+                    <Text style={styles.logoSubText}>Vendedor</Text>
+                  </View>
+                </View>
+                <Text style={styles.h1}>Seja um Vendedor KeyFi</Text>
+                <Text style={styles.sub}>
+                  Preencha seus dados abaixo para começar a indicar clientes e ganhar comissões a cada venda realizada.
+                </Text>
               </View>
 
               <View style={styles.formCard}>
@@ -315,7 +314,7 @@ await queueBiometricSetup(normalizedEmail);
                       setFocused((s) => ({ ...s, name: false }));
                       setTouched((s) => ({ ...s, name: true }));
                     }}
-                    placeholder="Nome completo"
+                    placeholder="Ex: João Silva"
                     placeholderTextColor={COLORS.placeholder}
                     style={styles.input}
                     selectionColor={COLORS.focus}
@@ -345,7 +344,7 @@ await queueBiometricSetup(normalizedEmail);
                       setFocused((s) => ({ ...s, email: false }));
                       setTouched((s) => ({ ...s, email: true }));
                     }}
-                    placeholder="email@exemplo.com"
+                    placeholder="vendedor@keyfi.com"
                     placeholderTextColor={COLORS.placeholder}
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -379,7 +378,7 @@ await queueBiometricSetup(normalizedEmail);
                       setFocused((s) => ({ ...s, password: false }));
                       setTouched((s) => ({ ...s, password: true }));
                     }}
-                    placeholder="Crie uma senha"
+                    placeholder="Crie uma senha forte (min. 8 chars)"
                     placeholderTextColor={COLORS.placeholder}
                     secureTextEntry={secure}
                     autoCapitalize="none"
@@ -399,7 +398,7 @@ await queueBiometricSetup(normalizedEmail);
                   >
                     <Ionicons
                       name={secure ? "eye-outline" : "eye-off-outline"}
-                      size={18}
+                      size={20}
                       color={COLORS.sub}
                     />
                   </Pressable>
@@ -424,7 +423,7 @@ await queueBiometricSetup(normalizedEmail);
                       setFocused((s) => ({ ...s, cnpj: false }));
                       setTouched((s) => ({ ...s, cnpj: true }));
                     }}
-                    placeholder="00.000.000/0000-00"
+                    placeholder="12.345.678/0001-90"
                     placeholderTextColor={COLORS.placeholder}
                     keyboardType="numeric"
                     style={styles.input}
@@ -495,13 +494,10 @@ await queueBiometricSetup(normalizedEmail);
                 pressed && can ? styles.btnPressed : null,
               ]}
             >
-              <LinearGradient
-                colors={[COLORS.primaryA, COLORS.primaryB]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={StyleSheet.absoluteFillObject}
-              />
               <Text style={styles.btnText}>{btnText}</Text>
+              {!loading && !inCooldown && (
+                 <Ionicons name="arrow-forward" size={20} color={COLORS.primaryText} style={styles.btnIcon} />
+              )}
             </Pressable>
 
             {!keyboardOpen ? (
@@ -537,40 +533,18 @@ const styles = StyleSheet.create({
     minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
 
   backBtn: {
-    width: 78,
-    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
   },
 
   backText: {
     marginLeft: 2,
-    fontSize: 13,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-
-  navTitle: {
-    flex: 1,
-    textAlign: "center",
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "700",
     color: COLORS.text,
-    letterSpacing: -0.2,
-  },
-
-  navSideSpacer: {
-    width: 78,
-    minHeight: 40,
-  },
-
-  hairline: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.border,
   },
 
   scrollContent: {
@@ -580,23 +554,54 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     paddingTop: 18,
-    paddingBottom: 14,
+    paddingBottom: 24,
+  },
+
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  logoIcon: {
+    marginRight: 8,
+  },
+
+  logoTextWrapper: {
+    alignItems: "flex-start",
+  },
+
+  logoText: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#1E293B",
+    letterSpacing: -0.5,
+    lineHeight: 26,
+  },
+
+  logoSubText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+    letterSpacing: 0.5,
   },
 
   h1: {
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: "900",
-    letterSpacing: -0.7,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.5,
     color: COLORS.text,
+    textAlign: "center",
   },
 
   sub: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
     color: COLORS.sub,
     textAlign: "center",
+    paddingHorizontal: 10,
+    lineHeight: 20,
   },
 
   formCard: {
@@ -609,14 +614,14 @@ const styles = StyleSheet.create({
   fieldLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginTop: 8,
     marginBottom: 7,
   },
 
   label: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: "700",
     color: COLORS.text,
     letterSpacing: -0.1,
   },
@@ -627,9 +632,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    minHeight: 50,
+    minHeight: 52,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
 
   inputWrapFocused: {
@@ -644,7 +654,7 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    height: 50,
+    height: 52,
     fontSize: 15,
     color: COLORS.text,
     paddingVertical: 0,
@@ -675,38 +685,38 @@ const styles = StyleSheet.create({
   },
 
   gap: {
-    height: 10,
+    height: 16,
   },
 
   termsGap: {
-    height: 16,
+    height: 24,
   },
 
   termsRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
   },
 
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 1,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1.5,
     borderColor: COLORS.borderStrong,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
+    marginTop: -2,
   },
 
   checkboxOn: {
-    borderColor: COLORS.primaryA,
-    backgroundColor: COLORS.primaryA,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
   },
 
   checkboxError: {
-    borderColor: COLORS.errorBorder,
+    borderColor: COLORS.error,
   },
 
   termsText: {
@@ -717,14 +727,12 @@ const styles = StyleSheet.create({
   },
 
   termsLink: {
-    color: COLORS.primaryA,
-    fontWeight: "800",
+    color: COLORS.primary,
+    fontWeight: "700",
   },
 
   cta: {
     backgroundColor: COLORS.bg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingHorizontal: 16,
     paddingTop: 10,
   },
@@ -734,51 +742,58 @@ const styles = StyleSheet.create({
   },
 
   btn: {
-    height: 52,
-    borderRadius: 16,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
     elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.10,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 5 },
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    marginBottom: 16,
   },
 
   btnDisabled: {
     opacity: 0.55,
+    elevation: 0,
+    shadowOpacity: 0,
   },
 
   btnPressed: {
-    opacity: 0.94,
+    opacity: 0.92,
     transform: [{ scale: 0.995 }],
   },
 
   btnText: {
     fontSize: 16,
-    fontWeight: "900",
+    fontWeight: "800",
     color: "#FFFFFF",
-    letterSpacing: -0.2,
+  },
+
+  btnIcon: {
+    marginLeft: 8,
   },
 
   bottomLine: {
-    marginTop: 10,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 8,
   },
 
   bottomText: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "500",
     color: COLORS.sub,
   },
 
   bottomLink: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: COLORS.primaryA,
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.primary,
   },
 
   pressed: {

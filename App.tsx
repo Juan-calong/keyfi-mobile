@@ -17,7 +17,13 @@ import {
   handleInitialPushOpen,
   registerPushTokenWithBackend,
 } from "./src/core/push/push.service";
-import { handleNotificationClick, normalizePayload } from "./src/core/notifications/notification-actions";
+import {
+  clearPendingNotificationAction,
+  handleNotificationClick,
+  loadPendingNotificationAction,
+  normalizePayload,
+  savePendingNotificationAction,
+} from "./src/core/notifications/notification-actions";
 import { CUSTOMER_SCREENS } from "./src/navigation/customer.routes";
 import {
   parseInviteFromUrl,
@@ -53,13 +59,13 @@ async function handleInviteUrl(url: string) {
 
     await savePendingInvite(invite);
 
-if (hydrated && token) {
-  try {
-    await applyPendingInvite();
-  } catch {
-    // Falha ao aplicar convite não deve bloquear abertura do app.
-  }
-}
+    if (hydrated && token) {
+      try {
+        await applyPendingInvite();
+      } catch {
+        // Falha ao aplicar convite não deve bloquear abertura do app.
+      }
+    }
 }
 
   queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -72,26 +78,41 @@ export default function App() {
   const role = useAuthStore((s) => s.activeRole);
 
   const navigateFromNotification = React.useCallback((screen: string, params?: any) => {
-  if (!navigationRef.isReady()) return false;
+    if (!navigationRef.isReady()) return false;
 
-  navigationRef.dispatch(
-    CommonActions.navigate({
-      name: screen,
-      params,
-    })
-  );
+    navigationRef.dispatch(
+      CommonActions.navigate({
+        name: screen,
+        params,
+      })
+    );
 
-  return true;
-}, []);
+    return true;
+  }, []);
 
   useEffect(() => {
     useAuthStore.getState().hydrate();
   }, []);
 
+    const processPendingNotificationAfterAuth = React.useCallback(async () => {
+    if (!hydrated || !token || !navigationRef.isReady()) return;
+
+    const pendingAction = await loadPendingNotificationAction();
+    if (!pendingAction) return;
+
+    const handled = handleNotificationClick({ data: pendingAction }, navigateFromNotification);
+
+    if (!handled) {
+      navigateFromNotification(CUSTOMER_SCREENS.Notifications);
+    }
+
+    await clearPendingNotificationAction();
+  }, [hydrated, navigateFromNotification, token]);
+
   useEffect(() => {
     Airbridge.setOnDeeplinkReceived((url) => {
       handleInviteUrl(url).catch(() => {
-       // Falha no deeplink não deve bloquear o app.
+        // Falha no deeplink não deve bloquear o app.
       });
     });
 
@@ -113,22 +134,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !token) return;
+    if (!hydrated) return;
 
-registerPushTokenWithBackend().catch(() => {
-  // Falha ao registrar push token não deve bloquear sessão.
-});
-
-applyPendingInvite().catch(() => {
-  // Falha ao aplicar convite pendente não deve bloquear sessão.
-});
-
-    const unsubTokenRefresh = bindPushTokenRefresh();
-    const unsubForeground = bindForegroundPushListener();
-    const processPushOpen = (remoteMessage: any) => {
+    const processPushOpen = async (remoteMessage: any) => {
       console.log("[PUSH_OPEN][RECEIVED]");
       const payload = normalizePayload(remoteMessage);
       console.log("[PUSH_OPEN][DATA]", payload);
+
+        const activeToken = useAuthStore.getState().token;
+
+      if (!activeToken) {
+        await savePendingNotificationAction(remoteMessage);
+        return;
+      }
+
+      if (!navigationRef.isReady()) {
+        console.log("[PUSH_OPEN][NAV_NOT_READY_PENDING]");
+        pendingPushOpenRef.current = remoteMessage;
+        return;
+      }
 
       const handled = handleNotificationClick(remoteMessage, navigateFromNotification);
 
@@ -142,28 +166,45 @@ applyPendingInvite().catch(() => {
     };
 
     const onPushOpen = (remoteMessage: any) => {
-      if (!navigationRef.isReady()) {
-        console.log("[PUSH_OPEN][NAV_NOT_READY_PENDING]");
-        pendingPushOpenRef.current = remoteMessage;
-        return;
-      }
-      processPushOpen(remoteMessage);
+      processPushOpen(remoteMessage).catch(() => {});
     };
 
     const unsubOpen = bindPushOpenListener(onPushOpen);
     const unsubNotifeeOpen = bindNotifeePushOpenListener(onPushOpen);
 
     handleInitialPushOpen(onPushOpen).catch(() => {
-        // Falha ao processar abertura inicial por push não deve bloquear o app.
+      // Falha ao processar abertura inicial por push não deve bloquear o app.
     });
+
+    return () => {
+      unsubOpen();
+      unsubNotifeeOpen();
+    };
+      }, [hydrated, navigateFromNotification]);
+
+  useEffect(() => {
+    if (!hydrated || !token) return;
+
+    registerPushTokenWithBackend().catch(() => {
+      // Falha ao registrar push token não deve bloquear sessão.
+    });
+
+    applyPendingInvite().catch(() => {
+      // Falha ao aplicar convite pendente não deve bloquear sessão.
+    });
+
+    const unsubTokenRefresh = bindPushTokenRefresh();
+    const unsubForeground = bindForegroundPushListener();
 
     return () => {
       unsubTokenRefresh();
       unsubForeground();
-      unsubOpen();
-      unsubNotifeeOpen();
     };
   }, [hydrated, token]);
+
+    useEffect(() => {
+    processPendingNotificationAfterAuth().catch(() => {});
+  }, [processPendingNotificationAfterAuth]);
 
   if (!hydrated) {
     return (
@@ -185,17 +226,23 @@ applyPendingInvite().catch(() => {
           ref={navigationRef}
           onReady={() => {
             const pending = pendingPushOpenRef.current;
-            if (!pending) return;
-            console.log("[PUSH_OPEN][NAV_READY_PROCESS_PENDING]");
-            const handled = handleNotificationClick(pending, navigateFromNotification);
 
-            if (handled) {
-              console.log("[PUSH_OPEN][HANDLED_TRUE]");
-            } else {
-              console.log("[PUSH_OPEN][HANDLED_FALSE]");
-              navigateFromNotification(CUSTOMER_SCREENS.Notifications);
+            if (pending) {
+              const activeToken = useAuthStore.getState().token;
+
+              if (activeToken) {
+                const handled = handleNotificationClick(pending, navigateFromNotification);
+
+                if (!handled) {
+                  navigateFromNotification(CUSTOMER_SCREENS.Notifications);
+                }
+              } else {
+                savePendingNotificationAction(pending).catch(() => {});
+              }
+
+              pendingPushOpenRef.current = null;
             }
-            pendingPushOpenRef.current = null;
+            processPendingNotificationAfterAuth().catch(() => {});
           }}
         >
           <RootNavigator />

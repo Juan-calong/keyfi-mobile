@@ -54,7 +54,7 @@ export function RegisterChooseRoleScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Voltar"
         >
-          <Text style={styles.backText}>‹ Back</Text>
+          <Text style={styles.backText}>‹ Voltar</Text>
         </Pressable>
 
         <Text style={styles.navTitle} accessibilityRole="header">

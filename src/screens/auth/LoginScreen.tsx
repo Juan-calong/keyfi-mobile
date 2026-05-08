@@ -36,6 +36,7 @@ export function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [secure, setSecure] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false); // Adicionado para a UI do Lembre-se de mim
 
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
@@ -114,7 +115,7 @@ export function LoginScreen() {
   const btnText = loading
     ? "Entrando..."
     : inCooldown
-    ? `Tente novamente em ${formatLeft(left)}`
+    ? `Aguarde ${formatLeft(left)}`
     : "Entrar";
 
   async function onSubmit() {
@@ -178,26 +179,6 @@ export function LoginScreen() {
     <Screen style={{ backgroundColor: COLORS.bg }}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
 
-      <View style={[styles.navbar, { paddingTop: topPad }]}>
-        <View style={{ width: 32 }} />
-        <Text style={styles.navTitle}>Entrar</Text>
-
-        <Pressable
-          hitSlop={12}
-          onPress={() =>
-            showError({
-              title: "Ajuda",
-              message: "Coloque aqui sua tela/ação de ajuda.",
-            })
-          }
-          style={({ pressed }) => [styles.helpBtn, pressed && styles.pressed]}
-        >
-          <Text style={styles.helpIcon}>?</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.hairline} />
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -206,12 +187,15 @@ export function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: topPad + 20 }]}
         >
           <Container>
             <View style={styles.header}>
-              <Text style={styles.h1}>Bem-vindo</Text>
-              <Text style={styles.sub}>Faça login para continuar</Text>
+              <View style={styles.logoContainer}>
+                <Text style={styles.logoText}>KeyFi</Text>
+              </View>
+              <Text style={styles.h1}>Acesse sua conta</Text>
+              <Text style={styles.sub}>Faça login ou continue com sua conta social.</Text>
             </View>
 
             <View style={styles.form}>
@@ -294,20 +278,94 @@ export function LoginScreen() {
                 <Text style={styles.errorText}>Senha deve ter pelo menos 6 caracteres.</Text>
               ) : null}
 
-              <Pressable
-                onPress={onForgot}
-                hitSlop={10}
-                style={({ pressed }) => [styles.forgot, pressed && styles.pressed]}
-              >
-                <Text style={styles.forgotText}>Esqueci minha senha</Text>
-              </Pressable>
+              <View style={styles.optionsRow}>
+                <Pressable 
+                  style={styles.checkboxContainer} 
+                  onPress={() => setRememberMe(!rememberMe)}
+                  hitSlop={8}
+                >
+                  <Ionicons 
+                    name={rememberMe ? "checkmark-circle" : "ellipse-outline"} 
+                    size={22} 
+                    color={rememberMe ? COLORS.primary : COLORS.icon} 
+                  />
+                  <Text style={styles.rememberText}>Lembre-se de mim</Text>
+                </Pressable>
 
-              <View style={[styles.hairline, { marginTop: 18 }]} />
+                <Pressable
+                  onPress={onForgot}
+                  hitSlop={10}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <Text style={styles.forgotText}>Esqueci minha senha</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OU CONTINUE COM</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.socialRow}>
+                <Pressable 
+                  style={styles.socialBtn}
+                  onPress={() => showError({ title: "Google Login", message: "Fluxo social pendente" })}
+                >
+                  <Ionicons name="logo-google" size={20} color="#DB4437" />
+                  <Text style={styles.socialBtnText}>Entrar com Google</Text>
+                </Pressable>
+
+                <Pressable 
+                  style={styles.socialBtn}
+                  onPress={() => showError({ title: "Apple Login", message: "Fluxo social pendente" })}
+                >
+                  <Ionicons name="logo-apple" size={20} color="#000000" />
+                  <Text style={styles.socialBtnText}>Entrar com Apple</Text>
+                </Pressable>
+              </View>
+
             </View>
           </Container>
         </ScrollView>
 
         <View style={[styles.cta, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <Pressable
+            disabled={!can}
+            onPress={onSubmit}
+            style={({ pressed }) => [
+              styles.ctaBtn,
+              !can && styles.ctaBtnDisabled,
+              pressed && can ? styles.ctaBtnPressed : null,
+            ]}
+          >
+            <Text style={styles.ctaText}>{btnText}</Text>
+            {!loading && !inCooldown && (
+               <Ionicons name="arrow-forward" size={20} color={COLORS.primaryText} style={styles.ctaIcon} />
+            )}
+          </Pressable>
+
+          {biometricEnabled ? (
+            <Pressable
+              disabled={biometricLoading || loading}
+              onPress={onBiometricLogin}
+              style={({ pressed }) => [
+                styles.bioBtn,
+                (biometricLoading || loading) && styles.bioBtnDisabled,
+                pressed && !(biometricLoading || loading) ? styles.bioBtnPressed : null,
+              ]}
+            >
+              <Ionicons
+                name={Platform.OS === "ios" ? "scan-outline" : "finger-print-outline"}
+                size={20}
+                color={COLORS.primary}
+              />
+              <Text style={styles.bioBtnText}>
+                {biometricLoading ? "Verificando..." : "Entrar com biometria"}
+              </Text>
+            </Pressable>
+          ) : null}
+
           <Text style={styles.terms}>
             Ao continuar, você concorda com os nossos{" "}
             <Text
@@ -333,39 +391,6 @@ export function LoginScreen() {
             .
           </Text>
 
-          <Pressable
-            disabled={!can}
-            onPress={onSubmit}
-            style={({ pressed }) => [
-              styles.ctaBtn,
-              !can && styles.ctaBtnDisabled,
-              pressed && can ? styles.ctaBtnPressed : null,
-            ]}
-          >
-            <Text style={styles.ctaText}>{btnText}</Text>
-          </Pressable>
-
-          {biometricEnabled ? (
-            <Pressable
-              disabled={biometricLoading || loading}
-              onPress={onBiometricLogin}
-              style={({ pressed }) => [
-                styles.bioBtn,
-                (biometricLoading || loading) && styles.bioBtnDisabled,
-                pressed && !(biometricLoading || loading) ? styles.bioBtnPressed : null,
-              ]}
-            >
-              <Ionicons
-                name={Platform.OS === "ios" ? "scan-outline" : "finger-print-outline"}
-                size={20}
-                color={COLORS.primary}
-              />
-              <Text style={styles.bioBtnText}>
-                {biometricLoading ? "Verificando..." : "Entrar com biometria"}
-              </Text>
-            </Pressable>
-          ) : null}
-
           <View style={styles.bottomLine}>
             <Text style={styles.bottomText}>Não tem conta? </Text>
             <Pressable
@@ -389,92 +414,62 @@ export function LoginScreen() {
   );
 }
 
-const HAIRLINE = StyleSheet.hairlineWidth;
-
 const COLORS = {
-  bg: "#FFFFFF",
+  bg: "#FAFAFA",
   text: "#0F172A",
   sub: "#475569",
   placeholder: "#94A3B8",
   border: "#E2E8F0",
-  borderStrong: "#94A3B8",
-  icon: "#334155",
-  primary: "#0B63F6",
+  icon: "#64748B",
+  primary: "#006175", // Azul Petróleo escuro da nova UI
   primaryText: "#FFFFFF",
-  link: "#0B63F6",
+  link: "#006175",
   danger: "#DC2626",
   inputBg: "#FFFFFF",
-  inputBgFocused: "#F8FAFC",
+  inputBgFocused: "#F0FDF4",
 };
 
 const styles = StyleSheet.create({
-  navbar: {
-    backgroundColor: COLORS.bg,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    height: 44 + 14,
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-
-  navTitle: {
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: "800",
-    letterSpacing: -0.2,
-  },
-
-  helpBtn: {
-    position: "absolute",
-    right: 16,
-    bottom: 4,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF",
-  },
-
-  helpIcon: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: "900",
-    marginTop: -1,
-  },
-
-  hairline: {
-    height: HAIRLINE,
-    backgroundColor: COLORS.border,
-  },
-
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
 
   header: {
     alignItems: "center",
-    marginTop: 18,
-    marginBottom: 18,
+    marginBottom: 28,
+  },
+
+  logoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  logoIcon: {
+    marginRight: 6,
+  },
+
+  logoText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#1E293B",
+    letterSpacing: -0.5,
   },
 
   h1: {
-    fontSize: 31,
-    lineHeight: 36,
+    fontSize: 26,
     color: COLORS.text,
-    fontWeight: "900",
+    fontWeight: "800",
     letterSpacing: -0.8,
   },
 
   sub: {
-    marginTop: 6,
+    marginTop: 8,
     fontSize: 14,
     color: COLORS.sub,
-    fontWeight: "600",
-    letterSpacing: -0.1,
+    fontWeight: "500",
+    textAlign: "center",
   },
 
   form: {
@@ -485,23 +480,29 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     fontSize: 13,
     color: COLORS.text,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: -0.1,
   },
 
   inputWrap: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 14,
-    height: 50,
+    borderRadius: 12,
+    height: 52,
     paddingHorizontal: 14,
     justifyContent: "center",
     backgroundColor: COLORS.inputBg,
+    elevation: 1, // Sombra suave para Android
+    shadowColor: "#000", // Sombras para iOS
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
 
   inputWrapFocused: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.inputBgFocused,
+    backgroundColor: COLORS.inputBg,
+    shadowOpacity: 0.1,
   },
 
   inputWrapError: {
@@ -542,50 +543,104 @@ const styles = StyleSheet.create({
   },
 
   fieldGap: {
-    height: 14,
+    height: 16,
   },
 
-  forgot: {
-    alignSelf: "flex-start",
-    marginTop: 10,
+  optionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+  },
+
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  rememberText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: "600",
   },
 
   forgotText: {
     fontSize: 13,
     color: COLORS.link,
-    fontWeight: "800",
-    letterSpacing: -0.1,
+    fontWeight: "700",
+  },
+
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 32,
+    marginBottom: 24,
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: COLORS.border,
+  },
+
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 11,
+    color: COLORS.placeholder,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  socialBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 48,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+
+  socialBtnText: {
+    marginLeft: 8,
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: "700",
   },
 
   cta: {
     backgroundColor: COLORS.bg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     paddingHorizontal: 18,
-    paddingTop: 10,
-  },
-
-  terms: {
-    textAlign: "center",
-    fontSize: 12,
-    color: COLORS.sub,
-    fontWeight: "500",
-    marginBottom: 10,
-    lineHeight: 17,
-  },
-
-  termsLink: {
-    color: COLORS.link,
-    fontWeight: "800",
+    paddingTop: 16,
   },
 
   ctaBtn: {
-    height: 52,
+    height: 54,
     borderRadius: 14,
     backgroundColor: COLORS.primary,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    marginBottom: 16,
   },
 
   ctaBtnPressed: {
@@ -595,22 +650,27 @@ const styles = StyleSheet.create({
 
   ctaBtnDisabled: {
     opacity: 0.5,
+    elevation: 0,
+    shadowOpacity: 0,
   },
 
   ctaText: {
     fontSize: 16,
     color: COLORS.primaryText,
-    fontWeight: "900",
-    letterSpacing: -0.1,
+    fontWeight: "800",
+  },
+
+  ctaIcon: {
+    marginLeft: 8,
   },
 
   bioBtn: {
-    marginTop: 10,
-    height: 52,
+    marginBottom: 16,
+    height: 54,
     borderRadius: 14,
     borderWidth: 1.2,
     borderColor: COLORS.primary,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -618,46 +678,54 @@ const styles = StyleSheet.create({
   },
 
   bioBtnPressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.995 }],
+    opacity: 0.6,
   },
 
   bioBtnDisabled: {
-    opacity: 0.6,
+    opacity: 0.4,
   },
 
   bioBtnText: {
     fontSize: 15,
     color: COLORS.primary,
-    fontWeight: "900",
-    letterSpacing: -0.1,
+    fontWeight: "800",
+  },
+
+  terms: {
+    textAlign: "center",
+    fontSize: 11,
+    color: COLORS.sub,
+    fontWeight: "500",
+    marginBottom: 16,
+    lineHeight: 16,
+  },
+
+  termsLink: {
+    color: COLORS.text,
+    fontWeight: "700",
   },
 
   bottomLine: {
-    marginTop: 12,
-    marginBottom: 2,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 8,
   },
 
   bottomText: {
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.sub,
     fontWeight: "500",
-    letterSpacing: -0.1,
   },
 
   bottomLink: {
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.link,
     fontWeight: "800",
-    letterSpacing: -0.1,
-    textDecorationLine: "underline",
   },
 
   pressed: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
 });
 
