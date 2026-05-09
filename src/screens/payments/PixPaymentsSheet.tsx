@@ -35,7 +35,15 @@ function normalizeUrl(value: any) {
   return null;
 }
 
-export function PixPaymentSheet({ envelope }: { envelope: any }) {
+export function PixPaymentSheet({
+  envelope,
+  onViewOrders,
+  viewOrdersLabel = "Ver meus pedidos",
+}: {
+  envelope: any;
+  onViewOrders?: () => void;
+  viewOrdersLabel?: string;
+}) {
   const action = envelope?.nextAction ?? {};
   const payment = envelope?.payment ?? {};
   const raw = envelope?.raw ?? envelope?.payment?.raw ?? null;
@@ -124,6 +132,8 @@ export function PixPaymentSheet({ envelope }: { envelope: any }) {
         {hasTicketUrl ? (
           <OutlineButton title="Abrir link do PIX" onPress={onOpen} />
         ) : null}
+
+      {onViewOrders ? <OutlineButton title={viewOrdersLabel} onPress={onViewOrders} /> : null}
       </View>
 
       {hasPixCode ? (

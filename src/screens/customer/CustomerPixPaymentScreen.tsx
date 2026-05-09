@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Platform, StatusBar, ScrollView, Image } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
@@ -10,6 +11,7 @@ import { Card } from "../../ui/components/Card";
 import { Button } from "../../ui/components/Button";
 import { Loading, ErrorState } from "../../ui/components/State";
 import { t } from "../../ui/tokens";
+
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
@@ -133,6 +135,17 @@ function formatCooldown(retryAfterSec?: number | null) {
 
 export function CustomerPixPaymentScreen({ route }: any) {
   const navigation = useNavigation<any>();
+
+    const insets = useSafeAreaInsets();
+
+  const onExitPayment = React.useCallback(() => {
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate(CUSTOMER_SCREENS.Orders);
+  }, [navigation]);
   const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
   const routeAmount = Number(route?.params?.amount || 0);
 
@@ -272,10 +285,13 @@ React.useEffect(() => {
 
   return (
     <Screen>
-      <Container style={{ flex: 1, paddingTop: 6 }}>
+      <Container style={{ flex: 1, paddingTop: Platform.OS === "ios" ? Math.max(insets.top, 10) : 6 }}>
         {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
         <View style={m.header}>
+            <Pressable onPress={onExitPayment} hitSlop={12} style={({ pressed }) => [m.backBtn, pressed && { opacity: 0.85 }]}>
+            <Text style={m.backTxt}>←</Text>
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Text style={m.h1}>Métodos de pagamento</Text>
             {headerSubtitle ? <Text style={m.sub}>{headerSubtitle}</Text> : null}
@@ -375,7 +391,7 @@ React.useEffect(() => {
   <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
 
   {method === "PIX" ? (
-    <PixPaymentSheet envelope={env} />
+    <PixPaymentSheet envelope={env} onViewOrders={() => navigation.navigate(CUSTOMER_SCREENS.Orders)} viewOrdersLabel="Ver meus pedidos" />
   ) : method === "BOLETO" ? (
     <BoletoPaymentSheet envelope={env} />
   ) : method === "CARD" ? (
@@ -438,6 +454,8 @@ const m = StyleSheet.create({
   header: { paddingHorizontal: 2, paddingTop: 8, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
   h1: { color: "#000000", fontSize: 28, fontWeight: "900", letterSpacing: -0.6 },
   sub: { marginTop: 8, color: "#000000", fontSize: 14, fontWeight: "600", opacity: 0.7, lineHeight: 18 },
+    backBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.18)", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+  backTxt: { color: "#000000", fontSize: 20, fontWeight: "900", marginTop: -1 },
   refreshBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.18)", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   refreshTxt: { color: "#000000", fontSize: 16, fontWeight: "800" },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.10)", width: "100%" },
