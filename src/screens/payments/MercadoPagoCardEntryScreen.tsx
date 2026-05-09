@@ -7,6 +7,9 @@ import {
   TextInput,
   View,
   ScrollView,
+  SafeAreaView,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
@@ -19,21 +22,34 @@ const onlyDigits = (v?: string) => String(v || "").replace(/\D/g, "");
 const makeNonce = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
 function buildHtml(publicKey: string, amount: number, nonce: string) {
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
   <style>
-    html,body{margin:0;padding:0;background:#fff;font-family:sans-serif}
+    html,body{margin:0;padding:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
     body{padding:8px}
-    .field-wrap{margin-bottom:10px}
-    .label{font-size:13px;color:#333;margin-bottom:4px;font-weight:600}
-    .f{border:1px solid #ddd;border-radius:8px;min-height:48px;height:48px;width:100%;background:#fff;box-sizing:border-box;overflow:hidden;position:relative}
-    .f iframe{width:100% !important;height:100% !important;border:0 !important;display:block !important}
+    .field-wrap{margin-bottom:12px}
+    .row{display:flex;gap:12px;}
+    .col{flex:1;}
+    .label{font-size:14px;color:#111;margin-bottom:6px;font-weight:700}
+    .f{border:1px solid #ddd;border-radius:10px;min-height:52px;height:52px;width:100%;background:#fff;box-sizing:border-box;overflow:hidden;position:relative}
+    .f iframe{width:100% !important;height:100% !important;border:0 !important;display:block !important;padding:0 8px !important;box-sizing:border-box}
   </style></head>
   <body><form id="form-checkout" onsubmit="return false;">
-    <div class="field-wrap"><div class="label">Número do cartão</div><div id="form-checkout__cardNumber" class="f"></div></div>
-    <div class="field-wrap"><div class="label">Validade</div><div id="form-checkout__expirationDate" class="f"></div></div>
-    <div class="field-wrap"><div class="label">CVV/CVC</div><div id="form-checkout__securityCode" class="f"></div></div>
+    <div class="field-wrap">
+      <div class="label">Número do cartão</div>
+      <div id="form-checkout__cardNumber" class="f"></div>
+    </div>
+    <div class="row">
+      <div class="field-wrap col">
+        <div class="label">Validade</div>
+        <div id="form-checkout__expirationDate" class="f"></div>
+      </div>
+      <div class="field-wrap col">
+        <div class="label">CVV/CVC</div>
+        <div id="form-checkout__securityCode" class="f"></div>
+      </div>
+    </div>
   </form>
   <script>(function(){
     var NONCE=${JSON.stringify(nonce)};
@@ -217,6 +233,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const [installments, setInstallments] = useState(1);
   const [maxInstallments, setMaxInstallments] = useState(1);
   const [availableInstallments, setAvailableInstallments] = useState<number[]>([1]);
+  const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
 
   const [pmId, setPmId] = useState<string | undefined>();
   const [issuerId, setIssuerId] = useState<string | undefined>();
@@ -245,6 +262,10 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
       orderId,
       showPaymentSuccessOnPaid: true,
     });
+
+  const formattedAmount = amount > 0 
+    ? amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "";
 
   useEffect(() => {
     (async () => {
@@ -559,180 +580,248 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
     }
   }
 
-return (
-  <Screen>
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      contentContainerStyle={s.content}
-    >
-      <Text style={s.title}>Pagamento com cartão</Text>
-      <Text style={s.subtitle}>
-        Informe os dados do titular e depois preencha os dados do cartão.
-      </Text>
-
-      {!!error && <Text style={s.error}>{error}</Text>}
-      {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
-      {!!status && <Text style={s.status}>{status}</Text>}
-
-      <View style={s.fieldGroup}>
-        <Text style={s.label}>Nome do titular</Text>
-        <TextInput
-          placeholder="Ex: João Silva"
-          placeholderTextColor="#6B7280"
-          value={name}
-          onChangeText={setName}
-          style={s.input}
-          autoCapitalize="words"
-          autoCorrect={false}
-          underlineColorAndroid="transparent"
-          returnKeyType="next"
-        />
-      </View>
-
-      <View style={s.fieldGroup}>
-        <Text style={s.label}>CPF ou CNPJ</Text>
-        <TextInput
-          placeholder="Somente números"
-          placeholderTextColor="#6B7280"
-          keyboardType="number-pad"
-          value={doc}
-          onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
-          style={s.input}
-          maxLength={14}
-          underlineColorAndroid="transparent"
-          returnKeyType="next"
-        />
-      </View>
-
-      <View style={s.fieldGroup}>
-        <Text style={s.label}>Email</Text>
-        <TextInput
-          placeholder="email@exemplo.com"
-          placeholderTextColor="#6B7280"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          style={s.input}
-          underlineColorAndroid="transparent"
-          returnKeyType="done"
-        />
-      </View>
-
-      <View style={s.installmentsRow}>
-        {availableInstallments.map((n) => (
-          <Pressable
-            key={n}
-            onPress={() => setInstallments(n)}
-            style={[s.inst, installments === n && s.instOn]}
-          >
-            <Text style={s.instText}>{n}x</Text>
+  return (
+    <Screen>
+      <SafeAreaView style={s.safeArea}>
+        <View style={s.header}>
+          <Pressable onPress={() => navigation.goBack()} style={s.backBtn}>
+            <Text style={s.backIcon}>‹</Text>
           </Pressable>
-        ))}
-      </View>
+          <Text style={s.headerTitle}>Pagamento</Text>
+          <View style={s.spacer} /> 
+        </View>
 
-      {!!html && (
-        <WebView
-          ref={webRef}
-          source={{
-            html,
-            baseUrl: "https://www.mercadopago.com.br/",
-          }}
-          originWhitelist={["*"]}
-          onMessage={onMessage}
-          javaScriptEnabled
-          domStorageEnabled
-          incognito={false}
-          setSupportMultipleWindows={false}
-          javaScriptCanOpenWindowsAutomatically={false}
-          mixedContentMode="never"
-          allowFileAccess={false}
-          style={s.webview}
-          onLoadEnd={() => setWebLoaded(true)}
-          onShouldStartLoadWithRequest={(req) => {
-            try {
-              const url = String(req.url || "");
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={s.content}
+          >
+            {!!error && <Text style={s.error}>{error}</Text>}
+            {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
+            {!!status && <Text style={s.status}>{status}</Text>}
 
-              if (url.startsWith("about:blank")) return true;
-              if (url.startsWith("data:text")) return true;
-              if (url.startsWith("blob:")) return true;
+            <Text style={s.sectionTitle}>Dados do Titular</Text>
+            
+            <View style={s.fieldGroup}>
+              <Text style={s.label}>Nome do titular</Text>
+              <TextInput
+                placeholder="Ex: João Silva"
+                placeholderTextColor="#6B7280"
+                value={name}
+                onChangeText={setName}
+                style={s.input}
+                autoCapitalize="words"
+                autoCorrect={false}
+                underlineColorAndroid="transparent"
+                returnKeyType="next"
+                autoComplete="name"
+              />
+            </View>
 
-              if (url === "https://mercadopago.com.br/") return true;
-              if (url === "https://www.mercadopago.com.br/") return true;
+            <View style={s.fieldGroup}>
+              <Text style={s.label}>CPF ou CNPJ</Text>
+              <TextInput
+                placeholder="Somente números"
+                placeholderTextColor="#6B7280"
+                keyboardType="number-pad"
+                value={doc}
+                onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
+                style={s.input}
+                maxLength={14}
+                underlineColorAndroid="transparent"
+                returnKeyType="next"
+              />
+            </View>
 
-              const host = url
-                .replace(/^https?:\/\//i, "")
-                .split("/")[0]
-                .toLowerCase();
+            <View style={s.fieldGroup}>
+              <Text style={s.label}>Email</Text>
+              <TextInput
+                placeholder="email@exemplo.com"
+                placeholderTextColor="#6B7280"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                style={s.input}
+                underlineColorAndroid="transparent"
+                returnKeyType="done"
+                autoComplete="email"
+              />
+            </View>
 
-              if (host === "sdk.mercadopago.com") return true;
+            <View style={s.divider} />
+            
+            <Text style={s.sectionTitle}>Dados do Cartão</Text>
 
-              if (host === "mercadopago.com") return true;
-              if (host.endsWith(".mercadopago.com")) return true;
+            <View style={s.fieldGroup}>
+              <Text style={s.label}>Parcelamento</Text>
+              <Pressable 
+                style={s.dropdownBtn} 
+                onPress={() => setInstallmentsExpanded(!installmentsExpanded)}
+              >
+                <Text style={s.dropdownText}>{installments}x sem juros</Text>
+                <Text style={s.dropdownIcon}>{installmentsExpanded ? "▲" : "▼"}</Text>
+              </Pressable>
 
-              if (host === "mercadopago.com.br") return true;
-              if (host.endsWith(".mercadopago.com.br")) return true;
+              {installmentsExpanded && (
+                <View style={s.dropdownList}>
+                  {availableInstallments.map((n) => (
+                    <Pressable
+                      key={n}
+                      onPress={() => {
+                        setInstallments(n);
+                        setInstallmentsExpanded(false);
+                      }}
+                      style={[s.dropdownItem, installments === n && s.dropdownItemActive]}
+                    >
+                      <Text style={[s.dropdownItemText, installments === n && s.dropdownItemTextActive]}>
+                        {n}x sem juros
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
 
-              if (host === "mercadolibre.com") return true;
-              if (host.endsWith(".mercadolibre.com")) return true;
+            {!!html && (
+              <WebView
+                ref={webRef}
+                source={{
+                  html,
+                  baseUrl: "https://www.mercadopago.com.br/",
+                }}
+                originWhitelist={["*"]}
+                onMessage={onMessage}
+                javaScriptEnabled
+                domStorageEnabled
+                incognito={false}
+                setSupportMultipleWindows={false}
+                javaScriptCanOpenWindowsAutomatically={false}
+                mixedContentMode="never"
+                allowFileAccess={false}
+                style={s.webview}
+                onLoadEnd={() => setWebLoaded(true)}
+                onShouldStartLoadWithRequest={(req) => {
+                  try {
+                    const url = String(req.url || "");
 
-              if (host === "mercadolibrestatic.com") return true;
-              if (host.endsWith(".mercadolibrestatic.com")) return true;
+                    if (url.startsWith("about:blank")) return true;
+                    if (url.startsWith("data:text")) return true;
+                    if (url.startsWith("blob:")) return true;
 
-              if (host === "mlstatic.com") return true;
-              if (host.endsWith(".mlstatic.com")) return true;
+                    if (url === "https://mercadopago.com.br/") return true;
+                    if (url === "https://www.mercadopago.com.br/") return true;
 
-              return false;
-            } catch {
-              return String(req.url || "").startsWith("about:blank");
-            }
-          }}
-        />
-      )}
+                    const host = url
+                      .replace(/^https?:\/\//i, "")
+                      .split("/")[0]
+                      .toLowerCase();
 
-      {__DEV__ && (
-        <Text style={s.debug}>
-          ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)}{" "}
-          amount={String(amount)} canPay={String(canPay)}
-        </Text>
-      )}
+                    if (host === "sdk.mercadopago.com") return true;
 
-      <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && s.btnDisabled]}>
-        {processing ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={s.btnText}>Pagar</Text>
-        )}
-      </Pressable>
+                    if (host === "mercadopago.com") return true;
+                    if (host.endsWith(".mercadopago.com")) return true;
 
-      {showOrderAction && (
-        <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
-          <Text style={s.secondaryBtnText}>Ver pedido</Text>
-        </Pressable>
-      )}
-    </ScrollView>
-  </Screen>
-);
+                    if (host === "mercadopago.com.br") return true;
+                    if (host.endsWith(".mercadopago.com.br")) return true;
+
+                    if (host === "mercadolibre.com") return true;
+                    if (host.endsWith(".mercadolibre.com")) return true;
+
+                    if (host === "mercadolibrestatic.com") return true;
+                    if (host.endsWith(".mercadolibrestatic.com")) return true;
+
+                    if (host === "mlstatic.com") return true;
+                    if (host.endsWith(".mlstatic.com")) return true;
+
+                    return false;
+                  } catch {
+                    return String(req.url || "").startsWith("about:blank");
+                  }
+                }}
+              />
+            )}
+
+            <View style={s.securityNoticeContainer}>
+              <Text style={s.securityNoticeText}>🔒 Pagamento 100% seguro via Mercado Pago</Text>
+            </View>
+
+            <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && s.btnDisabled]}>
+              {processing ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={s.btnText}>
+                  Pagar {formattedAmount ? `R$ ${formattedAmount}` : ""}
+                </Text>
+              )}
+            </Pressable>
+
+            {showOrderAction && (
+              <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
+                <Text style={s.secondaryBtnText}>Ver pedido</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Screen>
+  );
 }
 
 const s = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  backBtn: {
+    padding: 8,
+    width: 50,
+  },
+  backIcon: {
+    fontSize: 34,
+    color: "#111",
+    lineHeight: 34,
+    marginTop: -4, 
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+  },
+  spacer: {
+    width: 50,
+  },
   content: {
     flexGrow: 1,
     padding: 16,
-    gap: 12,
-    backgroundColor: "#fff",
+    gap: 16,
+    paddingBottom: 40,
   },
-  title: {
-    fontSize: 24,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "800",
     color: "#111",
+    marginTop: 8,
+    marginBottom: -4,
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 20,
+  divider: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+    marginVertical: 4,
   },
   statusTitle: {
     fontSize: 16,
@@ -766,40 +855,69 @@ const s = StyleSheet.create({
     color: "#111",
     fontSize: 16,
   },
-  installmentsRow: {
+  dropdownBtn: {
     flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-    marginTop: 4,
-  },
-  inst: {
+    justifyContent: "space-between",
+    alignItems: "center",
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     backgroundColor: "#fff",
   },
-  instOn: {
-    borderColor: "#111",
-  },
-  instText: {
+  dropdownText: {
+    fontSize: 16,
     color: "#111",
-    fontWeight: "600",
+  },
+  dropdownIcon: {
+    fontSize: 12,
+    color: "#666",
+  },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    marginTop: 4,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  dropdownItemActive: {
+    backgroundColor: "#f9f9f9",
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: "#444",
+  },
+  dropdownItemTextActive: {
+    color: "#111",
+    fontWeight: "700",
   },
   webview: {
-    height: 280,
-    minHeight: 280,
+    height: 220,
+    minHeight: 220,
     backgroundColor: "#fff",
+    marginTop: 8,
   },
-  debug: {
-    fontSize: 11,
-    opacity: 0.5,
-    color: "#111",
+  securityNoticeContainer: {
+    alignItems: "center",
+    marginTop: -8,
+    marginBottom: 8,
+  },
+  securityNoticeText: {
+    fontSize: 12,
+    color: "#15803d",
+    fontWeight: "600",
   },
   btn: {
     backgroundColor: "#111",
-    padding: 14,
+    padding: 16,
     borderRadius: 12,
     alignItems: "center",
     marginTop: 8,
