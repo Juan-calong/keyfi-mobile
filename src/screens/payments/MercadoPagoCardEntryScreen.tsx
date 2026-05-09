@@ -21,6 +21,37 @@ import { OWNER_SCREENS } from "../../navigation/owner.routes";
 const onlyDigits = (v?: string) => String(v || "").replace(/\D/g, "");
 const makeNonce = () => `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+function toAmountNumber(value: any) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return 0;
+
+  const cleaned = raw.replace(/[R$\s]/g, "");
+
+  let normalized = cleaned;
+
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (cleaned.includes(",")) {
+    normalized = cleaned.replace(",", ".");
+  }
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function extractActiveAmount(active: any) {
+  return (
+    toAmountNumber(active?.payment?.amount) ||
+    toAmountNumber(active?.order?.amountDue) ||
+    toAmountNumber(active?.order?.totalAmount) ||
+    toAmountNumber(active?.amount) ||
+    0
+  );
+}
+
+
 function buildHtml(publicKey: string, amount: number, nonce: string) {
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
@@ -219,7 +250,7 @@ function buildHtml(publicKey: string, amount: number, nonce: string) {
 export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   const orderId = String(route?.params?.orderId || "");
   const routePublicKey = route?.params?.publicKey;
-  const routeAmount = Number(route?.params?.amount || 0);
+  const routeAmount = toAmountNumber(route?.params?.amount);
 
   const nonce = useMemo(() => makeNonce(), []);
 
@@ -268,8 +299,10 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
     : "";
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       const methods = await PaymentsService.getPaymentMethods();
+      if (!alive) return;
       const cardProvider = String(methods?.card?.provider || "").trim().toUpperCase();
 
       setProvider(cardProvider);
@@ -284,25 +317,27 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
 
       setMaxInstallments(Number(methods.card.maxInstallments || 1));
 
-      if (!(amount > 0)) {
+      let backendAmount = 0;
+      if (orderId) {
         const active = await PaymentsService.active(orderId);
+        if (!alive) return;
+        backendAmount = extractActiveAmount(active);
+      }
 
-        const fallback = Number(
-          (active as any)?.payment?.amount ||
-            (active as any)?.order?.amountDue ||
-            (active as any)?.order?.totalAmount ||
-            (active as any)?.amount ||
-            0
-        );
+      if (backendAmount > 0) {
+        setAmount(backendAmount);
+        return;
+      }
 
-        if (fallback > 0) {
-          setAmount(fallback);
-        } else {
-          setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
-        }
+      if (!(routeAmount > 0)) {
+        setError("Não foi possível identificar o valor do pedido. Volte e tente novamente.");
       }
     })().catch(() => setError("Não foi possível iniciar pagamento."));
-  }, [amount, orderId, publicKey]);
+
+    return () => {
+      alive = false;
+    };
+  }, [orderId, publicKey, routeAmount]);
 
   const html = useMemo(
     () => (publicKey && amount > 0 ? buildHtml(publicKey, amount, nonce) : ""),
@@ -664,7 +699,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
                 style={s.dropdownBtn} 
                 onPress={() => setInstallmentsExpanded(!installmentsExpanded)}
               >
-                <Text style={s.dropdownText}>{installments}x sem juros</Text>
+                <Text style={s.dropdownText}>{installments}x</Text>
                 <Text style={s.dropdownIcon}>{installmentsExpanded ? "▲" : "▼"}</Text>
               </Pressable>
 
@@ -680,7 +715,7 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
                       style={[s.dropdownItem, installments === n && s.dropdownItemActive]}
                     >
                       <Text style={[s.dropdownItemText, installments === n && s.dropdownItemTextActive]}>
-                        {n}x sem juros
+                        {n}x
                       </Text>
                     </Pressable>
                   ))}
