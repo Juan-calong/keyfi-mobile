@@ -11,6 +11,9 @@ import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
 
+const PLACEHOLDER_COLOR = "#8A94A6";
+const SELECTION_COLOR = "#006175";
+
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
   return s.includes("@") && s.includes(".");
@@ -71,17 +74,19 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
               <Text style={styles.title}>Recuperar senha</Text>
               <Text style={styles.subtitle}>Informe seu email para receber as instruções.</Text>
 
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                textContentType="emailAddress"
-                placeholder="seuemail@exemplo.com"
-                style={styles.input}
-              />
+<TextInput
+  value={email}
+  onChangeText={setEmail}
+  keyboardType="email-address"
+  autoCapitalize="none"
+  autoCorrect={false}
+  autoComplete="email"
+  textContentType="emailAddress"
+  placeholder="seuemail@exemplo.com"
+  placeholderTextColor={PLACEHOLDER_COLOR}
+  selectionColor={SELECTION_COLOR}
+  style={styles.input}
+/>
 
               <Pressable style={[styles.button, !canSubmit && styles.buttonDisabled]} onPress={onSubmit} disabled={!canSubmit}>
                 <Text style={styles.buttonText}>{loading ? "Enviando..." : "Enviar instruções"}</Text>

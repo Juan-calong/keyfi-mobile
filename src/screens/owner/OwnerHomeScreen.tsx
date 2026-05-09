@@ -958,16 +958,16 @@ export function OwnerHomeScreen() {
 
 return (
   <Screen style={{ backgroundColor: DARK_BG }}>
-    <HeaderBar
-      title="KEYFI"
-      onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
-      titleStyle={{ fontSize: 20, fontWeight: "900", letterSpacing: 0.6 }}
-      menuVariant="bare"
-      menuIconSize={22}
-      menuIconColor="#FFFFFF"
-      backgroundColor={DARK_BG}
-      showDivider={false}
-    />
+<HeaderBar
+  title="KEYFI"
+  onMenu={() => nav.dispatch(DrawerActions.openDrawer())}
+  menuVariant="bare"
+  menuIconSize={22}
+  menuIconColor="#FFFFFF"
+  backgroundColor="#0F0F0F"
+  showDivider={false}
+  dark
+/>
 
     <View style={styles.container}>
       {isLoading ? (
@@ -984,6 +984,9 @@ return (
           data={[]}
           keyExtractor={(_, idx) => String(idx)}
           renderItem={() => null}
+          overScrollMode="never"
+          bounces={false}
+          alwaysBounceVertical={false}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: tabBarHeight + 14 },

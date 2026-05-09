@@ -1,6 +1,30 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
+import { OWNER_SCREENS } from "../../navigation/owner.routes";
 const PENDING_NOTIFICATION_ACTION_KEY = "@keyfi/pending-notification-action";
+
+export type NotificationAudience = "CUSTOMER" | "OWNER";
+
+type HandleNotificationOptions = {
+  audience?: NotificationAudience;
+};
+
+const AUDIENCE_SCREENS = {
+  CUSTOMER: CUSTOMER_SCREENS,
+  OWNER: OWNER_SCREENS,
+} as const;
+
+function canUsePayloadScreen(payloadScreen: string | undefined, audience: NotificationAudience) {
+  if (!payloadScreen) return false;
+  return Object.values(AUDIENCE_SCREENS[audience]).includes(payloadScreen as any);
+}
+
+function resolveAudience(payload: NotificationPayload, audience?: NotificationAudience): NotificationAudience | null {
+  if (audience) return audience;
+  if (canUsePayloadScreen(payload.screen, "OWNER")) return "OWNER";
+  if (canUsePayloadScreen(payload.screen, "CUSTOMER")) return "CUSTOMER";
+  return null;
+}
 
 export type NotificationAction =
   | "OPEN_PRODUCT_REVIEW"
@@ -108,12 +132,19 @@ export async function clearPendingNotificationAction() {
   await AsyncStorage.removeItem(PENDING_NOTIFICATION_ACTION_KEY);
 }
 
-export function handleNotificationClick(raw: any, navigate: (screen: string, params?: any) => void) {
+export function handleNotificationClick(
+  raw: any,
+  navigate: (screen: string, params?: any) => void,
+  options?: HandleNotificationOptions
+) {
   const payload = normalizePayload(raw);
+  const audience = resolveAudience(payload, options?.audience);
+  if (!audience) return false;
+  const screens = AUDIENCE_SCREENS[audience];
 
   if (payload.action === "OPEN_PRODUCT_REVIEW" || payload.action === "OPEN_PRODUCT") {
     if (payload.productId) {
-      navigate(CUSTOMER_SCREENS.ProductDetails, {
+      navigate(screens.ProductDetails, {
         productId: payload.productId,
         intent: payload.action === "OPEN_PRODUCT_REVIEW" ? "REVIEW" : undefined,
         orderId: payload.orderId,
@@ -124,20 +155,22 @@ export function handleNotificationClick(raw: any, navigate: (screen: string, par
     }
 
     if (payload.orderId) {
-      navigate(CUSTOMER_SCREENS.OrderDetails, { orderId: payload.orderId });
-      return true;
+      navigate(screens.OrderDetails, { orderId: payload.orderId });      return true;
     }
   }
 
   if (payload.action === "OPEN_ORDER" || payload.action === "OPEN_ORDER_REVIEW") {
     if (payload.orderId) {
-      navigate(CUSTOMER_SCREENS.OrderDetails, { orderId: payload.orderId });
+      navigate(screens.OrderDetails, { orderId: payload.orderId });
       return true;
     }
   }
 
-  if (payload.screen === CUSTOMER_SCREENS.OrderDetails && payload.orderId) {
-    navigate(CUSTOMER_SCREENS.OrderDetails, { orderId: payload.orderId });
+  if (canUsePayloadScreen(payload.screen, audience)) {
+    navigate(payload.screen as string, {
+      ...(payload.orderId ? { orderId: payload.orderId } : {}),
+      ...(payload.productId ? { productId: payload.productId } : {}),
+    });
     return true;
   }
 
