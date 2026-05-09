@@ -559,184 +559,233 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
     }
   }
 
-  return (
-    <Screen>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        contentContainerStyle={s.content}
-      >
-        <Text style={s.title}>Cartão Mercado Pago</Text>
+return (
+  <Screen>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      contentContainerStyle={s.content}
+    >
+      <Text style={s.title}>Pagamento com cartão</Text>
+      <Text style={s.subtitle}>
+        Informe os dados do titular e depois preencha os dados do cartão.
+      </Text>
 
-        {!!error && <Text style={s.error}>{error}</Text>}
-        {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
-        {!!status && <Text>{status}</Text>}
+      {!!error && <Text style={s.error}>{error}</Text>}
+      {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
+      {!!status && <Text style={s.status}>{status}</Text>}
 
+      <View style={s.fieldGroup}>
+        <Text style={s.label}>Nome do titular</Text>
         <TextInput
-          placeholder="Nome no cartão"
+          placeholder="Ex: João Silva"
+          placeholderTextColor="#6B7280"
           value={name}
           onChangeText={setName}
           style={s.input}
           autoCapitalize="words"
           autoCorrect={false}
+          underlineColorAndroid="transparent"
+          returnKeyType="next"
         />
+      </View>
 
+      <View style={s.fieldGroup}>
+        <Text style={s.label}>CPF ou CNPJ</Text>
         <TextInput
-          placeholder="CPF/CNPJ"
+          placeholder="Somente números"
+          placeholderTextColor="#6B7280"
           keyboardType="number-pad"
           value={doc}
           onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
           style={s.input}
           maxLength={14}
+          underlineColorAndroid="transparent"
+          returnKeyType="next"
         />
+      </View>
 
+      <View style={s.fieldGroup}>
+        <Text style={s.label}>Email</Text>
         <TextInput
-          placeholder="Email"
+          placeholder="email@exemplo.com"
+          placeholderTextColor="#6B7280"
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
           style={s.input}
+          underlineColorAndroid="transparent"
+          returnKeyType="done"
         />
+      </View>
 
-        <View style={s.installmentsRow}>
-          {availableInstallments.map((n) => (
-            <Pressable
-              key={n}
-              onPress={() => setInstallments(n)}
-              style={[s.inst, installments === n && s.instOn]}
-            >
-              <Text>{n}x</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {!!html && (
-          <WebView
-            ref={webRef}
-            source={{
-              html,
-              baseUrl: "https://www.mercadopago.com.br/",
-            }}
-            originWhitelist={["*"]}
-            onMessage={onMessage}
-            javaScriptEnabled
-            domStorageEnabled
-            incognito={false}
-            setSupportMultipleWindows={false}
-            javaScriptCanOpenWindowsAutomatically={false}
-            mixedContentMode="never"
-            allowFileAccess={false}
-            style={s.webview}
-            onLoadEnd={() => setWebLoaded(true)}
-            onShouldStartLoadWithRequest={(req) => {
-              try {
-                const url = String(req.url || "");
-
-                if (url.startsWith("about:blank")) return true;
-                if (url.startsWith("data:text")) return true;
-                if (url.startsWith("blob:")) return true;
-
-                if (url === "https://mercadopago.com.br/") return true;
-                if (url === "https://www.mercadopago.com.br/") return true;
-
-                const host = url
-                  .replace(/^https?:\/\//i, "")
-                  .split("/")[0]
-                  .toLowerCase();
-
-                if (host === "sdk.mercadopago.com") return true;
-
-                if (host === "mercadopago.com") return true;
-                if (host.endsWith(".mercadopago.com")) return true;
-
-                if (host === "mercadopago.com.br") return true;
-                if (host.endsWith(".mercadopago.com.br")) return true;
-
-                if (host === "mercadolibre.com") return true;
-                if (host.endsWith(".mercadolibre.com")) return true;
-
-                if (host === "mercadolibrestatic.com") return true;
-                if (host.endsWith(".mercadolibrestatic.com")) return true;
-
-                if (host === "mlstatic.com") return true;
-                if (host.endsWith(".mlstatic.com")) return true;
-
-                return false;
-              } catch {
-                return String(req.url || "").startsWith("about:blank");
-              }
-            }}
-          />
-        )}
-
-        {__DEV__ && (
-          <Text style={s.debug}>
-            ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)}{" "}
-            amount={String(amount)} canPay={String(canPay)}
-          </Text>
-        )}
-
-        <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && s.btnDisabled]}>
-          {processing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={s.btnText}>Pagar</Text>
-          )}
-        </Pressable>
-
-        {showOrderAction && (
-          <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
-            <Text style={s.secondaryBtnText}>Ver pedido</Text>
+      <View style={s.installmentsRow}>
+        {availableInstallments.map((n) => (
+          <Pressable
+            key={n}
+            onPress={() => setInstallments(n)}
+            style={[s.inst, installments === n && s.instOn]}
+          >
+            <Text style={s.instText}>{n}x</Text>
           </Pressable>
+        ))}
+      </View>
+
+      {!!html && (
+        <WebView
+          ref={webRef}
+          source={{
+            html,
+            baseUrl: "https://www.mercadopago.com.br/",
+          }}
+          originWhitelist={["*"]}
+          onMessage={onMessage}
+          javaScriptEnabled
+          domStorageEnabled
+          incognito={false}
+          setSupportMultipleWindows={false}
+          javaScriptCanOpenWindowsAutomatically={false}
+          mixedContentMode="never"
+          allowFileAccess={false}
+          style={s.webview}
+          onLoadEnd={() => setWebLoaded(true)}
+          onShouldStartLoadWithRequest={(req) => {
+            try {
+              const url = String(req.url || "");
+
+              if (url.startsWith("about:blank")) return true;
+              if (url.startsWith("data:text")) return true;
+              if (url.startsWith("blob:")) return true;
+
+              if (url === "https://mercadopago.com.br/") return true;
+              if (url === "https://www.mercadopago.com.br/") return true;
+
+              const host = url
+                .replace(/^https?:\/\//i, "")
+                .split("/")[0]
+                .toLowerCase();
+
+              if (host === "sdk.mercadopago.com") return true;
+
+              if (host === "mercadopago.com") return true;
+              if (host.endsWith(".mercadopago.com")) return true;
+
+              if (host === "mercadopago.com.br") return true;
+              if (host.endsWith(".mercadopago.com.br")) return true;
+
+              if (host === "mercadolibre.com") return true;
+              if (host.endsWith(".mercadolibre.com")) return true;
+
+              if (host === "mercadolibrestatic.com") return true;
+              if (host.endsWith(".mercadolibrestatic.com")) return true;
+
+              if (host === "mlstatic.com") return true;
+              if (host.endsWith(".mlstatic.com")) return true;
+
+              return false;
+            } catch {
+              return String(req.url || "").startsWith("about:blank");
+            }
+          }}
+        />
+      )}
+
+      {__DEV__ && (
+        <Text style={s.debug}>
+          ready={String(ready)} fieldsMounted={String(fieldsMounted)} provider={String(provider)}{" "}
+          amount={String(amount)} canPay={String(canPay)}
+        </Text>
+      )}
+
+      <Pressable onPress={onPay} disabled={!canPay} style={[s.btn, !canPay && s.btnDisabled]}>
+        {processing ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={s.btnText}>Pagar</Text>
         )}
-      </ScrollView>
-    </Screen>
-  );
+      </Pressable>
+
+      {showOrderAction && (
+        <Pressable onPress={goToOrderDetails} style={s.secondaryBtn}>
+          <Text style={s.secondaryBtnText}>Ver pedido</Text>
+        </Pressable>
+      )}
+    </ScrollView>
+  </Screen>
+);
 }
 
 const s = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: 16,
-    gap: 8,
+    gap: 12,
+    backgroundColor: "#fff",
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "800",
+    color: "#111",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#555",
+    lineHeight: 20,
   },
   statusTitle: {
     fontSize: 16,
     fontWeight: "700",
+    color: "#111",
+  },
+  status: {
+    color: "#333",
   },
   error: {
     color: "#b00020",
+    fontWeight: "600",
+  },
+  fieldGroup: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 10,
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     width: "100%",
-    minHeight: 50,
+    minHeight: 52,
     backgroundColor: "#fff",
     color: "#111",
+    fontSize: 16,
   },
   installmentsRow: {
     flexDirection: "row",
     gap: 8,
     flexWrap: "wrap",
+    marginTop: 4,
   },
   inst: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
   },
   instOn: {
     borderColor: "#111",
+  },
+  instText: {
+    color: "#111",
+    fontWeight: "600",
   },
   webview: {
     height: 280,
@@ -746,12 +795,14 @@ const s = StyleSheet.create({
   debug: {
     fontSize: 11,
     opacity: 0.5,
+    color: "#111",
   },
   btn: {
     backgroundColor: "#111",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
+    marginTop: 8,
   },
   btnDisabled: {
     opacity: 0.5,
@@ -759,6 +810,7 @@ const s = StyleSheet.create({
   btnText: {
     color: "#fff",
     fontWeight: "700",
+    fontSize: 16,
   },
   secondaryBtn: {
     borderWidth: 1,
