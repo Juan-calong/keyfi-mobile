@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { t } from "../tokens";
 
-import KEYFI_LOGO from "../../assets/logo/keyfi-img.png";
+import KEYFI_LOGO from "../../assets/logo/keyfi-logo-transparent-header.png";
 
 type Props = {
   title?: string;
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 0,
+    overflow: "hidden",
     ...Platform.select({
       ios: {
         shadowColor: "transparent",
@@ -112,8 +113,8 @@ const styles = StyleSheet.create({
 },
 
 logo: {
-  width: 135,
-  height: 90,
+  width: 108,
+  height: 50,
   backgroundColor: "transparent",
 },
 
