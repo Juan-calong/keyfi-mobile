@@ -984,6 +984,9 @@ return (
           data={[]}
           keyExtractor={(_, idx) => String(idx)}
           renderItem={() => null}
+          overScrollMode="never"
+          bounces={false}
+          alwaysBounceVertical={false}
           contentContainerStyle={[
             styles.content,
             { paddingBottom: tabBarHeight + 14 },

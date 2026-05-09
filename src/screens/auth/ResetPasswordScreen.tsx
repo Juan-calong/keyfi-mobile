@@ -11,6 +11,9 @@ import type { AuthStackParamList } from "../../navigation/AuthStack";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ResetPassword">;
 
+const PLACEHOLDER_COLOR = "#8A94A6";
+const SELECTION_COLOR = "#006175";
+
 export function ResetPasswordScreen({ navigation, route }: Props) {
   const [email, setEmail] = useState(route.params?.email ?? "");
   const [token, setToken] = useState("");
@@ -87,32 +90,48 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
               <Text style={styles.title}>Criar nova senha</Text>
               <Text style={styles.subtitle}>Digite o token/código recebido por email e sua nova senha.</Text>
 
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholder="Email (opcional)"
-                style={styles.input}
-              />
-              <TextInput value={token} onChangeText={setToken} autoCapitalize="none" placeholder="Token/código" style={styles.input} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                placeholder="Nova senha"
-                style={styles.input}
-              />
-              <TextInput
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                placeholder="Confirmar nova senha"
-                style={styles.input}
-              />
+<TextInput
+  value={email}
+  onChangeText={setEmail}
+  keyboardType="email-address"
+  autoCapitalize="none"
+  placeholder="Email (opcional)"
+  placeholderTextColor={PLACEHOLDER_COLOR}
+  selectionColor={SELECTION_COLOR}
+  style={styles.input}
+/>
 
+<TextInput
+  value={token}
+  onChangeText={setToken}
+  autoCapitalize="none"
+  placeholder="Token/código"
+  placeholderTextColor={PLACEHOLDER_COLOR}
+  selectionColor={SELECTION_COLOR}
+  style={styles.input}
+/>
+
+<TextInput
+  value={password}
+  onChangeText={setPassword}
+  secureTextEntry
+  autoCapitalize="none"
+  placeholder="Nova senha"
+  placeholderTextColor={PLACEHOLDER_COLOR}
+  selectionColor={SELECTION_COLOR}
+  style={styles.input}
+/>
+
+<TextInput
+  value={confirmPassword}
+  onChangeText={setConfirmPassword}
+  secureTextEntry
+  autoCapitalize="none"
+  placeholder="Confirmar nova senha"
+  placeholderTextColor={PLACEHOLDER_COLOR}
+  selectionColor={SELECTION_COLOR}
+  style={styles.input}
+/>
               <Pressable style={[styles.button, !canSubmit && styles.buttonDisabled]} onPress={onSubmit} disabled={!canSubmit}>
                 <Text style={styles.buttonText}>{loading ? "Redefinindo..." : "Redefinir senha"}</Text>
               </Pressable>

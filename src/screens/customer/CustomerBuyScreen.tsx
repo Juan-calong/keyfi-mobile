@@ -9,6 +9,7 @@ import {
   Pressable,
   GestureResponderEvent,
   Platform,
+  RefreshControl,
   StatusBar,
   useWindowDimensions,
 } from "react-native";
@@ -700,15 +701,22 @@ onRetry={() => {
                   <Text style={styles.emptyText}>Sem produtos nesse filtro.</Text>
                 </View>
               }
-              refreshing={
-                productsQ.isRefetching ||
-                categoriesQ.isRefetching ||
-                promosQ.isRefetching ||
-                favoritesQ.isRefetching
+              refreshControl={
+                <RefreshControl
+                  refreshing={
+                    productsQ.isRefetching ||
+                    categoriesQ.isRefetching ||
+                    promosQ.isRefetching ||
+                    favoritesQ.isRefetching
+                  }
+                  onRefresh={() => {
+                    void refetchAll();
+                  }}
+                  colors={["#C9A227"]}
+                  tintColor="#C9A227"
+                  progressBackgroundColor="#FFFFFF"
+                />
               }
-onRefresh={() => {
-  void refetchAll();
-}}
               renderItem={({ item, index }) => {
                 const inCartQty = qtyById?.[item.id] ?? 0;
                 const inCart = inCartQty > 0;
