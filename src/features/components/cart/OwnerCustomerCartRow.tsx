@@ -1,5 +1,6 @@
 import React from "react";
 import { Image, Pressable, Text, View } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 import { s } from "./cart.shared.styles";
 import { formatBRL, toNumberBR } from "./cart.shared.utils";
 import type { CartPreviewItem } from "./cart.shared.types";
@@ -66,6 +67,8 @@ export function OwnerCustomerCartRow({
         </View>
       </View>
 
+      <View style={s.productActionDivider} />
+
       <View style={s.productBottomRow}>
         <Pressable
           onPress={(e) => {
@@ -75,6 +78,7 @@ export function OwnerCustomerCartRow({
           hitSlop={8}
           style={s.removeBtn}
         >
+          <Ionicons name="trash-outline" size={16} color="#B6923E" />
           <Text style={s.removeText}>Remover</Text>
         </Pressable>
 

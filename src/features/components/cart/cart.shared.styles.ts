@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from "react-native";
-const BG = "#F5F5F7";
+const BG = "#fcfcfd";
 const CARD = "#FFFFFF";
 const TEXT = "#111111";
 const MUTED = "#6E6E73";
@@ -12,7 +12,7 @@ export const s = StyleSheet.create({
   nav: {
     minHeight: 64,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -20,11 +20,12 @@ export const s = StyleSheet.create({
   },
 
   backHit: {
-    width: 72,
+    width: 68,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
+    paddingLeft: 8,
   },
 
   backText: {
@@ -55,12 +56,11 @@ export const s = StyleSheet.create({
   },
 
   navRightSpacer: {
-    width: 72,
+    width: 68,
     height: 44,
-    borderRadius: 22,
     alignItems: "flex-end",
     justifyContent: "center",
-    paddingHorizontal: 8,
+    paddingRight: 8,
   },
 
     rightText: {
@@ -83,7 +83,7 @@ sectionLabel: {
 
   productsContent: {
     paddingTop: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 9,
   },
 
   productCard: {
@@ -177,8 +177,14 @@ sectionLabel: {
     fontWeight: "600",
   },
 
-  productBottomRow: {
+  productActionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(0,0,0,0.06)",
     marginTop: 12,
+      },
+
+  productBottomRow: {
+    marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -186,13 +192,11 @@ sectionLabel: {
 
   removeBtn: {
     minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFF8EC",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(182,146,62,0.32)",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
   },
 
   removeText: {
@@ -207,14 +211,15 @@ sectionLabel: {
     backgroundColor: BG,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
+    borderColor: "rgba(0,0,0,0.10)",
     overflow: "hidden",
-    height: 40,
+    height: 44,
   },
 
   stepperBtn: {
     minWidth: 44,
     minHeight: 44,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -222,6 +227,10 @@ sectionLabel: {
   stepperMid: {
     minWidth: 40,
     minHeight: 44,
+    backgroundColor: "#FFFFFF",
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -364,7 +373,7 @@ sectionLabel: {
   fixedBottomWrap: {
     flexShrink: 0,
     paddingTop: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 9,
     backgroundColor: "transparent",
   },
 
@@ -510,7 +519,7 @@ sectionLabel: {
     fontWeight: "600",
   },
 
-  bannerWrap: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 4 },
+  bannerWrap: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4 },
 
   bannerCard: {
     flexDirection: "row",
