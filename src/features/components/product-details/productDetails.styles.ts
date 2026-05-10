@@ -219,6 +219,12 @@ export const s = StyleSheet.create({
     fontSize: 13,
   },
 
+    priceStack: {
+    marginTop: 12,
+    gap: 4,
+  },
+
+
   priceRow: {
     marginTop: 12,
     flexDirection: "row",
@@ -227,11 +233,10 @@ export const s = StyleSheet.create({
   },
 
   oldPrice: {
-    color: COLORS.textMuted,
-    fontWeight: "800",
+    color: "#8A817A",
+    fontWeight: "700",
     textDecorationLine: "line-through",
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 13,
   },
 
   pricePromo: {
@@ -264,14 +269,12 @@ promoOfferChip: {
   alignSelf: "flex-start",
   paddingHorizontal: 14,
   paddingVertical: 8,
-  borderRadius: 6,
-  backgroundColor: "transparent",
-  borderWidth: 2,
-  borderColor: "#5A403A",
+  borderRadius: 999,
+  backgroundColor: "#F3E7D0",
 },
 
 promoOfferText: {
-  color: "#5A403A",
+  color: "#6B4B16",
   fontWeight: "900",
   fontSize: 12,
   letterSpacing: 0.2,
@@ -359,6 +362,24 @@ quantityOfferText: {
     fontSize: 13,
   },
 
+    floatingCartBar: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    paddingTop: 11,
+    borderWidth: 1,
+    borderColor: "#ECE2D8",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+
   cartActionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -369,6 +390,32 @@ quantityOfferText: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+
+    qtyPill: {
+    width: 128,
+    height: 54,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#EFE8E1",
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+
+  qtyPillBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   qtyBtn: {
@@ -397,20 +444,21 @@ quantityOfferText: {
   },
 
   qtyValue: {
-    color: COLORS.text,
+    color: "#111111",
     fontWeight: "900",
-    fontSize: 14,
+    fontSize: 16,
   },
 
   primaryCta: {
-    flex: 1,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: COLORS.black,
+    minWidth: 0,
+    height: 54,
+    borderRadius: 20,
+    backgroundColor: "#050505",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 10,
   },
 
   primaryCtaDisabled: {
@@ -419,10 +467,57 @@ quantityOfferText: {
 
   primaryCtaText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: -0.2,
   },
+
+    emptyReviewCard: {
+    marginTop: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#ECE2D8",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  emptyReviewTitle: {
+    color: "#111111",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  emptyReviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyReviewScore: {
+    color: "#111111",
+    fontSize: 28,
+    fontWeight: "900",
+    minWidth: 78,
+  },
+  emptyReviewStar: {
+    color: "#C28A20",
+  },
+  emptyReviewMain: {
+    color: "#111111",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  emptyReviewSub: {
+    marginTop: 4,
+    color: "#6F6F6F",
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "600",
+  },
+
 
   reviewsSection: {
     marginTop: 24,
@@ -699,10 +794,6 @@ quantityOfferText: {
     right: 8,
     width: 34,
     height: 34,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Screen } from "../../../ui/components/Screen";
@@ -690,23 +691,71 @@ function DetailAccordion({
           {title}
         </Text>
 
-        <Text
-          style={{
-            width: 22,
-            textAlign: "center",
-            color: COLORS.text,
-            fontSize: 24,
-            lineHeight: 24,
-            fontWeight: "400",
-          }}
-        >
-          {open ? "−" : "+"}
-        </Text>
+        <Icon
+          name={open ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={COLORS.text}
+        />
       </Pressable>
 
       {open ? (
         <View style={{ paddingBottom: 16, paddingRight: 4 }}>{children}</View>
       ) : null}
+    </View>
+  );
+}
+
+function ProductStickyCartFooter({
+  qtyInCart,
+  out,
+  alreadyInCart,
+  onAdd,
+  onRemove,
+  onGoToCart,
+}: {
+  qtyInCart: number;
+  out: boolean;
+  alreadyInCart: boolean;
+  onAdd: () => void;
+  onRemove: () => void;
+  onGoToCart: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[s.floatingCartBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      <View style={s.cartActionRow}>
+        <View style={s.qtyPill}>
+          <Pressable
+            onPress={onRemove}
+            disabled={qtyInCart <= 0}
+            style={({ pressed }) => [s.qtyPillBtn, pressed && qtyInCart > 0 && { opacity: 0.7 }]}
+          >
+            <Icon name="remove" size={18} color="#111111" />
+          </Pressable>
+          <Text style={s.qtyValue}>{qtyInCart}</Text>
+          <Pressable
+            onPress={onAdd}
+            disabled={out}
+            style={({ pressed }) => [s.qtyPillBtn, pressed && !out && { opacity: 0.7 }]}
+          >
+            <Icon name="add" size={18} color="#111111" />
+          </Pressable>
+        </View>
+        <Pressable
+          onPress={alreadyInCart ? onGoToCart : onAdd}
+          disabled={out}
+          style={({ pressed }) => [
+            s.primaryCta,
+            pressed && !out && { opacity: 0.9 },
+            out && s.primaryCtaDisabled,
+          ]}
+        >
+          <Icon name="bag-handle-outline" size={17} color="#FFFFFF" />
+          <Text style={s.primaryCtaText}>
+            {out ? "Sem estoque" : alreadyInCart ? "Ir para o carrinho" : "Adicionar ao carrinho"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -1157,7 +1206,10 @@ const quantityTierBadges = useMemo(() => {
   style={{ backgroundColor: PRODUCT_DETAILS_BG }}
   contentContainerStyle={[
     s.scrollContent,
-    { backgroundColor: PRODUCT_DETAILS_BG },
+    {
+      backgroundColor: PRODUCT_DETAILS_BG,
+      paddingBottom: 190,
+    },
   ]}
 >
             <View style={[s.mainCard, { backgroundColor: PRODUCT_DETAILS_BG }]}>
@@ -1226,6 +1278,8 @@ const quantityTierBadges = useMemo(() => {
                   <ProductFavoriteButton
                     productId={product.id}
                     initialFavorited={resolvedInitialFavorited}
+                    variant="plain"
+                    inactiveColor="#111111"
                   />
                 </View>
 
@@ -1259,21 +1313,14 @@ const quantityTierBadges = useMemo(() => {
 
                 <View style={s.ratingWrap}>
                   <RatingStars value={averageRating} size={15} />
-                  <Text style={s.ratingText}>
-                    {averageRating > 0 ? averageRating.toFixed(1) : "0.0"}
-                  </Text>
-                  <Text style={s.ratingCount}>({reviewsCount || 0})</Text>
+                  <Text style={s.ratingCount}>{`${averageRating > 0 ? averageRating.toFixed(1) : "0.0"} · ${reviewsCount || 0} ${reviewsCount === 1 ? "avaliação" : "avaliações"}`}</Text>
                 </View>
 
-<View style={s.priceRow}>
+<View style={s.priceStack}>
+  <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
   {priceModel.hasPromo ? (
-    <>
-      <Text style={s.oldPrice}>{formatBRL(priceModel.oldPrice)}</Text>
-      <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
-    </>
-  ) : (
-    <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
-  )}
+    <Text style={s.oldPrice}>{formatBRL(priceModel.oldPrice)}</Text>
+  ) : null}
 </View>
 
 {priceModel.promoLabel ? (
@@ -1347,67 +1394,6 @@ const quantityTierBadges = useMemo(() => {
 ) : null}
 
 <View style={s.separator} />
-                <View style={s.cartActionRow}>
-                  <View style={s.qtyGroup}>
-                    <Pressable
-                      onPress={handleRemoveFromCart}
-                      disabled={qtyInCart <= 0}
-                      style={({ pressed }) => [
-                        s.qtyBtn,
-                        qtyInCart <= 0 && s.qtyBtnDisabled,
-                        pressed && qtyInCart > 0 && { opacity: 0.7 },
-                      ]}
-                    >
-                      <Icon
-                        name="remove"
-                        size={18}
-                        color={qtyInCart > 0 ? COLORS.text : COLORS.textMuted}
-                      />
-                    </Pressable>
-
-                    <View style={s.qtyValueWrap}>
-                      <Text style={s.qtyValue}>{qtyInCart}</Text>
-                    </View>
-
-                    <Pressable
-                      onPress={handleAddToCart}
-                      disabled={out}
-                      style={({ pressed }) => [
-                        s.qtyBtn,
-                        out && s.qtyBtnDisabled,
-                        pressed && !out && { opacity: 0.7 },
-                      ]}
-                    >
-                      <Icon
-                        name="add"
-                        size={18}
-                        color={!out ? COLORS.text : COLORS.textMuted}
-                      />
-                    </Pressable>
-                  </View>
-
-                  <Pressable
-                    onPress={alreadyInCart ? onGoToCart : handleAddToCart}
-                    disabled={out}
-                    style={({ pressed }) => [
-                      s.primaryCta,
-                      pressed && !out && { opacity: 0.92 },
-                      out && s.primaryCtaDisabled,
-                    ]}
-                  >
-                    <Icon name="bag-handle-outline" size={18} color="#FFFFFF" />
-                    <Text style={s.primaryCtaText}>
-                      {out
-                        ? "Sem estoque"
-                        : alreadyInCart
-                        ? "Ir para o carrinho"
-                        : "Adicionar ao carrinho"}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                <View style={{ height: 22 }} />
-
                 <View
                   style={{
                     borderTopWidth: 1,
@@ -1524,7 +1510,7 @@ const quantityTierBadges = useMemo(() => {
                         letterSpacing: -0.3,
                       }}
                     >
-                      Avaliações e comentários
+                      Avaliações
                     </Text>
                     <Text
                       style={{
@@ -1640,70 +1626,7 @@ const quantityTierBadges = useMemo(() => {
                     Tente novamente em instantes.
                   </Text>
                 </View>
-              ) : !reviewStatus?.canReview ? (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#E9DED4",
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 20,
-                    padding: 16,
-                    marginBottom: 14,
-                    shadowColor: "#000",
-                    shadowOpacity: 0.03,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 3 },
-                    elevation: 1,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 999,
-                        backgroundColor: "#F4EEE8",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        name="chatbubble-ellipses-outline"
-                        size={16}
-                        color={COLORS.text}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: COLORS.text,
-                          fontWeight: "800",
-                          fontSize: 15,
-                        }}
-                      >
-                        Avaliação indisponível
-                      </Text>
-                      <Text
-                        style={{
-                          marginTop: 2,
-                          color: COLORS.textMuted,
-                          fontWeight: "600",
-                          fontSize: 12,
-                          lineHeight: 18,
-                        }}
-                      >
-                        {reviewBlockedMessage}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+ 
               ) : (
                 <View
                   style={{
@@ -2054,6 +1977,7 @@ const quantityTierBadges = useMemo(() => {
                 </View>
               )}
 
+              {!(commentsQ.isLoading || commentsQ.isError) && reviewsRaw.length > 0 && sortedReviews.length > 0 ? (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -2088,7 +2012,7 @@ const quantityTierBadges = useMemo(() => {
                   );
                 })}
               </ScrollView>
-
+              ) : null}
               {commentsQ.isLoading ? (
                 <Text style={s.relatedLoading}>Carregando avaliações...</Text>
               ) : commentsQ.isError ? (
@@ -2295,60 +2219,19 @@ const quantityTierBadges = useMemo(() => {
                   ) : null}
                 </View>
               ) : (
-                <View
-                  style={{
-                    marginTop: 4,
-                    borderWidth: 1,
-                    borderColor: "#ECE2D8",
-                    borderRadius: 0,
-                    backgroundColor: "#FFFFFF",
-                    paddingVertical: 18,
-                    paddingHorizontal: 16,
-                    alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 999,
-                      backgroundColor: "#F4EEE8",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <Icon
-                      name="chatbubble-ellipses-outline"
-                      size={18}
-                      color={COLORS.text}
-                    />
+                 <View style={s.emptyReviewCard}>
+                  <Text style={s.emptyReviewTitle}>Avaliações</Text>
+                  <View style={s.emptyReviewRow}>
+                    <Text style={s.emptyReviewScore}>0.0 <Text style={s.emptyReviewStar}>★</Text></Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.emptyReviewMain}>Nenhuma avaliação ainda</Text>
+                      <Text style={s.emptyReviewSub}>
+                        {canCreateReview
+                          ? "Você poderá avaliar este produto após uma compra entregue."
+                          : reviewBlockedMessage}
+                      </Text>
+                    </View>
                   </View>
-
-                  <Text
-                    style={{
-                      color: COLORS.text,
-                      fontSize: 15,
-                      fontWeight: "800",
-                      textAlign: "center",
-                    }}
-                  >
-                    Ainda não há avaliações
-                  </Text>
-
-                  <Text
-                    style={{
-                      marginTop: 6,
-                      color: COLORS.textMuted,
-                      fontSize: 13,
-                      lineHeight: 20,
-                      fontWeight: "600",
-                      textAlign: "center",
-                    }}
-                  >
-                    Quando os clientes enviarem avaliações e comentários deste produto,
-                    eles aparecerão aqui.
-                  </Text>
                 </View>
               )}
             </View>
@@ -2638,6 +2521,17 @@ const quantityTierBadges = useMemo(() => {
             ) : null}
           </ScrollView>
         )}
+
+          {product ? (
+          <ProductStickyCartFooter
+            qtyInCart={qtyInCart}
+            out={out}
+            alreadyInCart={alreadyInCart}
+            onAdd={handleAddToCart}
+            onRemove={handleRemoveFromCart}
+            onGoToCart={onGoToCart}
+          />
+        ) : null}
 
         <IosAlert
           visible={!!modal}

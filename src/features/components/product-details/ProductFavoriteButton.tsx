@@ -25,6 +25,7 @@ type Props = {
   activeColor?: string;
   inactiveColor?: string;
   loaderColor?: string;
+  variant?: "default" | "plain";
 };
 
 const RELEVANT_QUERY_ROOTS = new Set([
@@ -164,6 +165,7 @@ export function ProductFavoriteButton({
   activeColor = "#E11D48",
   inactiveColor = "#2E2A29",
   loaderColor = "#E11D48",
+  variant = "default",
 }: Props) {
   const queryClient = useQueryClient();
   const [favorited, setFavorited] = useState(Boolean(initialFavorited));
@@ -263,7 +265,7 @@ export function ProductFavoriteButton({
       }}
       hitSlop={10}
       style={({ pressed }) => [
-        styles.button,
+        variant === "default" ? styles.button : styles.buttonPlain,
         containerStyle,
         pressed && styles.buttonPressed,
       ]}
@@ -289,6 +291,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.96)",
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+    buttonPlain: {
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
