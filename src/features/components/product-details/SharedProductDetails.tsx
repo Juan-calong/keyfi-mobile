@@ -1023,6 +1023,26 @@ const quantityTierBadges = useMemo(() => {
     [sortedReviews, reviewsVisibleCount]
   );
 
+    const ratingDistribution = useMemo(() => {
+    const counts: Record<1 | 2 | 3 | 4 | 5, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const source = reviewsRaw.length >= sortedReviews.length ? reviewsRaw : sortedReviews;
+
+    for (const item of source) {
+      const rating = Math.round(getReviewRating(item));
+      if (rating >= 1 && rating <= 5) {
+        counts[rating as 1 | 2 | 3 | 4 | 5] += 1;
+      }
+    }
+
+    const total = Object.values(counts).reduce((sum, value) => sum + value, 0);
+
+    return [5, 4, 3, 2, 1].map((star) => ({
+      star,
+      count: counts[star as 1 | 2 | 3 | 4 | 5],
+      ratio: total > 0 ? counts[star as 1 | 2 | 3 | 4 | 5] / total : 0,
+    }));
+  }, [reviewsRaw, sortedReviews]);
+
   const hasMoreReviews = sortedReviews.length > reviewsVisibleCount;
 
   const averageRating = useMemo(
@@ -1498,10 +1518,12 @@ const quantityTierBadges = useMemo(() => {
                   <>
                     <View style={s.reviewsSummaryRow}>
                       <View style={s.reviewsAverageBlock}>
-                        <Text style={s.reviewsAverageScore}>
-                          {averageRating > 0 ? averageRating.toFixed(1) : "0.0"}
-                        </Text>
-                        <Text style={s.reviewsAverageStar}>★</Text>
+                        <View style={s.reviewsAverageScoreRow}>
+                          <Text style={s.reviewsAverageScore}>
+                            {averageRating > 0 ? averageRating.toFixed(1) : "0.0"}
+                          </Text>
+                          <Text style={s.reviewsAverageStar}>★</Text>
+                        </View>
                         {sortedReviews.length > 0 ? (
                           <Text style={s.reviewsAverageCount}>
                             {reviewsCount || 0} {reviewsCount === 1 ? "avaliação" : "avaliações"}
@@ -1509,6 +1531,19 @@ const quantityTierBadges = useMemo(() => {
                         ) : null}
                       </View>   
 
+                      {sortedReviews.length > 0 ? (
+                        <View style={s.ratingBreakdown}>
+                          {ratingDistribution.map((row) => (
+                            <View key={row.star} style={s.ratingBreakdownRow}>
+                              <Text style={s.ratingBreakdownLabel}>{row.star} ★</Text>
+                              <View style={s.ratingBreakdownTrack}>
+                                <View style={[s.ratingBreakdownFill, { width: `${row.ratio * 100}%` }]} />
+                              </View>
+                              <Text style={s.ratingBreakdownCount}>{row.count}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
                       {sortedReviews.length === 0 ? (
                         <View style={s.reviewsEmptyContent}>
                           <Text style={s.reviewsEmptyTitle}>Nenhuma avaliação ainda</Text>
@@ -1609,10 +1644,6 @@ const quantityTierBadges = useMemo(() => {
                             <Text style={s.reviewSuccessInlineText}>{commentSuccessMessage}</Text>
                           </View>
                         ) : null}
-
-                        {!canWriteReview && !canCreateReview && !hasVisibleMyComment ? (
-                          <Text style={s.reviewBlockedInline}>{reviewBlockedMessage}</Text>
-                        ) : null}
                       </>
                     )}
 
@@ -1656,8 +1687,8 @@ const quantityTierBadges = useMemo(() => {
                                     <Text style={s.reviewDate}>{formatReviewDate(item.createdAt)}</Text>
                                   </View>
                                 </View>
+                                <View style={{ marginBottom: 8 }}><RatingStars value={rating} size={14} /></View>
                                 <Text style={s.reviewBody}>{item.comment}</Text>
-                                <View style={{ marginTop: 10 }}><RatingStars value={rating} size={14} /></View>
                                 {adminResponse ? (
                                   <View style={s.reviewAdminResponseCard}>
                                     <Text style={s.reviewAdminResponseTitle}>Resposta da loja</Text>
