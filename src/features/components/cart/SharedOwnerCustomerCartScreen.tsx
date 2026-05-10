@@ -86,7 +86,7 @@ export function SharedOwnerCustomerCartScreen({
   onCheckout,
   onGoToShop,
 }: Props) {
-  const BG = "#F5F5F7";
+  const BG = "#F8F8FF";
 
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
@@ -123,7 +123,7 @@ export function SharedOwnerCustomerCartScreen({
     <Screen style={{ backgroundColor: BG as any }}>
       <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
-      <Container style={{ flex: 1, backgroundColor: BG }}>
+      <Container style={{ flex: 1, backgroundColor: BG, paddingHorizontal: 0 }}>
           <CartHeader
             title="Carrinho"
             itemCount={cartItemsLength}
