@@ -86,7 +86,7 @@ export function SharedOwnerCustomerCartScreen({
   onCheckout,
   onGoToShop,
 }: Props) {
-  const BG = "#F8F8FF";
+  const BG = "#fcfcfd";
 
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();

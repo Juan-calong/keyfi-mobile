@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from "react-native";
-const BG = "##F5F5F5";
+const BG = "#fcfcfd";
 const CARD = "#FFFFFF";
 const TEXT = "#111111";
 const MUTED = "#6E6E73";
