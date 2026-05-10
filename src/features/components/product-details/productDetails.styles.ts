@@ -136,23 +136,28 @@ export const s = StyleSheet.create({
     fontSize: 11,
   },
 
-  galleryProgressTrack: {
+  galleryDotsWrap: {
     position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 10,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    overflow: "hidden",
+    left: 0,
+    right: 0,
+    bottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
   },
 
-  galleryProgressThumb: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
+  galleryDot: {
+    width: 7,
+    height: 7,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#D8D1C8",
+  },
+
+  galleryDotActive: {
+    width: 8,
+    height: 8,
+    backgroundColor: "#8A6A32",
   },
 
   content: {
@@ -238,6 +243,12 @@ export const s = StyleSheet.create({
     textDecorationLine: "line-through",
     fontSize: 13,
   },
+    originalPricePromoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
 
   pricePromo: {
     color: COLORS.black,
@@ -267,8 +278,8 @@ offerBadgesWrap: {
 
 promoOfferChip: {
   alignSelf: "flex-start",
-  paddingHorizontal: 14,
-  paddingVertical: 8,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
   borderRadius: 999,
   backgroundColor: "#F3E7D0",
 },
@@ -276,7 +287,7 @@ promoOfferChip: {
 promoOfferText: {
   color: "#6B4B16",
   fontWeight: "900",
-  fontSize: 12,
+  fontSize: 11,
   letterSpacing: 0.2,
 },
 
@@ -429,10 +440,6 @@ quantityOfferText: {
     justifyContent: "center",
   },
 
-  qtyBtnDisabled: {
-    opacity: 0.4,
-  },
-
   qtyValueWrap: {
     minWidth: 38,
     height: 42,
@@ -444,9 +451,19 @@ quantityOfferText: {
   },
 
   qtyValue: {
-    color: "#111111",
+    color: "#000000",
     fontWeight: "900",
     fontSize: 16,
+    includeFontPadding: false,
+  },
+
+    qtyPillSymbol: {
+    color: "#000000",
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: "700",
+    includeFontPadding: false,
+    textAlign: "center",
   },
 
   primaryCta: {

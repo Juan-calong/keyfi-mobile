@@ -728,9 +728,13 @@ function ProductStickyCartFooter({
           <Pressable
             onPress={onRemove}
             disabled={qtyInCart <= 0}
-            style={({ pressed }) => [s.qtyPillBtn, pressed && qtyInCart > 0 && { opacity: 0.7 }]}
+            style={({ pressed }) => [
+              s.qtyPillBtn,
+              qtyInCart <= 0 && { opacity: 0.65 },
+              pressed && qtyInCart > 0 && { opacity: 0.7 },
+            ]}
           >
-            <Icon name="remove" size={18} color="#111111" />
+            <Text style={s.qtyPillSymbol}>−</Text>
           </Pressable>
           <Text style={s.qtyValue}>{qtyInCart}</Text>
           <Pressable
@@ -738,7 +742,7 @@ function ProductStickyCartFooter({
             disabled={out}
             style={({ pressed }) => [s.qtyPillBtn, pressed && !out && { opacity: 0.7 }]}
           >
-            <Icon name="add" size={18} color="#111111" />
+            <Text style={s.qtyPillSymbol}>+</Text>
           </Pressable>
         </View>
         <Pressable
@@ -1290,16 +1294,17 @@ const quantityTierBadges = useMemo(() => {
                 ) : null}
 
                 {galleryMedia.length > 1 ? (
-                  <View style={s.galleryProgressTrack}>
-                    <View
-                      style={[
-                        s.galleryProgressThumb,
-                        {
-                          width: `${100 / galleryMedia.length}%`,
-                          left: `${(100 / galleryMedia.length) * galleryIndex}%`,
-                        },
-                      ]}
-                    />
+                  <View style={s.galleryDotsWrap}>
+                    {galleryMedia.map((item, index) => {
+                      const active = index === galleryIndex;
+
+                      return (
+                        <View
+                          key={`${item.type}-${item.id}-dot`}
+                          style={[s.galleryDot, active && s.galleryDotActive]}
+                        />
+                      );
+                    })}
                   </View>
                 ) : null}
               </View>
@@ -1319,19 +1324,16 @@ const quantityTierBadges = useMemo(() => {
 <View style={s.priceStack}>
   <Text style={s.pricePromo}>{formatBRL(priceModel.currentPrice)}</Text>
   {priceModel.hasPromo ? (
-    <Text style={s.oldPrice}>{formatBRL(priceModel.oldPrice)}</Text>
+    <View style={s.originalPricePromoRow}>
+      <Text style={s.oldPrice}>{formatBRL(priceModel.oldPrice)}</Text>
+      {priceModel.promoLabel ? (
+        <View style={s.promoOfferChip}>
+          <Text style={s.promoOfferText}>{priceModel.promoLabel}</Text>
+        </View>
+      ) : null}
+    </View>
   ) : null}
 </View>
-
-{priceModel.promoLabel ? (
-  <View style={s.offersSection}>
-    <View style={s.offerBadgesWrap}>
-      <View style={s.promoOfferChip}>
-        <Text style={s.promoOfferText}>{priceModel.promoLabel}</Text>
-      </View>
-    </View>
-  </View>
-) : null}
 
 {quantityTierBadges.length > 0 ? (
   <View style={[s.offersSection, { gap: 10 }]}>
