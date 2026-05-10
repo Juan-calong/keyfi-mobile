@@ -226,7 +226,7 @@ export const s = StyleSheet.create({
 
     priceStack: {
     marginTop: 12,
-    gap: 4,
+    marginBottom: 10,
   },
 
 
@@ -689,18 +689,18 @@ quantityOfferText: {
     gap: 12,
   },
 
-  reviewCard: {
-    borderWidth: 1,
-    borderColor: "#ECE2D8",
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
+reviewCard: {
+  borderWidth: 1,
+  borderColor: "#ECE2D8",
+  borderRadius: 18,
+  backgroundColor: "#FFFEFC",
+  padding: 14,
+  shadowColor: "#000",
+  shadowOpacity: 0.035,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 1,
+},
 
   reviewCardTop: {
     flexDirection: "row",
@@ -756,9 +756,9 @@ quantityOfferText: {
 
   reviewBody: {
     color: COLORS.textSoft,
-    fontSize: 14,
-    lineHeight: 22,
-    fontWeight: "500",
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "600",
   },
 
   reviewsMoreBtn: {

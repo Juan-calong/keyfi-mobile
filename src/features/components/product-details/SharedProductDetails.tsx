@@ -1651,8 +1651,8 @@ const quantityTierBadges = useMemo(() => {
                       <>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12, marginTop: 12 }}>
                           {[
-                            { key: "recent", label: "Mais recentes" },
-                            { key: "oldest", label: "Mais antigos" },
+                            { key: "recent", label: "Recentes" },
+                            { key: "oldest", label: "Antigos" },
                             { key: "highest", label: "Maior nota" },
                             { key: "lowest", label: "Menor nota" },
                           ].map((item) => {
@@ -1687,7 +1687,8 @@ const quantityTierBadges = useMemo(() => {
                                     <Text style={s.reviewDate}>{formatReviewDate(item.createdAt)}</Text>
                                   </View>
                                 </View>
-                                <View style={{ marginBottom: 8 }}><RatingStars value={rating} size={14} /></View>
+                                <View style={{ marginTop: 2, marginBottom: 8 }}>
+                                 <RatingStars value={rating} size={14} /></View>
                                 <Text style={s.reviewBody}>{item.comment}</Text>
                                 {adminResponse ? (
                                   <View style={s.reviewAdminResponseCard}>
