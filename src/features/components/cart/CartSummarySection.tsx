@@ -10,61 +10,55 @@ type Props = {
 };
 
 export function CartSummarySection({ summary, compact = false }: Props) {
-  const subtotalBase = formatBRL(toNumberBR(summary?.subtotalBase ?? "0"));
-  const discountProducts = formatBRL(toNumberBR(summary?.discountProducts ?? "0"));
-  const couponDiscount = formatBRL(toNumberBR(summary?.couponDiscount ?? "0"));
-  const shipping = formatBRL(toNumberBR(summary?.shipping ?? "0"));
-  const total = formatBRL(toNumberBR(summary?.total ?? "0"));
+  const subtotalBaseN = toNumberBR(summary?.subtotalBase ?? "0");
+  const discountProductsN = toNumberBR(summary?.discountProducts ?? "0");
+  const couponDiscountN = toNumberBR(summary?.couponDiscount ?? "0");
+  const shippingN = toNumberBR(summary?.shipping ?? "0");
+  const totalN = toNumberBR(summary?.total ?? "0");
+
+  const subtotalBase = formatBRL(subtotalBaseN);
+  const discountProducts = formatBRL(discountProductsN);
+  const couponDiscount = formatBRL(couponDiscountN);
+  const shipping = formatBRL(shippingN);
+  const total = formatBRL(totalN);
 
   return (
     <View style={[s.section, compact && s.sectionCompact]}>
       <Text style={s.sectionLabel}>Resumo do pedido</Text>
 
-      <View style={s.summary}>
-        <View style={s.divider} />
+      <View style={s.summaryCard}>
 
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Subtotal</Text>
           <Text style={s.summaryVal}>{subtotalBase}</Text>
         </View>
 
-        <View style={s.divider} />
-
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Desconto em produtos</Text>
-          <Text style={s.summaryVal}>
-            {toNumberBR(summary?.discountProducts ?? "0") > 0
-              ? `−${discountProducts}`
-              : discountProducts}
+          <Text style={[s.summaryVal, discountProductsN > 0 && s.summaryPositive]}>
+            {discountProductsN > 0 ? `−${discountProducts}` : discountProducts}
           </Text>
         </View>
 
-        <View style={s.divider} />
 
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Cupom</Text>
-          <Text style={s.summaryVal}>
-            {toNumberBR(summary?.couponDiscount ?? "0") > 0
-              ? `−${couponDiscount}`
-              : couponDiscount}
+          <Text style={[s.summaryVal, couponDiscountN > 0 && s.summaryPositive]}>
+            {couponDiscountN > 0 ? `−${couponDiscount}` : couponDiscount}
           </Text>
         </View>
 
-        <View style={s.divider} />
-
         <View style={s.summaryRow}>
           <Text style={s.summaryKey}>Frete</Text>
-          <Text style={s.summaryVal}>{shipping}</Text>
+          <Text style={s.summaryVal}>{shippingN === 0 ? "Calculado na próxima etapa" : shipping}</Text>
         </View>
 
-        <View style={s.divider} />
+        <View style={s.summaryDivider} />
 
         <View style={[s.summaryRow, s.totalRow]}>
           <Text style={s.totalKey}>Total</Text>
           <Text style={s.totalVal}>{total}</Text>
         </View>
-
-        <View style={s.divider} />
       </View>
     </View>
   );
