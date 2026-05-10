@@ -70,11 +70,46 @@ function getFavoriteImage(item: FavoriteItemBase) {
   return item.images?.[0]?.url || null;
 }
 
-function getFavoritePrice(item: FavoriteItemBase) {
-  if (typeof item.activePromo?.promoPrice === "number") {
-    return item.activePromo.promoPrice;
+function toFiniteNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getPromoPrice(item: FavoriteItemBase): number | null {
+  const promoPrice = toFiniteNumber(item.activePromo?.promoPrice);
+  return promoPrice != null && promoPrice > 0 ? promoPrice : null;
+}
+
+function getReferencePrice(item: FavoriteItemBase): number | null {
+  return (
+    toFiniteNumber(item.customerPrice) ??
+    toFiniteNumber(item.effectivePrice) ??
+    toFiniteNumber(item.price)
+  );
+}
+
+function hasActivePromotion(item: FavoriteItemBase): boolean {
+  const promoPrice = getPromoPrice(item);
+  if (promoPrice == null) return false;
+
+  const referencePrice = getReferencePrice(item);
+  if (referencePrice != null && referencePrice > 0) {
+    return promoPrice < referencePrice;
   }
-  return null;
+  return Boolean(item.activePromo);
+}
+
+function isAvailable(item: FavoriteItemBase): boolean {
+  if (item.stock == null) return true;
+
+  const stock = toFiniteNumber(item.stock);
+  return stock != null && stock > 0;
+}
+
+function getFavoritePrice(item: FavoriteItemBase) {
+  return hasActivePromotion(item) ? getPromoPrice(item) : null;
 }
 
 export function SharedFavoritesScreen({
@@ -93,13 +128,11 @@ export function SharedFavoritesScreen({
 
   const filteredItems = React.useMemo(() => {
     if (selectedFilter === "promos") {
-      return items.filter((item) => Number(item.activePromo?.promoPrice) > 0);
+      return items.filter(hasActivePromotion);
     }
 
     if (selectedFilter === "available") {
-      return items.filter(
-        (item) => item.stock == null || Number(item.stock) > 0,
-      );
+      return items.filter(isAvailable);
     }
 
     return items;
