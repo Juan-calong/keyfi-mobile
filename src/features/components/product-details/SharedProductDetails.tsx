@@ -1480,762 +1480,206 @@ const quantityTierBadges = useMemo(() => {
             </View>
 
             <View style={{ marginTop: 24, paddingHorizontal: 16 }}>
-              <View
-                style={{
-                  marginBottom: 14,
-                  borderWidth: 1,
-                  borderColor: "#E9DED4",
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 22,
-                  padding: 16,
-                  shadowColor: "#000",
-                  shadowOpacity: 0.03,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 3 },
-                  elevation: 1,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 12,
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{
-                        color: COLORS.text,
-                        fontWeight: "900",
-                        fontSize: 22,
-                        letterSpacing: -0.3,
-                      }}
-                    >
-                      Avaliações
+              <View style={s.reviewsPremiumCard}>
+                <Text style={s.reviewsPremiumTitle}>Avaliações</Text>
+
+                {commentsQ.isLoading ? (
+                  <Text style={s.relatedLoading}>Carregando avaliações...</Text>
+                ) : commentsQ.isError ? (
+                  <View style={s.reviewsSimpleState}>
+                    <Text style={s.reviewsSimpleStateTitle}>
+                      Não foi possível carregar as avaliações
                     </Text>
-                    <Text
-                      style={{
-                        marginTop: 4,
-                        color: COLORS.textMuted,
-                        fontWeight: "600",
-                        fontSize: 13,
-                      }}
-                    >
-                      Comentários e notas de quem já comprou
+                    <Text style={s.reviewsSimpleStateSub}>
+                      Tente novamente mais tarde.
                     </Text>
                   </View>
-
-                  <View
-                    style={{
-                      minWidth: 74,
-                      height: 40,
-                      paddingHorizontal: 12,
-                      borderRadius: 999,
-                      backgroundColor: "#111111",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#FFFFFF",
-                        fontWeight: "900",
-                        fontSize: 14,
-                        letterSpacing: -0.2,
-                      }}
-                    >
-                      {averageRating > 0 ? averageRating.toFixed(1) : "0.0"} ★
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={{
-                    marginTop: 12,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <RatingStars value={averageRating} size={15} />
-                  <Text
-                    style={{
-                      color: COLORS.textMuted,
-                      fontWeight: "700",
-                      fontSize: 13,
-                    }}
-                  >
-                    {reviewsCount || 0} avaliação(ões)
-                  </Text>
-                </View>
-              </View>
-
-              {myCommentStatusQ.isLoading ? (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#E9DED4",
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 20,
-                    padding: 18,
-                    marginBottom: 14,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <ActivityIndicator size="small" color="#111111" />
-                  <Text
-                    style={{
-                      marginTop: 10,
-                      color: COLORS.textMuted,
-                      fontWeight: "700",
-                      fontSize: 13,
-                    }}
-                  >
-                    Verificando sua avaliação...
-                  </Text>
-                </View>
-              ) : myCommentStatusQ.isError ? (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#E9DED4",
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 20,
-                    padding: 16,
-                    marginBottom: 14,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: COLORS.text,
-                      fontWeight: "800",
-                      fontSize: 15,
-                    }}
-                  >
-                    Não foi possível verificar sua avaliação
-                  </Text>
-                  <Text
-                    style={{
-                      marginTop: 4,
-                      color: COLORS.textMuted,
-                      fontWeight: "600",
-                      fontSize: 12,
-                      lineHeight: 18,
-                    }}
-                  >
-                    Tente novamente em instantes.
-                  </Text>
-                </View>
- 
-              ) : (
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#E9DED4",
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: 20,
-                    padding: 14,
-                    marginBottom: 14,
-                    shadowColor: "#000",
-                    shadowOpacity: 0.03,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 3 },
-                    elevation: 1,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 999,
-                        backgroundColor: "#F4EEE8",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        name="chatbubble-ellipses-outline"
-                        size={16}
-                        color={COLORS.text}
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: COLORS.text,
-                          fontWeight: "800",
-                          fontSize: 15,
-                        }}
-                      >
-                        {reviewCardTitle}
-                      </Text>
-                      <Text
-                        style={{
-                          marginTop: 2,
-                          color: COLORS.textMuted,
-                          fontWeight: "600",
-                          fontSize: 12,
-                        }}
-                      >
-                        {reviewCardSubtitle}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {hasVisibleMyComment && !canCreateReview ? (
-                    <View
-                      style={{
-                        marginTop: 6,
-                        marginBottom: 10,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        borderColor: "#E8DED5",
-                        backgroundColor: "#FCFAF8",
-                        padding: 12,
-                        gap: 8,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: COLORS.text,
-                          fontWeight: "800",
-                          fontSize: 13,
-                        }}
-                      >
-                        Sua avaliação atual
-                      </Text>
-
-                      <RatingStars
-                       value={Number(reviewItem?.rating ?? 0)}
-                        size={14}
-                      />
-
-                      <Text
-                        style={{
-                          color: COLORS.textSoft,
-                          fontSize: 13,
-                          lineHeight: 20,
-                          fontWeight: "500",
-                        }}
-                      >
-                        {String(reviewItem?.comment ?? "")}
-                      </Text>
-
-                      <Text
-                        style={{
-                          color: COLORS.textMuted,
-                          fontSize: 12,
-                          fontWeight: "700",
-                        }}
-                      >
-                        {reviewStatus?.nextAllowedEditAt
-                          ? `Você poderá editar novamente em ${formatReviewDateTime(
-                              reviewStatus?.nextAllowedEditAt
-                            )}`
-                            : reviewBlockedMessage}
-                      </Text>
-                    </View>
-                  ) : null}
-
-                  {canWriteReview ? (
-                    <>
-                      <View
-                        style={{
-                          marginTop: 10,
-                          marginBottom: 12,
-                          paddingVertical: 12,
-                          paddingHorizontal: 12,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: "#E8DED5",
-                          backgroundColor: "#FCFAF8",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: COLORS.text,
-                            fontWeight: "800",
-                            fontSize: 13,
-                            marginBottom: 8,
-                          }}
-                        >
-                          Sua nota
+                ) : (
+                  <>
+                    <View style={s.reviewsSummaryRow}>
+                      <View style={s.reviewsAverageBlock}>
+                        <Text style={s.reviewsAverageScore}>
+                          {averageRating > 0 ? averageRating.toFixed(1) : "0.0"}
                         </Text>
-                        <RatingInput value={draftRating} onChange={setDraftRating} />
-                      </View>
+                        <Text style={s.reviewsAverageStar}>★</Text>
+                        {sortedReviews.length > 0 ? (
+                          <Text style={s.reviewsAverageCount}>
+                            {reviewsCount || 0} {reviewsCount === 1 ? "avaliação" : "avaliações"}
+                          </Text>
+                        ) : null}
+                      </View>   
 
-                      <TextInput
-                        value={draftComment}
-                        onChangeText={(text) => {
-                          setDraftComment(text);
-                          if (commentSuccessMessage) {
-                            setCommentSuccessMessage(null);
-                            setCommentSuccessMode(null);
-                          }
-                        }}
-                        placeholder="Conte o que achou do produto..."
-                        placeholderTextColor="#9A9088"
-                        multiline
-                        textAlignVertical="top"
-                        maxLength={1000}
-                        style={{
-                          minHeight: 120,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: "#E8DED5",
-                          backgroundColor: "#FCFAF8",
-                          paddingHorizontal: 14,
-                          paddingVertical: 14,
-                          color: COLORS.text,
-                          fontSize: 14,
-                          lineHeight: 22,
-                          fontWeight: "500",
-                        }}
-                      />
-
-                      <View
-                        style={{
-                          marginTop: 10,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color:
-                              trimmedComment.length > 1000
-                                ? "#B42318"
-                                : COLORS.textMuted,
-                            fontSize: 12,
-                            fontWeight: "700",
-                          }}
-                        >
-                          {trimmedComment.length}/1000
-                        </Text>
-
-                        <Pressable
-                          onPress={handleSubmitComment}
-                          disabled={!canSubmitComment}
-                          style={({ pressed }) => [
-                            {
-                              minWidth: 170,
-                              height: 46,
-                              borderRadius: 14,
-                              backgroundColor: canSubmitComment ? "#111111" : "#D8D1CB",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexDirection: "row",
-                              gap: 8,
-                              paddingHorizontal: 16,
-                            },
-                            pressed && canSubmitComment && { opacity: 0.88 },
-                          ]}
-                        >
-                          {createCommentM.isPending ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <>
-                              <Icon
-                                name="paper-plane-outline"
-                                size={16}
-                                color="#FFFFFF"
-                              />
-                              <Text
-                                style={{
-                                  color: "#FFFFFF",
-                                  fontSize: 14,
-                                  fontWeight: "900",
-                                  letterSpacing: -0.2,
-                                }}
-                              >
-                                {reviewSubmitLabel}
-                              </Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
-                    </>
-                  ) : null}
-                  
-
-                  {canCreateReview && reviewStatus?.eligibleOrderItem ? (
-                    <View
-                      style={{
-                        marginTop: 10,
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        backgroundColor: "#F4EEE8",
-                        borderWidth: 1,
-                        borderColor: "#E9DED4",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: COLORS.textMuted,
-                          fontWeight: "700",
-                          fontSize: 12,
-                          lineHeight: 18,
-                        }}
-                      >
-                        Produto recebido. Você já pode avaliar.
-                      </Text>
+                      {sortedReviews.length === 0 ? (
+                        <View style={s.reviewsEmptyContent}>
+                          <Text style={s.reviewsEmptyTitle}>Nenhuma avaliação ainda</Text>
+                          <Text style={s.reviewsEmptySub}>
+                            {canWriteReview
+                              ? "Produto recebido. Você já pode avaliar."
+                              : "Você poderá avaliar este produto após uma compra entregue."}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
-                  ) : null}
-
-                  {commentSuccessMessage ? (
-                    <View
-                      style={{
-                        marginTop: 12,
-                        borderRadius: 16,
-                        backgroundColor: "#F4EEE8",
-                        borderWidth: 1,
-                        borderColor: "#E8DDD2",
-                        paddingHorizontal: 12,
-                        paddingVertical: 12,
-                        flexDirection: "row",
-                        alignItems: "flex-start",
-                        gap: 10,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 999,
-                          backgroundColor: "#111111",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginTop: 1,
-                        }}
-                      >
-                        <Icon name="checkmark" size={16} color="#FFFFFF" />
-                      </View>
-
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            color: COLORS.text,
-                            fontSize: 13,
-                            fontWeight: "800",
-                          }}
-                        >
-                          {commentSuccessMode === "updated"
-                            ? "Avaliação atualizada"
-                            : "Avaliação enviada"}
-                        </Text>
-                        <Text
-                          style={{
-                            marginTop: 2,
-                            color: COLORS.textMuted,
-                            fontSize: 12,
-                            lineHeight: 18,
-                            fontWeight: "600",
-                          }}
-                        >
-                          {commentSuccessMessage}
-                        </Text>
-                      </View>
-                    </View>
-                  ) : null}
-                  
-                  {!canCreateReview && !hasVisibleMyComment ? (
-                    <View
-                      style={{
-                        marginTop: 10,
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        backgroundColor: "#F8F4EF",
-                        borderWidth: 1,
-                        borderColor: "#E9DED4",
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: COLORS.textMuted,
-                          fontWeight: "700",
-                          fontSize: 12,
-                          lineHeight: 18,
-                        }}
-                      >
-                        {reviewBlockedMessage}
+  
+                      {myCommentStatusQ.isLoading ? (
+                      <Text style={s.reviewsInlineMuted}>Verificando sua avaliação...</Text>
+                    ) : myCommentStatusQ.isError ? (
+                      <Text style={s.reviewsInlineMuted}>
+                        Não foi possível verificar sua avaliação agora.
                       </Text>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-
-              {!(commentsQ.isLoading || commentsQ.isError) && reviewsRaw.length > 0 && sortedReviews.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
-              >
-                {[
-                  { key: "recent", label: "Mais recentes" },
-                  { key: "oldest", label: "Mais antigos" },
-                  { key: "highest", label: "Maior nota" },
-                  { key: "lowest", label: "Menor nota" },
-                ].map((item) => {
-                  const active = reviewSort === item.key;
-                  return (
-                    <Pressable
-                      key={item.key}
-                      onPress={() => setReviewSort(item.key as ReviewSort)}
-                      style={({ pressed }) => [
-                        s.reviewSortChip,
-                        active && s.reviewSortChipActive,
-                        pressed && { opacity: 0.75 },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          s.reviewSortChipText,
-                          active && s.reviewSortChipTextActive,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-              ) : null}
-              {commentsQ.isLoading ? (
-                <Text style={s.relatedLoading}>Carregando avaliações...</Text>
-              ) : commentsQ.isError ? (
-                <View
-                  style={{
-                    marginTop: 4,
-                    borderWidth: 1,
-                    borderColor: "#ECE2D8",
-                    borderRadius: 0,
-                    backgroundColor: "#FFFFFF",
-                    paddingVertical: 18,
-                    paddingHorizontal: 16,
-                    alignItems: "center",
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 999,
-                      backgroundColor: "#F4EEE8",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <Icon
-                      name="alert-circle-outline"
-                      size={18}
-                      color={COLORS.text}
-                    />
-                  </View>
-
-                  <Text
-                    style={{
-                      color: COLORS.text,
-                      fontSize: 15,
-                      fontWeight: "800",
-                      textAlign: "center",
-                    }}
-                  >
-                    Não foi possível carregar as avaliações
-                  </Text>
-
-                  <Text
-                    style={{
-                      marginTop: 6,
-                      color: COLORS.textMuted,
-                      fontSize: 13,
-                      lineHeight: 20,
-                      fontWeight: "600",
-                      textAlign: "center",
-                    }}
-                  >
-                    Tente novamente mais tarde. Quando houver avaliações e comentários,
-                    elas aparecerão aqui.
-                  </Text>
-                </View>
-              ) : sortedReviews.length > 0 ? (
-                <View style={{ gap: 12 }}>
-                  {visibleReviews.map((item) => {
-                    const rating = getReviewRating(item);
-                    const adminResponse = getActiveAdminResponse(item);
-                    const adminName = getAdminDisplayName(adminResponse);
-                    const adminDate = formatReviewDate(adminResponse?.createdAt);
-
-                    return (
-                      <View
-                        key={item.id}
-                        style={{
-                          borderWidth: 1,
-                          borderColor: "#ECE2D8",
-                          borderRadius: 0,
-                          backgroundColor: "#FFFFFF",
-                          padding: 14,
-                          shadowColor: "#000",
-                          shadowOpacity: 0.04,
-                          shadowRadius: 8,
-                          shadowOffset: { width: 0, height: 3 },
-                          elevation: 2,
-                        }}
-                      >
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 10,
-                            marginBottom: 10,
-                          }}
-                        >
-                          <View
-                            style={{
-                              width: 42,
-                              height: 42,
-                              borderRadius: 999,
-                              backgroundColor: "#F4EEE8",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: COLORS.text,
-                                fontWeight: "900",
-                                fontSize: 15,
-                              }}
-                            >
-                              {(item.user?.name || "C")
-                                .trim()
-                                .charAt(0)
-                                .toUpperCase()}
+                    ) : (
+                      <>
+                        {hasVisibleMyComment && !canCreateReview ? (
+                          <View style={s.reviewCurrentCard}>
+                            <Text style={s.reviewCurrentTitle}>Sua avaliação atual</Text>
+                            <RatingStars value={Number(reviewItem?.rating ?? 0)} size={14} />
+                            <Text style={s.reviewCurrentBody}>{String(reviewItem?.comment ?? "")}</Text>
+                            <Text style={s.reviewBlockedInline}>
+                              {reviewStatus?.nextAllowedEditAt
+                                ? `Você poderá editar novamente em ${formatReviewDateTime(
+                                    reviewStatus?.nextAllowedEditAt
+                                  )}`
+                                : reviewBlockedMessage}
                             </Text>
                           </View>
+                        ) : null}
 
-                          <View style={{ flex: 1 }}>
-                            <Text style={s.reviewAuthor}>
-                              {item.user?.name || "Cliente"}
-                            </Text>
-                            <Text style={s.reviewDate}>
-                              {formatReviewDate(item.createdAt)}
-                            </Text>
-                          </View>
-                        </View>
+                        {canWriteReview ? (
+                          <>
+                            <View style={s.reviewWriteIntro}>
+                              <Text style={s.reviewWriteTitle}>{reviewCardTitle}</Text>
+                              <Text style={s.reviewWriteSubtitle}>{reviewCardSubtitle}</Text>
+                            </View>
+                            <View style={s.reviewFormScoreBox}>
+                              <Text style={s.reviewFormLabel}>Sua nota</Text>
+                              <RatingInput value={draftRating} onChange={setDraftRating} />
+                            </View>
 
-                        <Text style={s.reviewBody}>{item.comment}</Text>
-
-                        <View style={{ marginTop: 10 }}>
-                          <RatingStars value={rating} size={14} />
-                        </View>
-                        
-                        {adminResponse ? (
-                          <View
-                            style={{
-                              marginTop: 12,
-                              borderWidth: 1,
-                              borderColor: "#E8DED5",
-                              backgroundColor: "#FCFAF8",
-                              padding: 12,
-                              gap: 6,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: COLORS.text,
-                                fontSize: 12,
-                                fontWeight: "900",
+                            <TextInput
+                              value={draftComment}
+                              onChangeText={(text) => {
+                                setDraftComment(text);
+                                if (commentSuccessMessage) {
+                                  setCommentSuccessMessage(null);
+                                  setCommentSuccessMode(null);
+                                }
                               }}
-                            >
-                              Resposta da loja
-                            </Text>
-                            <Text
-                              style={{
-                                color: COLORS.textSoft,
-                                fontSize: 13,
-                                lineHeight: 20,
-                                fontWeight: "500",
-                              }}
-                            >
-                              {String(adminResponse.message ?? "")}
-                            </Text>
-                            {adminName || adminDate ? (
+                              placeholder="Conte o que achou do produto..."
+                              placeholderTextColor="#9A9088"
+                              multiline
+                              textAlignVertical="top"
+                              maxLength={1000}
+                              style={s.reviewFormTextArea}
+                            />
+
+                            <View style={s.reviewFormFooter}>
                               <Text
                                 style={{
-                                  color: COLORS.textMuted,
-                                  fontSize: 11,
+                                  color: trimmedComment.length > 1000 ? "#B42318" : COLORS.textMuted,
+                                  fontSize: 12,
                                   fontWeight: "700",
                                 }}
                               >
-                                {[adminName, adminDate].filter(Boolean).join(" • ")}
+                                {trimmedComment.length}/1000
                               </Text>
-                            ) : null}
+
+                              <Pressable
+                                onPress={handleSubmitComment}
+                                disabled={!canSubmitComment}
+                                style={({ pressed }) => [s.reviewSubmitButton, !canSubmitComment && s.reviewSubmitButtonDisabled, pressed && canSubmitComment && { opacity: 0.88 }]}
+                              >
+                                {createCommentM.isPending ? (
+                                  <ActivityIndicator size="small" color="#FFFFFF" />
+                                ) : (
+                                  <>
+                                    <Icon name="paper-plane-outline" size={16} color="#FFFFFF" />
+                                    <Text style={s.reviewSubmitButtonText}>{reviewSubmitLabel}</Text>
+                                  </>
+                                )}
+                              </Pressable>
+                            </View>
+                          </>
+                        ) : null}
+
+                        {commentSuccessMessage ? (
+                          <View style={s.reviewSuccessInline}>
+                            <Text style={s.reviewSuccessInlineTitle}>
+                              {commentSuccessMode === "updated" ? "Avaliação atualizada" : "Avaliação enviada"}
+                            </Text>
+                            <Text style={s.reviewSuccessInlineText}>{commentSuccessMessage}</Text>
                           </View>
                         ) : null}
-                      </View>
-                    );
-                  })}
 
-                  {hasMoreReviews ? (
-                    <Pressable
-                      onPress={() => setReviewsVisibleCount((prev) => prev + 6)}
-                      style={({ pressed }) => [
-                        {
-                          marginTop: 4,
-                          height: 46,
-                          borderRadius: 14,
-                          backgroundColor: "#111111",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        },
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: "#FFFFFF",
-                          fontSize: 14,
-                          fontWeight: "900",
-                          letterSpacing: -0.2,
-                        }}
-                      >
-                        Ver mais avaliações
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              ) : (
-                 <View style={s.emptyReviewCard}>
-                  <Text style={s.emptyReviewTitle}>Avaliações</Text>
-                  <View style={s.emptyReviewRow}>
-                    <Text style={s.emptyReviewScore}>0.0 <Text style={s.emptyReviewStar}>★</Text></Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.emptyReviewMain}>Nenhuma avaliação ainda</Text>
-                      <Text style={s.emptyReviewSub}>
-                        {canCreateReview
-                          ? "Você poderá avaliar este produto após uma compra entregue."
-                          : reviewBlockedMessage}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
+                        {!canWriteReview && !canCreateReview && !hasVisibleMyComment ? (
+                          <Text style={s.reviewBlockedInline}>{reviewBlockedMessage}</Text>
+                        ) : null}
+                      </>
+                    )}
+
+                    {sortedReviews.length > 0 ? (
+                      <>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12, marginTop: 12 }}>
+                          {[
+                            { key: "recent", label: "Mais recentes" },
+                            { key: "oldest", label: "Mais antigos" },
+                            { key: "highest", label: "Maior nota" },
+                            { key: "lowest", label: "Menor nota" },
+                          ].map((item) => {
+                            const active = reviewSort === item.key;
+                            return (
+                              <Pressable
+                                key={item.key}
+                                onPress={() => setReviewSort(item.key as ReviewSort)}
+                                style={({ pressed }) => [s.reviewSortChip, active && s.reviewSortChipActive, pressed && { opacity: 0.75 }]}
+                              >
+                                <Text style={[s.reviewSortChipText, active && s.reviewSortChipTextActive]}>{item.label}</Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+
+                        <View style={{ gap: 12 }}>
+                          {visibleReviews.map((item) => {
+                            const rating = getReviewRating(item);
+                            const adminResponse = getActiveAdminResponse(item);
+                            const adminName = getAdminDisplayName(adminResponse);
+                            const adminDate = formatReviewDate(adminResponse?.createdAt);
+
+                            return (
+                              <View key={item.id} style={s.reviewCard}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                                  <View style={s.reviewAvatar}>
+                                    <Text style={s.reviewAvatarText}>{(item.user?.name || "C").trim().charAt(0).toUpperCase()}</Text>
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={s.reviewAuthor}>{item.user?.name || "Cliente"}</Text>
+                                    <Text style={s.reviewDate}>{formatReviewDate(item.createdAt)}</Text>
+                                  </View>
+                                </View>
+                                <Text style={s.reviewBody}>{item.comment}</Text>
+                                <View style={{ marginTop: 10 }}><RatingStars value={rating} size={14} /></View>
+                                {adminResponse ? (
+                                  <View style={s.reviewAdminResponseCard}>
+                                    <Text style={s.reviewAdminResponseTitle}>Resposta da loja</Text>
+                                    <Text style={s.reviewAdminResponseBody}>{String(adminResponse.message ?? "")}</Text>
+                                    {adminName || adminDate ? <Text style={s.reviewAdminResponseMeta}>{[adminName, adminDate].filter(Boolean).join(" • ")}</Text> : null}
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          })}
+
+                          {hasMoreReviews ? (
+                            <Pressable onPress={() => setReviewsVisibleCount((prev) => prev + 6)} style={({ pressed }) => [s.reviewsMoreBtn, pressed && { opacity: 0.8 }]}>
+                              <Text style={s.reviewsMoreBtnText}>Ver mais avaliações</Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      </>
+                    ) : null}
+                  </>
+                )}
+              </View>
             </View>
 
             {relatedQuery.isLoading ? (
