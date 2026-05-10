@@ -97,6 +97,18 @@ function splitFullName(value?: string | null) {
   return { firstName, lastName };
 }
 
+function resolveProviderLine(option: ShippingQuoteOption) {
+  if (isLocalDeliveryOption(option)) return null;
+
+  const carrier = String(option.carrier || "").trim().toUpperCase();
+
+  if (!carrier) return null;
+  if (carrier === "CORREIOS") return "Correios";
+  if (carrier === "BRASPRESS") return "Transportadora";
+
+  return String(option.carrier || "").trim();
+}
+
 function pickPayerDoc(me: any, role: "CUSTOMER" | "SALON_OWNER") {
   const salon = pickSalon(me);
 
@@ -440,7 +452,7 @@ function resolveLocalRuleText(option: ShippingQuoteOption) {
     null;
 
   if (qualifiesFreeShipping) {
-    return "Frete grátis aplicado nesta entrega local.";
+    return "Frete grátis aplicado nesta entrega.";
   }
 
   if (
@@ -478,12 +490,10 @@ function ShippingRow({
   onPress: () => void;
 }) {
   const label = normalizeLabel(option);
-  const subtitle = normalizeDescription(option);
-  const finalPrice = Number(option.finalPrice ?? option.meta?.finalPrice ?? option.price ?? 0);
-  const originalPrice = Number(
-    option.originalPrice ?? option.meta?.originalPrice ?? option.price ?? 0
+  const fallbackSubtitle = normalizeDescription(option);
+  const finalPrice = Number(
+    option.finalPrice ?? option.meta?.finalPrice ?? option.price ?? 0
   );
-  const discount = Number(option.discount ?? option.meta?.discount ?? 0);
   const price = formatBRL(finalPrice);
 
   const localDeliveryCountdown = isLocalDeliveryOption(option)
@@ -491,7 +501,11 @@ function ShippingRow({
     : null;
 
   const localRuleText = resolveLocalRuleText(option);
-  const showOldPrice = discount > 0 && originalPrice > finalPrice;
+  const providerLine = resolveProviderLine(option);
+  const isFree = finalPrice <= 0;
+
+  // Evita duplicar linha de prazo para entrega local
+  const subtitle = localDeliveryCountdown || fallbackSubtitle;
 
   return (
     <View style={{ marginTop: 14 }}>
@@ -499,51 +513,49 @@ function ShippingRow({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityState={{ selected }}
-        accessibilityLabel={`${label}, ${option.carrier}, ${subtitle}, ${price}${
+        accessibilityLabel={`${label}, ${subtitle}, ${isFree ? "grátis" : price}${
           selected ? ", selecionado" : ""
         }`}
         style={({ pressed }) => [
           s.option,
           selected && s.optionSelected,
           option.available === false && s.optionDisabled,
-          pressed && option.available !== false && { opacity: 0.96 },
+          pressed && option.available !== false ? { opacity: 0.96 } : null,
         ]}
         disabled={option.available === false}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={s.optionTitle}>{label}</Text>
-          <Text style={s.optionSub}>{subtitle}</Text>
-          <Text style={s.providerText}>
-            {option.carrier} • {option.serviceName}
-          </Text>
+        <View style={s.optionContent}>
+          <View style={s.optionMain}>
+            <Text style={s.optionTitle}>{label}</Text>
 
-          {localDeliveryCountdown ? (
-            <Text style={s.localCountdownText}>{localDeliveryCountdown}</Text>
-          ) : null}
+            <Text style={s.optionSub}>{subtitle}</Text>
 
-          {localRuleText ? (
-            <Text style={s.localRuleText}>{localRuleText}</Text>
-          ) : null}
+            {providerLine ? (
+              <Text style={s.providerText}>{providerLine}</Text>
+            ) : null}
 
-          {option.available === false && option.reason ? (
-            <Text style={s.unavailableText}>{option.reason}</Text>
-          ) : null}
-        </View>
+            {localRuleText ? (
+              <Text style={s.localRuleText}>{localRuleText}</Text>
+            ) : null}
 
-        <View style={s.rightWrap}>
-          {showOldPrice ? (
-            <Text style={s.oldPriceText}>{formatBRL(originalPrice)}</Text>
-          ) : null}
+            {option.available === false && option.reason ? (
+              <Text style={s.unavailableText}>{option.reason}</Text>
+            ) : null}
+          </View>
 
-          <Text style={s.priceText}>{price}</Text>
+          <View style={s.optionAside}>
+            {isFree ? (
+              <View style={s.freeBadge}>
+                <Text style={s.freeBadgeText}>Grátis</Text>
+              </View>
+            ) : (
+              <Text style={s.priceText}>{price}</Text>
+            )}
 
-          {selected ? (
-            <View style={s.checkCircle}>
-              <Text style={s.checkText}>✓</Text>
+            <View style={selected ? s.selectorSelected : s.selector}>
+              {selected ? <View style={s.selectorDot} /> : null}
             </View>
-          ) : (
-            <View style={s.radioCircle} />
-          )}
+          </View>
         </View>
       </Pressable>
     </View>
@@ -574,28 +586,33 @@ function AddressSummaryCard({
   isComplete: boolean;
   onEditAddress?: () => void;
 }) {
-  const title = isComplete
-    ? "Endereço usado no cálculo"
-    : "Confirme o endereço para calcular corretamente";
-
-  const actionLabel = isComplete ? "Alterar endereço" : "Confirmar / editar endereço";
+  const title = isComplete ? "Entrega em" : "Complete o endereço";
+  const canEdit = Boolean(onEditAddress);
 
   return (
-    <View style={s.addressSummaryCard}>
-      <Text style={s.addressSummaryTitle}>{title}</Text>
-      <Text style={s.addressSummaryValue}>{summary}</Text>
-      <Pressable
-        onPress={onEditAddress}
-        disabled={!onEditAddress}
-        style={({ pressed }) => [
-          s.addressSummaryAction,
-          pressed && onEditAddress ? { opacity: 0.9 } : null,
-          !onEditAddress ? { opacity: 0.55 } : null,
-        ]}
-      >
-        <Text style={s.addressSummaryActionText}>{actionLabel}</Text>
-      </Pressable>
-    </View>
+    <Pressable
+      onPress={onEditAddress}
+      disabled={!canEdit}
+      accessibilityRole={canEdit ? "button" : undefined}
+      accessibilityState={{ disabled: !canEdit }}
+      accessibilityLabel={`${title}. ${summary}${canEdit ? ". Alterar endereço" : ""}`}
+      style={({ pressed }) => [
+        s.addressSummaryCard,
+        pressed && canEdit ? { opacity: 0.92 } : null,
+        !canEdit ? { opacity: 0.7 } : null,
+      ]}
+    >
+      <View style={s.addressSummaryHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.addressSummaryTitle}>{title}</Text>
+          <Text style={s.addressSummaryValue}>{summary}</Text>
+        </View>
+
+        {canEdit ? (
+          <Text style={s.addressSummaryActionText}>Alterar ›</Text>
+        ) : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -1017,7 +1034,6 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
 
           <View style={{ flex: 1 }}>
             <Text style={s.h1}>{title}</Text>
-            <Text style={s.sub}>Selecione uma forma de entrega</Text>
           </View>
         </View>
 
@@ -1037,6 +1053,7 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
               contentContainerStyle={[s.scroll, { paddingBottom: 150 + insets.bottom }]}
               showsVerticalScrollIndicator={false}
             >
+              <Text style={s.sectionEyebrow}>Opções de envio</Text>
               <Text style={s.sectionTitle}>Escolha uma forma de entrega</Text>
 
                 <AddressSummaryCard
@@ -1044,11 +1061,6 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
                 isComplete={hasCompleteAddress}
                 onEditAddress={onEditAddress}
               />
-
-              {hasValidZipcode ? (
-                <Text style={s.zipInfo}>CEP da entrega: {maskCep(cleanZipcode)}</Text>
-              ) : null}
-
               {!hasValidZipcode ? (
                 <InlineInfoCard
                   title="CEP de entrega não encontrado"
@@ -1192,13 +1204,7 @@ const s = StyleSheet.create({
     width: "100%",
   },
 
-  scroll: { paddingTop: 16, paddingHorizontal: 20, paddingBottom: 0 },
-  sectionTitle: {
-    color: "#000",
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: -0.3,
-  },
+  scroll: { paddingTop: 16, paddingHorizontal: 14, paddingBottom: 0 },
   zipInfo: {
     marginTop: 8,
     color: "rgba(0,0,0,0.55)",
@@ -1206,119 +1212,170 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 
-   addressSummaryCard: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.10)",
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  addressSummaryTitle: {
-    color: "rgba(0,0,0,0.6)",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  addressSummaryValue: {
-    marginTop: 6,
-    color: "#000",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  addressSummaryAction: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#F8F8F8",
-  },
-  addressSummaryActionText: {
-    color: "#111",
-    fontSize: 12,
-    fontWeight: "900",
-  },
+addressSummaryCard: {
+  marginTop: 12,
+  borderWidth: 1,
+  borderColor: "rgba(15,23,42,0.08)",
+  borderRadius: 18,
+  padding: 16,
+  backgroundColor: "#FFFFFF",
 
-  option: {
-    borderWidth: 2,
-    borderColor: "rgba(0,0,0,0.10)",
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  optionSelected: { borderColor: "#2563EB", backgroundColor: "#F5FAFF" },
-  optionDisabled: { opacity: 0.6 },
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.06,
+  shadowRadius: 14,
 
-  optionTitle: { color: "#000", fontSize: 18, fontWeight: "900" },
-  optionSub: {
-    marginTop: 4,
-    color: "rgba(0,0,0,0.65)",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  providerText: {
-    marginTop: 6,
-    color: "rgba(0,0,0,0.5)",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  localCountdownText: {
-    marginTop: 6,
-    color: "#1D4ED8",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  localRuleText: {
-    marginTop: 6,
-    color: "#065F46",
-    fontSize: 12,
-    fontWeight: "800",
-    lineHeight: 18,
-  },
+  elevation: 3,
+},
 
-  unavailableText: {
-    marginTop: 6,
-    color: "#B91C1C",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+addressSummaryHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+},
+addressSummaryTitle: {
+  color: "rgba(15,23,42,0.55)",
+  fontSize: 12,
+  fontWeight: "800",
+},
+addressSummaryValue: {
+  marginTop: 6,
+  color: "#0F172A",
+  fontSize: 14,
+  fontWeight: "800",
+  lineHeight: 19,
+},
+addressSummaryActionText: {
+  color: "#2563EB",
+  fontSize: 13,
+  fontWeight: "900",
+  flexShrink: 0,
+},
 
-  rightWrap: { marginLeft: 12, alignItems: "flex-end", gap: 6 },
-  oldPriceText: {
-    color: "rgba(0,0,0,0.40)",
-    fontSize: 12,
-    fontWeight: "700",
-    textDecorationLine: "line-through",
-  },
-  priceText: { color: "#000", fontSize: 18, fontWeight: "900" },
+option: {
+  borderWidth: 1.5,
+  borderColor: "rgba(15,23,42,0.14)",
+  borderRadius: 18,
+  paddingHorizontal: 16,
+  paddingVertical: 16,
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#FFFFFF",
+},
 
-  radioCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "rgba(0,0,0,0.20)",
-    backgroundColor: "transparent",
-  },
-  checkCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#2563EB",
-  },
-  checkText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "900",
-    marginTop: -1,
-  },
+sectionEyebrow: {
+  color: "rgba(17,17,17,0.52)",
+  fontSize: 13,
+  fontWeight: "800",
+  textAlign: "center",
+  marginBottom: 6,
+},
+sectionTitle: {
+  color: "#000",
+  fontSize: 22,
+  fontWeight: "900",
+  letterSpacing: -0.3,
+  textAlign: "center",
+},
+
+optionSelected: {
+  borderWidth: 1.8,
+  borderColor: "#3B82F6",
+  backgroundColor: "#F7FAFF",
+},
+optionDisabled: { opacity: 0.6 },
+
+optionContent: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 12,
+},
+optionMain: {
+  flex: 1,
+},
+optionAside: {
+  alignItems: "flex-end",
+  justifyContent: "space-between",
+  minHeight: 58,
+},
+
+optionTitle: {
+  color: "#111111",
+  fontSize: 17,
+  fontWeight: "900",
+  letterSpacing: -0.2,
+},
+optionSub: {
+  marginTop: 6,
+  color: "rgba(17,17,17,0.72)",
+  fontSize: 14,
+  fontWeight: "600",
+},
+providerText: {
+  marginTop: 8,
+  color: "rgba(17,17,17,0.45)",
+  fontSize: 12,
+  fontWeight: "700",
+},
+localRuleText: {
+  marginTop: 10,
+  color: "#15803D",
+  fontSize: 13,
+  fontWeight: "900",
+  lineHeight: 18,
+},
+unavailableText: {
+  marginTop: 8,
+  color: "#B91C1C",
+  fontSize: 12,
+  fontWeight: "700",
+},
+
+priceText: {
+  color: "#111111",
+  fontSize: 17,
+  fontWeight: "900",
+},
+
+freeBadge: {
+  backgroundColor: "#E8F7ED",
+  borderRadius: 999,
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+},
+freeBadgeText: {
+  color: "#15803D",
+  fontSize: 13,
+  fontWeight: "900",
+},
+
+selector: {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  borderWidth: 2,
+  borderColor: "#D1D5DB",
+  alignItems: "center",
+  justifyContent: "center",
+},
+selectorSelected: {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  borderWidth: 2,
+  borderColor: "#3B82F6",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+},
+selectorDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 999,
+  backgroundColor: "#3B82F6",
+},
 
   infoCard: {
     marginTop: 14,
@@ -1379,13 +1436,13 @@ ctaWrap: {
   ctaBtn: {
     marginTop: 10,
     height: 58,
-    borderRadius: 999,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F6C453",
+    backgroundColor: "#000000"
   },
   ctaText: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "900",
     letterSpacing: -0.2,

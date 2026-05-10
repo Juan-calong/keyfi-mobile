@@ -136,23 +136,28 @@ export const s = StyleSheet.create({
     fontSize: 11,
   },
 
-  galleryProgressTrack: {
+  galleryDotsWrap: {
     position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 10,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    overflow: "hidden",
+    left: 0,
+    right: 0,
+    bottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
   },
 
-  galleryProgressThumb: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
+  galleryDot: {
+    width: 7,
+    height: 7,
     borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#D8D1C8",
+  },
+
+  galleryDotActive: {
+    width: 8,
+    height: 8,
+    backgroundColor: "#8A6A32",
   },
 
   content: {
@@ -219,6 +224,12 @@ export const s = StyleSheet.create({
     fontSize: 13,
   },
 
+    priceStack: {
+    marginTop: 12,
+    marginBottom: 10,
+  },
+
+
   priceRow: {
     marginTop: 12,
     flexDirection: "row",
@@ -227,11 +238,16 @@ export const s = StyleSheet.create({
   },
 
   oldPrice: {
-    color: COLORS.textMuted,
-    fontWeight: "800",
+    color: "#8A817A",
+    fontWeight: "700",
     textDecorationLine: "line-through",
-    fontSize: 14,
-    marginBottom: 2,
+    fontSize: 13,
+  },
+    originalPricePromoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
 
   pricePromo: {
@@ -262,18 +278,16 @@ offerBadgesWrap: {
 
 promoOfferChip: {
   alignSelf: "flex-start",
-  paddingHorizontal: 14,
-  paddingVertical: 8,
-  borderRadius: 6,
-  backgroundColor: "transparent",
-  borderWidth: 2,
-  borderColor: "#5A403A",
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#F3E7D0",
 },
 
 promoOfferText: {
-  color: "#5A403A",
+  color: "#6B4B16",
   fontWeight: "900",
-  fontSize: 12,
+  fontSize: 11,
   letterSpacing: 0.2,
 },
 
@@ -359,6 +373,24 @@ quantityOfferText: {
     fontSize: 13,
   },
 
+    floatingCartBar: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    paddingTop: 11,
+    borderWidth: 1,
+    borderColor: "#ECE2D8",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+
   cartActionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -369,6 +401,32 @@ quantityOfferText: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+
+    qtyPill: {
+    width: 128,
+    height: 54,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#EFE8E1",
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+
+  qtyPillBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   qtyBtn: {
@@ -382,10 +440,6 @@ quantityOfferText: {
     justifyContent: "center",
   },
 
-  qtyBtnDisabled: {
-    opacity: 0.4,
-  },
-
   qtyValueWrap: {
     minWidth: 38,
     height: 42,
@@ -397,20 +451,31 @@ quantityOfferText: {
   },
 
   qtyValue: {
-    color: COLORS.text,
+    color: "#000000",
     fontWeight: "900",
-    fontSize: 14,
+    fontSize: 16,
+    includeFontPadding: false,
+  },
+
+    qtyPillSymbol: {
+    color: "#000000",
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: "700",
+    includeFontPadding: false,
+    textAlign: "center",
   },
 
   primaryCta: {
-    flex: 1,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: COLORS.black,
+    minWidth: 0,
+    height: 54,
+    borderRadius: 20,
+    backgroundColor: "#050505",
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 10,
   },
 
   primaryCtaDisabled: {
@@ -419,10 +484,133 @@ quantityOfferText: {
 
   primaryCtaText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: -0.2,
   },
+
+  
+  reviewsPremiumCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#ECE2D8",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  reviewsPremiumTitle: {
+    color: "#111111",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  reviewsSummaryRow: { flexDirection: "row", gap: 16, alignItems: "flex-start" },
+  reviewsAverageBlock: { width: 82 },
+  reviewsAverageScoreRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  reviewsAverageScore: { color: "#111111", fontSize: 32, fontWeight: "900" },
+  reviewsAverageStar: { color: "#C28A20", fontSize: 22, fontWeight: "900", marginTop: 2 },
+  reviewsAverageCount: { marginTop: 2, color: "#6F6F6F", fontSize: 12.5, fontWeight: "700" },
+  reviewsEmptyContent: { flex: 1 },
+  reviewsEmptyTitle: { color: "#111111", fontSize: 15, fontWeight: "800" },
+  reviewsEmptySub: { marginTop: 4, color: "#6F6F6F", fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+  reviewBlockedInline: { marginTop: 10, color: "#6F6F6F", fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+  reviewsSimpleState: { paddingVertical: 6 },
+  reviewsSimpleStateTitle: { color: "#111111", fontSize: 15, fontWeight: "800" },
+  reviewsSimpleStateSub: { marginTop: 4, color: "#6F6F6F", fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+  reviewsInlineMuted: { marginTop: 10, color: "#6F6F6F", fontSize: 12.5, fontWeight: "600" },
+    ratingBreakdown: { flex: 1, gap: 6 },
+  ratingBreakdownRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  ratingBreakdownLabel: { width: 28, color: "#6F6F6F", fontSize: 11, fontWeight: "800" },
+  ratingBreakdownTrack: { flex: 1, height: 6, borderRadius: 999, backgroundColor: "#EFE8DF", overflow: "hidden" },
+  ratingBreakdownFill: { height: "100%", borderRadius: 999, backgroundColor: "#C28A20" },
+  ratingBreakdownCount: { width: 16, textAlign: "right", color: "#6F6F6F", fontSize: 11, fontWeight: "800" },
+  reviewCurrentCard: {
+    marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: "#E8DED5", backgroundColor: "#FCFAF8", padding: 12, gap: 8,
+  },
+  reviewCurrentTitle: { color: COLORS.text, fontWeight: "800", fontSize: 13 },
+  reviewCurrentBody: { color: COLORS.textSoft, fontSize: 13, lineHeight: 20, fontWeight: "500" },
+
+  reviewWriteIntro: { marginTop: 10, marginBottom: 2 },
+  reviewWriteTitle: { color: "#111111", fontSize: 15, fontWeight: "800" },
+  reviewWriteSubtitle: { marginTop: 2, color: "#6F6F6F", fontSize: 12.5, fontWeight: "600" },
+  reviewSuccessInline: {
+    marginTop: 12,
+    borderRadius: 12,
+    backgroundColor: "#F4EEE8",
+    borderWidth: 1,
+    borderColor: "#E8DDD2",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  reviewSuccessInlineTitle: { color: COLORS.text, fontSize: 13, fontWeight: "800" },
+  reviewSuccessInlineText: { marginTop: 2, color: COLORS.textMuted, fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  reviewFormScoreBox: {
+    marginTop: 10, marginBottom: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: "#E8DED5", backgroundColor: "#FCFAF8",
+  },
+  reviewFormLabel: { color: COLORS.text, fontWeight: "800", fontSize: 13, marginBottom: 8 },
+  reviewFormTextArea: {
+    minHeight: 120, borderRadius: 16, borderWidth: 1, borderColor: "#E8DED5", backgroundColor: "#FCFAF8", paddingHorizontal: 14, paddingVertical: 14, color: COLORS.text, fontSize: 14, lineHeight: 22, fontWeight: "500",
+  },
+  reviewFormFooter: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  reviewSubmitButton: {
+    minWidth: 170, height: 46, borderRadius: 14, backgroundColor: "#111111", alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, paddingHorizontal: 16,
+  },
+  reviewSubmitButtonDisabled: { backgroundColor: "#D8D1CB" },
+  reviewSubmitButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900", letterSpacing: -0.2 },
+  reviewAdminResponseCard: { marginTop: 12, borderWidth: 1, borderColor: "#E8DED5", backgroundColor: "#FCFAF8", padding: 12, gap: 6 },
+  reviewAdminResponseTitle: { color: COLORS.text, fontSize: 12, fontWeight: "900" },
+  reviewAdminResponseBody: { color: COLORS.textSoft, fontSize: 13, lineHeight: 20, fontWeight: "500" },
+  reviewAdminResponseMeta: { color: COLORS.textMuted, fontSize: 11, fontWeight: "700" },
+  emptyReviewCard: {
+    marginTop: 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#ECE2D8",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  emptyReviewTitle: {
+    color: "#111111",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  emptyReviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyReviewScore: {
+    color: "#111111",
+    fontSize: 28,
+    fontWeight: "900",
+    minWidth: 78,
+  },
+  emptyReviewStar: {
+    color: "#C28A20",
+  },
+  emptyReviewMain: {
+    color: "#111111",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  emptyReviewSub: {
+    marginTop: 4,
+    color: "#6F6F6F",
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "600",
+  },
+
 
   reviewsSection: {
     marginTop: 24,
@@ -501,18 +689,18 @@ quantityOfferText: {
     gap: 12,
   },
 
-  reviewCard: {
-    borderWidth: 1,
-    borderColor: "#ECE2D8",
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    padding: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
+reviewCard: {
+  borderWidth: 1,
+  borderColor: "#ECE2D8",
+  borderRadius: 18,
+  backgroundColor: "#FFFEFC",
+  padding: 14,
+  shadowColor: "#000",
+  shadowOpacity: 0.035,
+  shadowRadius: 8,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 1,
+},
 
   reviewCardTop: {
     flexDirection: "row",
@@ -568,9 +756,9 @@ quantityOfferText: {
 
   reviewBody: {
     color: COLORS.textSoft,
-    fontSize: 14,
-    lineHeight: 22,
-    fontWeight: "500",
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: "600",
   },
 
   reviewsMoreBtn: {
@@ -699,10 +887,6 @@ quantityOfferText: {
     right: 8,
     width: 34,
     height: 34,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
     alignItems: "center",
     justifyContent: "center",
   },

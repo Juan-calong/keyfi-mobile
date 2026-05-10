@@ -24,7 +24,7 @@ export function CustomerShippingMethodScreen({ route }: any) {
   return (
     <SharedShippingMethodScreen
       role="CUSTOMER"
-      title="Métodos de entrega"
+      title="Opções de envio"
       items={items}
       couponCode={couponCode}
       deliveryAddress={deliveryAddress}

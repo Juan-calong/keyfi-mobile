@@ -24,7 +24,7 @@ export function OwnerShippingMethodScreen({ route }: any) {
   return (
     <SharedShippingMethodScreen
       role="SALON_OWNER"
-      title="Métodos de entrega"
+      title="Opções de envio"
       items={items}
       couponCode={couponCode}
       deliveryAddress={deliveryAddress}

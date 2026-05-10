@@ -100,25 +100,31 @@ function PaymentRow({
   icon: React.ReactNode;
 }) {
   return (
-    <View style={{ marginTop: 14 }}>
-      <Pressable onPress={onPress} style={({ pressed }) => [m.option, selected && m.optionSelected, pressed && { opacity: 0.96 }]}>
-        <View style={m.iconOnly}>{icon}</View>
+    <View style={m.optionShell}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={`${title}, ${subtitle}${selected ? ", selecionado" : ""}`}
+        style={({ pressed }) => [
+          m.option,
+          selected && m.optionSelected,
+          pressed ? { opacity: 0.96 } : null,
+        ]}
+      >
+        <View style={m.optionContent}>
+          <View style={m.iconOnly}>{icon}</View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={m.optionTitle}>{title}</Text>
-          <Text style={m.optionSub} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </View>
+          <View style={m.optionMain}>
+            <Text style={m.optionTitle}>{title}</Text>
+            <Text style={m.optionSub} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
 
-        <View style={m.rightWrap}>
-          {selected ? (
-            <View style={m.checkCircle}>
-              <Text style={m.checkText}>✓</Text>
-            </View>
-          ) : (
-            <View style={m.radioCircle} />
-          )}
+          <View style={selected ? m.selectorSelected : m.selector}>
+            {selected ? <View style={m.selectorDot} /> : null}
+          </View>
         </View>
       </Pressable>
     </View>
@@ -288,19 +294,27 @@ React.useEffect(() => {
       <Container style={{ flex: 1, paddingTop: Platform.OS === "ios" ? Math.max(insets.top, 10) : 6 }}>
         {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
-        <View style={m.header}>
-            <Pressable onPress={onExitPayment} hitSlop={12} style={({ pressed }) => [m.backBtn, pressed && { opacity: 0.85 }]}>
-            <Text style={m.backTxt}>←</Text>
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={m.h1}>Métodos de pagamento</Text>
-            {headerSubtitle ? <Text style={m.sub}>{headerSubtitle}</Text> : null}
-          </View>
+<View style={m.header}>
+  <Pressable
+    onPress={onExitPayment}
+    hitSlop={12}
+    style={({ pressed }) => [m.backBtn, pressed && { opacity: 0.85 }]}
+  >
+    <Text style={m.backTxt}>{"<"}</Text>
+  </Pressable>
 
-          <Pressable onPress={() => activeQ.refetch()} hitSlop={12} style={({ pressed }) => [m.refreshBtn, pressed && { opacity: 0.85 }]}>
-            <Text style={m.refreshTxt}>{activeQ.isRefetching ? "…" : "⟳"}</Text>
-          </Pressable>
-        </View>
+  <View pointerEvents="none" style={m.headerTitleWrap}>
+    <Text style={m.h1}>Pagamentos</Text>
+  </View>
+
+  <Pressable
+    onPress={() => activeQ.refetch()}
+    hitSlop={12}
+    style={({ pressed }) => [m.refreshBtn, pressed && { opacity: 0.85 }]}
+  >
+    <Text style={m.refreshTxt}>{activeQ.isRefetching ? "…" : "⟳"}</Text>
+  </Pressable>
+</View>
 
         <View style={m.hairline} />
 
@@ -340,14 +354,6 @@ React.useEffect(() => {
                     selected={selected === "PIX"}
                     onPress={() => setSelected("PIX")}
                     icon={<Image source={require("../../assets/payments/pix.png")} style={{ width: 36, height: 36, resizeMode: "contain" }} />}
-                  />
-
-                  <PaymentRow
-                    title="Boleto"
-                    subtitle="Em até 2 dias úteis"
-                    selected={selected === "BOLETO"}
-                    onPress={() => setSelected("BOLETO")}
-                    icon={<Image source={require("../../assets/payments/boleto.png")} style={{ width: 36, height: 36, resizeMode: "contain" }} />}
                   />
 
                   <PaymentRow
@@ -431,11 +437,6 @@ React.useEffect(() => {
           onPress={() => createPixMut.mutate()}
           loading={createPixMut.isPending}
         />
-        <Button
-          title="Gerar novo boleto"
-          variant="ghost"
-          onPress={() => navigation.navigate(CUSTOMER_SCREENS.BoletoPayerForm, { orderId })}
-        />
       </View>
     </Card>
   ) : null}
@@ -451,12 +452,142 @@ React.useEffect(() => {
 }
 
 const m = StyleSheet.create({
-  header: { paddingHorizontal: 2, paddingTop: 8, paddingBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
-  h1: { color: "#000000", fontSize: 28, fontWeight: "900", letterSpacing: -0.6 },
-  sub: { marginTop: 8, color: "#000000", fontSize: 14, fontWeight: "600", opacity: 0.7, lineHeight: 18 },
-    backBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.18)", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
-  backTxt: { color: "#000000", fontSize: 20, fontWeight: "900", marginTop: -1 },
-  refreshBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: "rgba(0,0,0,0.18)", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+
+  header: {
+  position: "relative",
+  paddingHorizontal: 2,
+  paddingTop: 8,
+  paddingBottom: 12,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+
+headerTitleWrap: {
+  position: "absolute",
+  left: 56,
+  right: 56,
+  top: 8,
+  bottom: 12,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+h1: {
+  color: "#000000",
+  fontSize: 24,
+  fontWeight: "900",
+  letterSpacing: -0.4,
+  textAlign: "center",
+},
+
+backBtn: {
+  width: 44,
+  height: 44,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+},
+
+backTxt: {
+  color: "#000000",
+  fontSize: 24,
+  fontWeight: "800",
+  marginTop: -1,
+  lineHeight: 28,
+},
+
+refreshBtn: {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  borderWidth: 1,
+  borderColor: "rgba(0,0,0,0.10)",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+},
+
+option: {
+  borderWidth: 1.5,
+  borderColor: "rgba(15,23,42,0.14)",
+  borderRadius: 18,
+  paddingHorizontal: 16,
+  paddingVertical: 16,
+  backgroundColor: "#FFFFFF",
+},
+
+optionSelected: {
+  borderColor: "#3B82F6",
+  backgroundColor: "#F7FAFF",
+},
+
+optionContent: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 14,
+},
+
+iconOnly: {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#F8FAFC",
+},
+
+optionMain: {
+  flex: 1,
+},
+
+optionTitle: {
+  color: "#111111",
+  fontSize: 18,
+  fontWeight: "900",
+  letterSpacing: -0.2,
+},
+
+optionShell: {
+  marginTop: 16,
+  marginHorizontal: -6,
+},
+
+optionSub: {
+  marginTop: 5,
+  color: "rgba(17,17,17,0.62)",
+  fontSize: 14,
+  fontWeight: "700",
+},
+
+selector: {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  borderWidth: 2,
+  borderColor: "#D1D5DB",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+},
+
+selectorSelected: {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  borderWidth: 2,
+  borderColor: "#3B82F6",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#FFFFFF",
+},
+
+selectorDot: {
+  width: 10,
+  height: 10,
+  borderRadius: 999,
+  backgroundColor: "#3B82F6",
+},
   refreshTxt: { color: "#000000", fontSize: 16, fontWeight: "800" },
   hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.10)", width: "100%" },
 
@@ -469,11 +600,6 @@ const m = StyleSheet.create({
 
   scroll: { paddingTop: 16, paddingHorizontal: 20, paddingBottom: 0 },
   sectionTitle: { color: "#000000", fontSize: 22, fontWeight: "900", letterSpacing: -0.3 },
-  option: { borderWidth: 2, borderColor: "rgba(0,0,0,0.10)", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 16, flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF" },
-  optionSelected: { borderColor: "#2563EB", backgroundColor: "#F5FAFF" },
-  iconOnly: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: 14 },
-  optionTitle: { color: "#000000", fontSize: 20, fontWeight: "900", letterSpacing: -0.2 },
-  optionSub: { marginTop: 4, color: "rgba(0,0,0,0.65)", fontSize: 15, fontWeight: "600" },
   rightWrap: { marginLeft: 12, width: 44, alignItems: "flex-end" },
   radioCircle: { width: 26, height: 26, borderRadius: 999, borderWidth: 2, borderColor: "rgba(0,0,0,0.20)", backgroundColor: "transparent" },
   checkCircle: { width: 32, height: 32, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#2563EB" },
@@ -483,6 +609,17 @@ const m = StyleSheet.create({
   secureRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10, marginBottom: 10 },
   lockIcon: { fontSize: 16 },
   secureText: { color: "rgba(0,0,0,0.55)", fontSize: 13, fontWeight: "800" },
-  ctaBtn: { height: 58, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: "#F6C453" },
-  ctaText: { color: "#111827", fontSize: 20, fontWeight: "900", letterSpacing: -0.2 },
+ctaBtn: {
+  height: 56,
+  borderRadius: 18,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#000000",
+},
+ctaText: {
+  color: "#FFFFFF",
+  fontSize: 17,
+  fontWeight: "900",
+  letterSpacing: -0.2,
+},
 });

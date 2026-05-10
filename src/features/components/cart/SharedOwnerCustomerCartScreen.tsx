@@ -1,24 +1,23 @@
 import React from "react";
 import {
-  SafeAreaView,
-  ScrollView,
   StatusBar,
   View,
   Pressable,
   Text,
   Image,
+  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import { Screen } from "../../../ui/components/Screen";
 import { Container } from "../../../ui/components/Container";
-import { Empty, Loading, ErrorState } from "../../../ui/components/State";
+import { Loading, ErrorState } from "../../../ui/components/State";
 
 import { CartHeader } from "./CartHeader";
 import { CartBanner } from "./CartBanner";
-import { CartCouponSection } from "./CartCouponSection";
-import { CartSummarySection } from "./CartSummarySection";
+import { CartCheckoutBar } from "./CartCheckoutBar";
+import { CartSummarySheet } from "./CartSummarySheet";
 import { OwnerCustomerCartRow } from "./OwnerCustomerCartRow";
 import { s } from "./cart.shared.styles";
 import type {
@@ -87,110 +86,47 @@ export function SharedOwnerCustomerCartScreen({
   onCheckout,
   onGoToShop,
 }: Props) {
-  const WHITE = "#FFFFFF";
+  const BG = "#fcfcfd";
 
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const [summaryVisible, setSummaryVisible] = React.useState(false);
+  const [footerHeight, setFooterHeight] = React.useState(0);
 
   // sobe o footer acima da tab bar
   const footerMarginBottom = Math.max(tabBarHeight - insets.bottom, 0);
-  const footerPaddingBottom = Math.max(insets.bottom, 12);
+  const footerPaddingBottom = Math.max(insets.bottom, 10);
+  const listBottomPadding = footerHeight + footerMarginBottom + 20;
 
   const EmptyCartBlock = () => (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 24,
-      }}
-    >
-      <View
-        style={{
-          width: 112,
-          height: 112,
-          borderRadius: 32,
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 20,
-        }}
-      >
+    <View style={s.emptyWrap}>
+      <View style={s.emptyIconWrap}>
         <Image
           source={require("../../../assets/icons/cart.png")}
-          style={{
-            width: 80,
-            height: 80,
-            resizeMode: "contain",
-            tintColor: "#B6923E",
-          }}
+          style={s.emptyIcon}
         />
       </View>
 
-      <Text
-        style={{
-          fontSize: 22,
-          fontWeight: "800",
-          color: "#1F1A14",
-          marginBottom: 8,
-          letterSpacing: 0.2,
-        }}
-      >
-        Seu carrinho está vazio
+      <Text style={s.emptyTitle}>Seu carrinho está vazio</Text>
+
+      <Text style={s.emptySubtitle}>
+        Adicione produtos para continuar sua compra com segurança e praticidade.
       </Text>
 
-      <Text
-        style={{
-          fontSize: 14,
-          lineHeight: 22,
-          color: "#7A6F63",
-          textAlign: "center",
-          maxWidth: 280,
-          marginBottom: 24,
-        }}
-      />
-
-      <Pressable
-        onPress={onGoToShop}
-        style={({ pressed }) => [
-          {
-            minWidth: 190,
-            paddingHorizontal: 22,
-            paddingVertical: 14,
-            borderRadius: 16,
-            backgroundColor: "#111111",
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#000",
-            shadowOpacity: 0.12,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 4,
-          },
-          pressed && { opacity: 0.9, transform: [{ scale: 0.985 }] },
-        ]}
-      >
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontSize: 15,
-            fontWeight: "800",
-            letterSpacing: 0.3,
-          }}
-        >
-          Voltar para loja
-        </Text>
+      <Pressable onPress={onGoToShop} style={({ pressed }) => [s.emptyBtn, pressed && { opacity: 0.9 }]}> 
+        <Text style={s.emptyBtnText}>Voltar para loja</Text>
       </Pressable>
     </View>
   );
 
   return (
-    <Screen style={{ backgroundColor: WHITE as any }}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+    <Screen style={{ backgroundColor: BG as any }}>
+      <StatusBar barStyle="dark-content" backgroundColor={BG} />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: WHITE }}>
-        <Container style={{ flex: 1, backgroundColor: WHITE }}>
+      <Container style={{ flex: 1, backgroundColor: BG, paddingHorizontal: 0 }}>
           <CartHeader
             title="Carrinho"
+            itemCount={cartItemsLength}
             onBack={onBack}
             rightText={cartItemsLength ? "Limpar" : ""}
             onRightPress={onClearCart}
@@ -208,39 +144,26 @@ export function SharedOwnerCustomerCartScreen({
             <EmptyCartBlock />
           ) : (
             <View style={{ flex: 1 }}>
-              <ScrollView
+              <FlatList
+                data={rows}
+                keyExtractor={(item) => item.productId}
+                renderItem={({ item }) => (
+                  <OwnerCustomerCartRow
+                    row={item}
+                    onOpenProduct={onOpenProduct}
+                    onInc={onInc}
+                    onDec={onDec}
+                    onRemove={onRemoveItem}
+                  />
+                )}
                 style={s.productsScroll}
-                contentContainerStyle={s.productsContent}
+                contentContainerStyle={[s.productsContent, { paddingBottom: listBottomPadding }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-              >
-                <View>
-                  <View style={s.divider} />
-
-                  {rows.map((row, idx) => (
-                    <View key={row.productId}>
-                      <OwnerCustomerCartRow
-                        row={row}
-                        onOpenProduct={onOpenProduct}
-                        onInc={onInc}
-                        onDec={onDec}
-                        onRemove={onRemoveItem}
-                      />
-
-                      <View
-                        style={[
-                          s.divider,
-                          idx === rows.length - 1 ? s.dividerAfterLast : null,
-                        ]}
-                      />
-                    </View>
-                  ))}
-                </View>
-
-                <View style={{ height: 20 }} />
-              </ScrollView>
+              />
 
               <View
+                onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
                 style={[
                   s.fixedBottomWrap,
                   {
@@ -249,45 +172,28 @@ export function SharedOwnerCustomerCartScreen({
                   },
                 ]}
               >
-                <CartCouponSection
-                  promoInput={promoInput}
-                  onChangePromoInput={onChangePromoInput}
-                  onApplyCoupon={onApplyCoupon}
-                  applyCouponPending={applyCouponPending}
-                  appliedCoupon={appliedCoupon}
-                  onRemoveCoupon={onRemoveCoupon}
-                  disabled={rows.length === 0}
-                  compact
+                <CartCheckoutBar
+                  summary={summary}
+                  canCheckout={canCheckout}
+                  checkoutPending={checkoutPending}
+                  onCheckout={onCheckout}
+                  onOpenSummary={() => setSummaryVisible(true)}
                 />
-
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#7A6F63", marginBottom: 6 }}>
-                  Valores estimados até selecionar o frete.
-                </Text>
-
-                <CartSummarySection summary={summary} compact />
-
-                <View style={s.checkoutOnlyWrap}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      s.checkoutBtn,
-                      (!canCheckout || checkoutPending) && { opacity: 0.55 },
-                      pressed &&
-                        canCheckout &&
-                        !checkoutPending && { opacity: 0.85 },
-                    ]}
-                    disabled={!canCheckout || checkoutPending}
-                    onPress={onCheckout}
-                  >
-                    <Text style={s.checkoutText}>
-                      {checkoutPending ? "..." : "Finalizar compra"}
-                    </Text>
-                  </Pressable>
-                </View>
               </View>
+                <CartSummarySheet
+                visible={summaryVisible}
+                onClose={() => setSummaryVisible(false)}
+                promoInput={promoInput}
+                onChangePromoInput={onChangePromoInput}
+                onApplyCoupon={onApplyCoupon}
+                applyCouponPending={applyCouponPending}
+                appliedCoupon={appliedCoupon}
+                onRemoveCoupon={onRemoveCoupon}
+                summary={summary}
+              />
             </View>
           )}
-        </Container>
-      </SafeAreaView>
+      </Container>
     </Screen>
   );
 }
