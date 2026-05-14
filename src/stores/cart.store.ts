@@ -114,7 +114,13 @@ export const useCartStore = create<CartState>()(
           return { qtyById: next, pricing: null };
         }),
 
-      clear: () => set({ qtyById: {}, pricing: null, couponCode: "" }),
+      clear: () =>
+        set({
+          qtyById: {},
+          draftById: {},
+          couponCode: "",
+          pricing: null,
+        }),
 
       // ===== Draft (seleção) =====
       draftSetQty: (productId, qty) =>

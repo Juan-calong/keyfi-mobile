@@ -13,6 +13,8 @@ import { AuthService, type SocialLoginPayload } from "../core/api/services/auth.
 import { ProfilesService } from "../core/api/services/profiles.service";
 import { decode as atob } from "base-64";
 import { removePushTokenFromBackend } from "../core/push/push.service";
+import { useCartStore } from "./cart.store";
+import { queryClient } from "../app/AppProviders";
 
 function decodeJwtPayload(token: string): any | null {
   try {
@@ -74,6 +76,19 @@ function clearAirbridgeUserSafe() {
   } catch {
     // Não bloqueia logout/reset se Airbridge falhar.
   }
+}
+
+function getTokenUserId(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const sub = decodeJwtPayload(token)?.sub;
+  if (sub == null) return null;
+  const normalized = String(sub).trim();
+  return normalized || null;
+}
+
+function clearSessionScopedClientState() {
+  useCartStore.getState().clear();
+  queryClient.clear();
 }
 
 export type Role =
@@ -186,6 +201,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
+      clearSessionScopedClientState();
+
       set({
         token,
         activeRole: role,
@@ -233,6 +250,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setNeedsOnboarding: (v) => set({ needsOnboarding: v }),
 
   setSession: async (token, role = null) => {
+    const previousToken = get().token;
+    const previousUserId = getTokenUserId(previousToken);
+    const nextUserId = getTokenUserId(token);
+    const shouldClearScopedState =
+      previousUserId !== nextUserId || (!previousUserId && !!nextUserId);
+
+    if (shouldClearScopedState) {
+      clearSessionScopedClientState();
+    }
     await saveToken(token);
 
     const payload = decodeJwtPayload(token);
@@ -484,6 +510,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: async () => {
+    clearSessionScopedClientState();
     await clearToken();
     clearAirbridgeUserSafe();
 
