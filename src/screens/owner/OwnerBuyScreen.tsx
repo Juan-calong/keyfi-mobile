@@ -24,7 +24,9 @@ import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
 import { resolvePromoPriceData } from "../../core/utils/promoPricing";
-import { useCartStore } from "../../stores/cart.store";
+import { friendlyError } from "../../core/errors/friendlyError";
+import { useAuthStore } from "../../stores/auth.store";
+import { usePersistentCart } from "../../core/api/hooks/usePersistentCart";
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 import { getProductImageUrl } from "../../core/utils/productImage";
 import { OwnerProductGridCard } from "./components/OwnerProductGridCard";
@@ -242,10 +244,29 @@ export function OwnerBuyScreen() {
 
   const cardWidth = Math.floor((width - horizontalListPadding * 2 - gridGap) / 2);
 
-  const cartCount = useCartStore((s) => s.cartItemsCount());
-  const qtyById = useCartStore((s) => s.qtyById);
-  const cartInc = useCartStore((s) => s.inc);
-  const cartRemove = useCartStore((s) => s.remove);
+  const token = useAuthStore((s) => s.token);
+  const activeRole = useAuthStore((s) => s.activeRole);
+  const { cart, addItemMutation, setItemQtyMutation, removeItemMutation } = usePersistentCart({ token, activeRole });
+  const cartCount = cart.totals.itemsCount;
+  const qtyById = useMemo(() => Object.fromEntries(cart.items.map((i) => [i.productId, i.qty])), [cart.items]);
+  const cartInc = (productId: string, amount = 1) => {
+    const currentQty = qtyById?.[productId] ?? 0;
+    if (currentQty > 0) {
+      setItemQtyMutation.mutate(
+        { productId, payload: { qty: currentQty + amount } },
+        { onError: (e: any) => showBanner("Erro ao atualizar carrinho", friendlyError(e).message) }
+      );
+      return;
+    }
+    addItemMutation.mutate(
+      { productId, qty: amount },
+      { onError: (e: any) => showBanner("Erro ao adicionar item", friendlyError(e).message) }
+    );
+  };
+  const cartRemove = (productId: string) =>
+    removeItemMutation.mutate(productId, {
+      onError: (e: any) => showBanner("Erro ao remover item", friendlyError(e).message),
+    });
 
   const addProductId = route.params?.addProductId as string | undefined;
   const highlightProductId = route.params?.highlightProductId as string | undefined;

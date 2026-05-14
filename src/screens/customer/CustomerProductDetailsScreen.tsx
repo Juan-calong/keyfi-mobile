@@ -6,7 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { CUSTOMER_SCREENS } from "../../navigation/customer.routes";
-import { useCartStore } from "../../stores/cart.store";
+import { useAuthStore } from "../../stores/auth.store";
+import { usePersistentCart } from "../../core/api/hooks/usePersistentCart";
+import { friendlyError } from "../../core/errors/friendlyError";
 
 import type {
   Product,
@@ -18,9 +20,9 @@ export function CustomerProductDetailsScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
 
-  const qtyById = useCartStore((state) => state.qtyById);
-  const cartInc = useCartStore((state) => state.inc);
-  const cartRemove = useCartStore((state) => state.remove);
+  const token = useAuthStore((state) => state.token);
+  const activeRole = useAuthStore((state) => state.activeRole);
+  const { cart, addItemMutation, setItemQtyMutation, removeItemMutation } = usePersistentCart({ token, activeRole });
 
   const productId = route.params?.productId as string | undefined;
   const intent = route.params?.intent as string | undefined;
@@ -55,7 +57,7 @@ export function CustomerProductDetailsScreen() {
     if (intent !== "REVIEW" || !product?.id) return;
     Alert.alert("Avalie este produto", "Role até a seção de avaliações e comentários para enviar sua avaliação.");
   }, [intent, product?.id]);
-  const qtyInCart = product ? (qtyById?.[product.id] ?? 0) : 0;
+  const qtyInCart = product ? (cart.items.find((item) => item.productId === product.id)?.qty ?? 0) : 0;
 
   return (
     <SharedProductDetails
@@ -74,8 +76,11 @@ export function CustomerProductDetailsScreen() {
       allowVideos={false}
       viewerMode="CUSTOMER"
       onBack={() => nav.goBack()}
-      onAddToCart={(id) => cartInc(id, 1)}
-      onRemoveFromCart={(id) => cartRemove(id)}
+      onAddToCart={(id) => addItemMutation.mutate({ productId: id, qty: 1 }, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) })}
+      onDecreaseCartItem={(id, nextQty) =>
+        setItemQtyMutation.mutate({ productId: id, payload: { qty: nextQty } }, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) })
+      }
+      onRemoveFromCart={(id) => removeItemMutation.mutate(id, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) })}
       onGoToCart={() => {
         nav.dispatch(
           CommonActions.navigate({
