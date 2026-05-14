@@ -22,6 +22,7 @@ import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { getBiometricStatus } from "../../core/security/keychain";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
+import { getGoogleIdToken, isGoogleSignInCancelled } from "../../core/auth/googleSignIn";
 
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
@@ -36,6 +37,7 @@ export function LoginScreen() {
   const insets = useSafeAreaInsets();
 
   const login = useAuthStore((s) => s.login);
+  const loginWithSocial = useAuthStore((s) => s.loginWithSocial);
   const loginWithBiometrics = useAuthStore((s) => s.loginWithBiometrics);
 
   const [email, setEmail] = useState("");
@@ -48,6 +50,7 @@ export function LoginScreen() {
 
   const [loading, setLoading] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [socialLoadingProvider, setSocialLoadingProvider] = useState<"GOOGLE" | "APPLE" | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
@@ -183,6 +186,59 @@ if (requiresEmailVerification) {
       biometricSubmittingRef.current = false;
     }
   }
+
+    function socialAuthErrorMessage(code: string) {
+    if (code === "ACCOUNT_LINK_REQUIRED") {
+      return "Já existe uma conta com este email. Entre com email e senha para vincular sua conta Google futuramente.";
+    }
+    if (code === "GOOGLE_WEB_CLIENT_ID_MISSING") {
+      return "Login com Google ainda não está configurado.";
+    }
+    if (code === "SOCIAL_PROVIDER_NOT_CONFIGURED") {
+      return "Login com Google ainda não está configurado.";
+    }
+    if (code === "SOCIAL_TOKEN_INVALID") {
+      return "Não foi possível validar sua conta Google. Tente novamente.";
+    }
+    if (code === "SOCIAL_EMAIL_REQUIRED") {
+      return "Não foi possível obter o email da sua conta Google.";
+    }
+    if (code === "SOCIAL_EMAIL_NOT_VERIFIED") {
+      return "Não foi possível confirmar o email da sua conta Google.";
+    }
+    return "Não foi possível entrar com Google. Tente novamente.";
+  }
+
+  async function onGoogleLogin() {
+    if (socialLoadingProvider) return;
+    try {
+      setSocialLoadingProvider("GOOGLE");
+      const idToken = await getGoogleIdToken();
+      const response = await loginWithSocial({ provider: "GOOGLE", idToken });
+
+      if (response?.requiresProfileCompletion) {
+        setAlert({
+          title: "Cadastro quase pronto",
+          message: "Cadastro quase pronto. Depois você poderá completar telefone e CPF no perfil.",
+        });
+      }
+    } catch (e: any) {
+      if (isGoogleSignInCancelled(e)) return;
+
+      const code = String(e?.response?.data?.code ?? e?.code ?? "").toUpperCase();
+      const isNetworkError = !e?.response && !!e?.message;
+
+      showError({
+        title: "Não foi possível entrar",
+        message: isNetworkError
+          ? "Não foi possível conectar. Verifique sua internet e tente novamente."
+          : socialAuthErrorMessage(code),
+      });
+    } finally {
+      setSocialLoadingProvider(null);
+    }
+  }
+
 
   function onForgot() {
     nav.navigate("ForgotPassword", {
@@ -329,6 +385,25 @@ if (requiresEmailVerification) {
                 <Text style={styles.dividerText}>OU CONTINUE COM</Text>
                 <View style={styles.dividerLine} />
               </View>
+              
+{Platform.OS === "android" ? (
+  <View style={styles.socialRow}>
+    <Pressable
+      onPress={onGoogleLogin}
+      disabled={!!socialLoadingProvider}
+      style={({ pressed }) => [
+        styles.socialBtn,
+        socialLoadingProvider && styles.socialBtnDisabled,
+        pressed && !socialLoadingProvider && styles.pressed,
+      ]}
+    >
+      <Ionicons name="logo-google" size={18} color={COLORS.text} />
+      <Text style={styles.socialBtnText}>
+        {socialLoadingProvider === "GOOGLE" ? "Conectando..." : "Entrar com Google"}
+      </Text>
+    </Pressable>
+  </View>
+) : null}
             </View>
           </Container>
         </ScrollView>
@@ -617,6 +692,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
+  },
+
+    socialBtnDisabled: {
+    opacity: 0.6,
   },
 
   socialBtnText: {

@@ -15,6 +15,7 @@ export const endpoints = {
     emailVerifyRequest: "/auth/email/verify/request",
     passwordForgot: "/auth/password/forgot",
     passwordReset: "/auth/password/reset",
+    social: "/auth/social",
   },
 
   onboarding: {

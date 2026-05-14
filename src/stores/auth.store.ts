@@ -9,7 +9,7 @@ import {
   loadTokenWithBiometrics,
   disableBiometricLogin,
 } from "../core/security/keychain";
-import { AuthService } from "../core/api/services/auth.service";
+import { AuthService, type SocialLoginPayload } from "../core/api/services/auth.service";
 import { ProfilesService } from "../core/api/services/profiles.service";
 import { decode as atob } from "base-64";
 import { removePushTokenFromBackend } from "../core/push/push.service";
@@ -98,6 +98,7 @@ type AuthState = {
 
   setSession: (token: string, role?: Role | null) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  loginWithSocial: (payload: SocialLoginPayload) => Promise<any>;
   loginWithBiometrics: () => Promise<void>;
 
   queueBiometricSetup: (email: string) => Promise<void>;
@@ -265,6 +266,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e: any) {
       throw e;
     }
+  },
+
+    loginWithSocial: async (payload) => {
+    const data = await AuthService.loginWithSocial(payload);
+    const token = data?.accessToken ?? data?.token;
+
+    if (!token) throw new Error("Login social não retornou token.");
+
+    await get().setSession(token, data?.user?.role ?? null);
+    return data;
   },
 
   loginWithBiometrics: async () => {
