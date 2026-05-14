@@ -15,8 +15,9 @@ import { SharedOwnerCustomerCartScreen } from "../../features/components/cart/Sh
 import type { CartItem, CartPreviewItem, CartPreviewResp } from "../../features/components/cart/cart.shared.types";
 import type { PersistentCart } from "../../core/api/services/cart.service";
 
-function money(value: number | null | undefined) {
-  return Number(value || 0).toFixed(2);
+function money(value: number | string | null | undefined) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed.toFixed(2) : "0.00";
 }
 
 
@@ -26,15 +27,16 @@ function mapPersistentCartToPreview(cart: PersistentCart): Pick<CartPreviewResp,
     qty: item.qty,
     product: {
       id: item.productId,
-      name: item.name,
-      imageUrl: item.image,
+      name: item.name ?? "",
+      sku: item.sku ?? null,
+      imageUrl: item.image ?? null,
     },
-    unitPriceBase: money(item.pricing.unitBase),
-    unitPriceFinal: money(item.pricing.unitFinal),
-    lineBase: money(item.pricing.lineBase),
-    lineFinal: money(item.pricing.lineFinal),
-    linePromoDiscount: money(item.pricing.lineBase - item.pricing.lineFinal),
-    promo: item.pricing.promoLabel ? { label: item.pricing.promoLabel } : null,
+    unitPriceBase: money(item.pricing?.unitBase),
+    unitPriceFinal: money(item.pricing?.unitFinal),
+    lineBase: money(item.pricing?.lineBase),
+    lineFinal: money(item.pricing?.lineFinal),
+    linePromoDiscount: money((Number(item.pricing?.lineBase ?? 0) - Number(item.pricing?.lineFinal ?? 0))),
+    promo: item.pricing?.promoLabel ? { label: item.pricing.promoLabel } : null,
   }));
 
   return {

@@ -17,8 +17,9 @@ export type PersistentCartCoupon = {
 export type PersistentCartItem = {
   productId: string;
   qty: number;
-  name: string;
-  image: string | null;
+  name?: string;
+  sku?: string | null;
+  image?: string | null;
   active: boolean;
   stock: number;
   pricing: {
