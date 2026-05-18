@@ -24,6 +24,8 @@ import { getBiometricStatus } from "../../core/security/keychain";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
 import { getGoogleIdToken, isGoogleSignInCancelled } from "../../core/auth/googleSignIn";
 
+const ENABLE_SOCIAL_LOGIN = false;
+
 function isEmail(v: string) {
   const s = v.trim().toLowerCase();
   return s.includes("@") && s.includes(".");
@@ -274,7 +276,11 @@ if (requiresEmailVerification) {
                 <Text style={styles.logoText}>KeyFi</Text>
               </View>
               <Text style={styles.h1}>Acesse sua conta</Text>
-              <Text style={styles.sub}>Faça login ou continue com sua conta social.</Text>
+              <Text style={styles.sub}>
+                {ENABLE_SOCIAL_LOGIN
+                  ? "Faça login ou continue com sua conta social."
+                  : "Faça login com email e senha."}
+              </Text>
             </View>
 
             <View style={styles.form}>
@@ -380,30 +386,36 @@ if (requiresEmailVerification) {
                 </Pressable>
               </View>
 
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>OU CONTINUE COM</Text>
-                <View style={styles.dividerLine} />
-              </View>
-              
-{Platform.OS === "android" ? (
-  <View style={styles.socialRow}>
-    <Pressable
-      onPress={onGoogleLogin}
-      disabled={!!socialLoadingProvider}
-      style={({ pressed }) => [
-        styles.socialBtn,
-        socialLoadingProvider && styles.socialBtnDisabled,
-        pressed && !socialLoadingProvider && styles.pressed,
-      ]}
-    >
-      <Ionicons name="logo-google" size={18} color={COLORS.text} />
-      <Text style={styles.socialBtnText}>
-        {socialLoadingProvider === "GOOGLE" ? "Conectando..." : "Entrar com Google"}
-      </Text>
-    </Pressable>
-  </View>
-) : null}
+              {ENABLE_SOCIAL_LOGIN ? (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OU CONTINUE COM</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  {Platform.OS === "android" ? (
+                    <View style={styles.socialRow}>
+                      <Pressable
+                        onPress={onGoogleLogin}
+                        disabled={!!socialLoadingProvider}
+                        style={({ pressed }) => [
+                          styles.socialBtn,
+                          socialLoadingProvider && styles.socialBtnDisabled,
+                          pressed && !socialLoadingProvider && styles.pressed,
+                        ]}
+                      >
+                        <Ionicons name="logo-google" size={18} color={COLORS.text} />
+                        <Text style={styles.socialBtnText}>
+                          {socialLoadingProvider === "GOOGLE"
+                            ? "Conectando..."
+                            : "Entrar com Google"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
             </View>
           </Container>
         </ScrollView>
