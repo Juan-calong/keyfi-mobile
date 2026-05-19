@@ -91,6 +91,56 @@ function clearSessionScopedClientState() {
   queryClient.clear();
 }
 
+function getErrorStatus(e: any): number | null {
+  const status = e?.response?.status;
+  return typeof status === "number" ? status : null;
+}
+
+function getErrorCode(e: any): string {
+  return String(
+    e?.response?.data?.code ??
+      e?.response?.data?.error ??
+      e?.code ??
+      ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function getErrorMessage(e: any): string {
+  return String(
+    e?.response?.data?.message ?? e?.message ?? ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function isDefinitiveAuthFailure(e: any): boolean {
+  const status = getErrorStatus(e);
+  const code = getErrorCode(e);
+  const message = getErrorMessage(e);
+
+  if (status === 401 || status === 403) {
+    return true;
+  }
+
+  const authErrorTokens = [
+    "TOKEN_INVALID",
+    "TOKEN_EXPIRED",
+    "INVALID_TOKEN",
+    "EXPIRED_TOKEN",
+    "SESSION_INVALID",
+    "SESSION_EXPIRED",
+    "INVALID_SESSION",
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+  ];
+
+  return authErrorTokens.some(
+    (token) => code.includes(token) || message.includes(token)
+  );
+}
+
 export type Role =
   | "SALON_OWNER"
   | "SELLER"
@@ -162,7 +212,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           try {
             await get().syncMe();
-          } catch (e: any) {
+          } catch {
             await clearToken();
             clearAirbridgeUserSafe();
 
@@ -181,7 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             hydrated: true,
           });
           return;
-        } catch (e: any) {
+        } catch {
           await clearToken();
           clearAirbridgeUserSafe();
 
@@ -320,6 +370,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     };
 
+      const clearActiveSessionOnly = async () => {
+      await clearToken();
+      clearAirbridgeUserSafe();
+      set({
+        token: null,
+        activeRole: null,
+        needsOnboarding: false,
+        needsBiometricSetup: false,
+        pendingBiometricEmail: null,
+      });
+    };
+
     const creds = await loadTokenWithBiometrics();
     let token = creds?.token?.trim();
 
@@ -362,20 +424,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             token,
           });
         }
-              } catch {
+      } catch (e: any) {
+        const status = getErrorStatus(e);
+        const code = getErrorCode(e);
+        const message = String(e?.message ?? "");
+
+        console.warn("[BIOMETRIC_LOGIN][REFRESH_FAILED]", {
+          status,
+          code,
+          message,
+        });
+
+        if (isDefinitiveAuthFailure(e)) {
+          await clearBiometricSession();
+          throw new Error(
+            "Sua sessão biométrica expirou. Entre com email e senha novamente."
+          );
+        }
+
+        await clearActiveSessionOnly();
+        throw new Error(
+          "Não foi possível validar sua sessão agora. Verifique sua conexão e tente novamente."
+        );
+        }
+      }
+
+    try {
+      await get().syncMe();
+    } catch (e: any) {
+      const status = getErrorStatus(e);
+      const code = getErrorCode(e);
+      const message = String(e?.message ?? "");
+
+      console.warn("[BIOMETRIC_LOGIN][SYNC_FAILED]", {
+        status,
+        code,
+        message,
+      });
+
+      if (isDefinitiveAuthFailure(e)) {
         await clearBiometricSession();
         throw new Error(
           "Sua sessão biométrica expirou. Entre com email e senha novamente."
         );
       }
-      }
 
-    try {
-      await get().syncMe();
-    } catch {
-      await clearBiometricSession();
+      await clearActiveSessionOnly();
       throw new Error(
-        "Não foi possível validar sua sessão biométrica. Entre com email e senha novamente."
+        "Não foi possível validar sua sessão agora. Verifique sua conexão e tente novamente."
       );
     }
   },
