@@ -91,7 +91,7 @@ export function BiometricSetupScreen() {
 
             <Text style={styles.title}>Deseja ativar biometria neste aparelho?</Text>
             <Text style={styles.subtitle}>
-              Use Face ID ou digital para facilitar seus próximos acessos ao app.
+              Use a biometria deste aparelho para entrar mais rápido.
             </Text>
           </View>
 

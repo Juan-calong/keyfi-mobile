@@ -218,7 +218,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           hydrated: true,
         });
-      } catch (e: any) {
+      } catch {
         await clearToken();
         clearAirbridgeUserSafe();
 
@@ -231,7 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hydrated: true,
         });
       }
-    } catch (e: any) {
+    } catch {
       await clearToken();
       clearAirbridgeUserSafe();
 
@@ -276,7 +276,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       await get().syncMe();
-    } catch (e: any) {
+    } catch {
       clearAirbridgeUserSafe();
     }
   },
@@ -289,6 +289,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!token) throw new Error("Login não retornou token.");
 
       await get().setSession(token, data?.user?.role ?? null);
+      await get().queueBiometricSetup(email);
     } catch (e: any) {
       throw e;
     }
@@ -305,69 +306,77 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithBiometrics: async () => {
-    try {
-      const creds = await loadTokenWithBiometrics();
-      const token = creds?.token;
+    const clearBiometricSession = async () => {
+      await clearToken();
+      await disableBiometricLogin();
+      clearAirbridgeUserSafe();
 
-      if (!token) {
-        throw new Error("Biometria não está habilitada neste aparelho.");
-      }
+      set({
+        token: null,
+        activeRole: null,
+        needsOnboarding: false,
+        needsBiometricSetup: false,
+        pendingBiometricEmail: null,
+      });
+    };
 
-      const payload = decodeJwtPayload(token);
+    const creds = await loadTokenWithBiometrics();
+    let token = creds?.token?.trim();
+
+    if (!token) {
+      await clearBiometricSession();
+      throw new Error(
+        "Não foi possível acessar sua biometria. Entre com email e senha novamente."
+      );
+    }
+
+    const applyTokenToState = async (nextToken: string) => {
+      const payload = decodeJwtPayload(nextToken);
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
+      await saveToken(nextToken);
+
       set({
-        token,
+        token: nextToken,
         activeRole: role,
         needsOnboarding: onboardingStatus === "INCOMPLETE",
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
       });
+      };
+      await applyTokenToState(token);
 
-      await saveToken(token);
-
-      if (isJwtExpired(token)) {
-        try {
-          await get().refreshSession();
-        } catch (e: any) {
-          await clearToken();
-          await disableBiometricLogin();
-          clearAirbridgeUserSafe();
-
-          set({
-            token: null,
-            activeRole: null,
-            needsOnboarding: false,
-            needsBiometricSetup: false,
-            pendingBiometricEmail: null,
-          });
-
-          throw new Error(
-            "Sua sessão biométrica expirou. Entre com email e senha novamente."
-          );
-        }
-      }
-
+    if (isJwtExpired(token)) {
       try {
-        await get().syncMe();
-      } catch (e: any) {
+        await get().refreshSession();
+        token = get().token?.trim();
 
-        await clearToken();
-        clearAirbridgeUserSafe();
+        if (!token || isJwtExpired(token)) {
+          throw new Error("Refresh não renovou a sessão biométrica.");
+        }
 
-        set({
-          token: null,
-          activeRole: null,
-          needsOnboarding: false,
-          needsBiometricSetup: false,
-          pendingBiometricEmail: null,
-        });
-
-        throw e;
+        if (creds?.email) {
+          await saveBiometricToken({
+            email: creds.email,
+            token,
+          });
+        }
+              } catch {
+        await clearBiometricSession();
+        throw new Error(
+          "Sua sessão biométrica expirou. Entre com email e senha novamente."
+        );
       }
-    } catch (e: any) {
-      throw e;
+      }
+
+    try {
+      await get().syncMe();
+    } catch {
+      await clearBiometricSession();
+      throw new Error(
+        "Não foi possível validar sua sessão biométrica. Entre com email e senha novamente."
+      );
     }
   },
 
@@ -397,7 +406,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         needsBiometricSetup: true,
         pendingBiometricEmail: normalizedEmail,
       });
-    } catch (e: any) {
+    } catch {
       set({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
@@ -526,7 +535,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       await AuthService.logout();
-    } catch (e: any) {
+    } catch {
     }
 
     await removePushTokenFromBackend();

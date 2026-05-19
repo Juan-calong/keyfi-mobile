@@ -42,15 +42,19 @@ export async function getBiometricStatus(): Promise<{
     };
   }
 
-  const meta = await Keychain.getGenericPassword({
-    service: BIO_META_SERVICE,
-  });
+  const [meta, services] = await Promise.all([
+    Keychain.getGenericPassword({ service: BIO_META_SERVICE }),
+    Keychain.getAllGenericPasswordServices(),
+  ]);
+
+  const hasCompleteCredential =
+    !!meta && !!meta.username && services.includes(BIO_TOKEN_SERVICE);
 
   return {
     available: true,
-    enabled: !!meta,
+    enabled: hasCompleteCredential,
     biometryType,
-    email: meta ? meta.username : null,
+    email: hasCompleteCredential ? meta.username : null,
   };
 }
 

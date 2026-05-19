@@ -183,6 +183,12 @@ if (requiresEmailVerification) {
       await loginWithBiometrics();
     } catch (e: any) {
       showError(friendlyError(e));
+      try {
+        const status = await getBiometricStatus();
+        setBiometricEnabled(!!status.enabled);
+      } catch {
+        setBiometricEnabled(false);
+      }
     } finally {
       setBiometricLoading(false);
       biometricSubmittingRef.current = false;

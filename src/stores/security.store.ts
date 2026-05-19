@@ -13,13 +13,7 @@ import {
   promptBiometricUnlock,
   type BiometryLabel,
 } from "../core/security/biometric";
-import {
-  generatePinSalt,
-  hashPin,
-  isValidPin,
-  normalizePin,
-  verifyPin,
-} from "../core/security/pin";
+
 
 function decodeJwtPayload(token: string): any | null {
   try {
@@ -298,48 +292,10 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     });
   },
 
-  setupPin: async (pin) => {
-    const normalized = normalizePin(pin);
-
-    if (!isValidPin(normalized)) {
-      return { ok: false, error: "O PIN deve ter 6 dígitos." };
-    }
-
-    const token = useAuthStore.getState().token;
-    const userId = getUserIdFromToken(token);
-
-    if (!userId) {
-      return { ok: false, error: "Sessão inválida para configurar PIN." };
-    }
-
-    const salt = generatePinSalt();
-    const hashed = hashPin(normalized, salt);
-
-    const nextPrefs = buildSecurityPrefs({
-      biometricOwnerUserId: get().biometricOwnerUserId,
-      pinSalt: salt,
-      pinHash: hashed,
-      pinOwnerUserId: userId,
-      relockOnBackground: get().relockOnBackground,
-      relockAfterMs: get().relockAfterMs,
-      lastBackgroundAt: null,
-    });
-
-    await saveSecurityPrefs(nextPrefs);
-
-    set({
-      pinEnabled: true,
-      pinSalt: salt,
-      pinHash: hashed,
-      pinOwnerUserId: userId,
-      syncedUserId: userId,
-      failedPinAttempts: 0,
-      appUnlocked: true,
-      lastBackgroundAt: null,
-    });
-
-    return { ok: true };
-  },
+  setupPin: async () => ({
+    ok: false,
+    error: "Use o login normal como alternativa à biometria.",
+  }),
 
   disablePin: async () => {
     const nextPrefs = buildSecurityPrefs({
@@ -408,61 +364,7 @@ export const useSecurityStore = create<SecurityState>((set, get) => ({
     return true;
   },
 
-  unlockWithPin: async (pin) => {
-    const normalized = normalizePin(pin);
-
-    if (!isValidPin(normalized)) {
-      return false;
-    }
-
-    const token = useAuthStore.getState().token;
-    const userId = getUserIdFromToken(token);
-
-    if (!userId) return false;
-    if (!get().pinEnabled) return false;
-    if (!get().pinSalt || !get().pinHash) return false;
-    if (get().pinOwnerUserId !== userId) return false;
-
-    const ok = verifyPin(normalized, get().pinSalt!, get().pinHash!);
-
-    if (ok) {
-      const nextPrefs = buildSecurityPrefs({
-        biometricOwnerUserId: get().biometricOwnerUserId,
-        pinSalt: get().pinSalt,
-        pinHash: get().pinHash,
-        pinOwnerUserId: get().pinOwnerUserId,
-        relockOnBackground: get().relockOnBackground,
-        relockAfterMs: get().relockAfterMs,
-        lastBackgroundAt: null,
-      });
-
-      set({
-        appUnlocked: true,
-        failedPinAttempts: 0,
-        lastBackgroundAt: null,
-      });
-
-      await saveSecurityPrefs(nextPrefs);
-      return true;
-    }
-
-    const nextAttempts = get().failedPinAttempts + 1;
-
-    set({
-      failedPinAttempts: nextAttempts,
-    });
-
-    if (nextAttempts >= get().maxPinAttempts) {
-      await useAuthStore.getState().logout();
-      set({
-        appUnlocked: true,
-        failedPinAttempts: 0,
-        lastBackgroundAt: null,
-      });
-    }
-
-    return false;
-  },
+  unlockWithPin: async () => false,
 
   markBackgroundNow: async () => {
     const now = Date.now();
