@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   Linking,
+  Alert,
 } from "react-native";
 import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -18,10 +19,13 @@ import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { resolvePromoBadgeLabel } from "../../core/utils/promoBadge";
 import { resolvePromoPriceData } from "../../core/utils/promoPricing";
+import { friendlyError } from "../../core/errors/friendlyError";
 import { t } from "../../ui/tokens";
 
 import { OWNER_SCREENS } from "../../navigation/owner.routes";
 import { useCartStore } from "../../stores/cart.store";
+import { useAuthStore } from "../../stores/auth.store";
+import { usePersistentCart } from "../../core/api/hooks/usePersistentCart";
  import { OwnerProductGridCard } from "./components/OwnerProductGridCard";
 
 type TargetType =
@@ -517,12 +521,16 @@ function PreviewGrid({
   data,
   onPressItem,
   onAddToCart,
+  onRemoveFromCart,
+  qtyById,
 }: {
   data: PreviewItem[];
   onPressItem: (id: string) => void;
   onAddToCart: (id: string) => void;
+  onRemoveFromCart: (id: string) => void;
+  qtyById: Record<string, number>;
 }) {
-  const qtyById = useCartStore((s) => s.qtyById);
+
 
   return (
     <FlatList
@@ -552,7 +560,7 @@ function PreviewGrid({
               inCart={inCart}
               isFavorite={item.isFavorite}
               onPress={() => onPressItem(productId)}
-              onToggleCart={() => onAddToCart(productId)}
+              onToggleCart={() => (inCart ? onRemoveFromCart(productId) : onAddToCart(productId))}
             />
           </View>
         );
@@ -566,9 +574,23 @@ export function OwnerHomeScreen() {
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const qtyById = useCartStore((s) => s.qtyById);
-  const addToCart = useCartStore((s) => s.inc);
-  const removeFromCart = useCartStore((s) => s.remove);
+  const token = useAuthStore((s) => s.token);
+  const activeRole = useAuthStore((s) => s.activeRole);
+  const { cart, addItemMutation, setItemQtyMutation, removeItemMutation } = usePersistentCart({ token, activeRole });
+  const qtyById = useMemo(() => Object.fromEntries(cart.items.map((i) => [i.productId, i.qty])), [cart.items]);
+  const addToCart = (productId: string, amount = 1) => {
+    const currentQty = qtyById?.[productId] ?? 0;
+    if (currentQty > 0) {
+      setItemQtyMutation.mutate(
+        { productId, payload: { qty: currentQty + amount } },
+        { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) }
+      );
+      return;
+    }
+    addItemMutation.mutate({ productId, qty: amount }, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) });
+  };
+  const removeFromCart = (productId: string) =>
+    removeItemMutation.mutate(productId, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) });
 
   const meQ = useQuery({
     queryKey: ["me"],
@@ -747,17 +769,15 @@ export function OwnerHomeScreen() {
     (productId: string) => {
       if (!productId) return;
 
-      const currentQty = Number(qtyById?.[productId] ?? 0);
-
-      if (currentQty > 0) {
-        removeFromCart(productId);
-        return;
-      }
-
       addToCart(productId, 1);
     },
-    [addToCart, removeFromCart, qtyById]
+    [addToCart]
   );
+    const handleRemoveFromCart = useCallback((productId: string) => {
+    if (!productId) return;
+    removeFromCart(productId);
+  }, [removeFromCart]);
+
 
   const newestBasePreview = useMemo<PreviewItem[]>(() => {
     const copy = [...products];
@@ -1006,6 +1026,8 @@ return (
             data={promoPreview}
             onPressItem={(id) => goToProductDetails(id)}
             onAddToCart={handleAddToCart}
+           onRemoveFromCart={handleRemoveFromCart}
+            qtyById={qtyById}
           />
 
           <View style={{ height: 6 }} />
@@ -1025,6 +1047,8 @@ return (
           data={newestPreview}
           onPressItem={(id) => goToProductDetails(id)}
           onAddToCart={handleAddToCart}
+          onRemoveFromCart={handleRemoveFromCart}
+          qtyById={qtyById}
         />
       )}
     </View>

@@ -27,7 +27,6 @@ import { resolvePromoBadgeLabel } from "../../../core/utils/promoBadge";
 import { resolvePromoPriceData } from "../../../core/utils/promoPricing";
 import { ProductFavoriteButton } from "./ProductFavoriteButton";
 import { AppBackButton } from "../../../ui/components/AppBackButton";
-import { useCartStore } from "../../../stores/cart.store";
 import { ProductMediaViewerModal } from "./ProductMediaViewerModal";
 
 import type {
@@ -61,6 +60,7 @@ type Props = {
   onBack: () => void;
   onOpenRelatedProduct: (productId: string) => void;
   onAddToCart: (productId: string) => void;
+  onDecreaseCartItem: (productId: string, nextQty: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onGoToCart: () => void;
   qtyInCart: number;
@@ -773,6 +773,7 @@ export function SharedProductDetails({
   onBack,
   onOpenRelatedProduct,
   onAddToCart,
+  onDecreaseCartItem,
   onRemoveFromCart,
   onGoToCart,
   qtyInCart,
@@ -816,7 +817,6 @@ export function SharedProductDetails({
 
   const out = product ? isOutOfStock(product) : false;
   const alreadyInCart = !!product && qtyInCart > 0;
-  const decrementCartItem = useCartStore((state) => state.dec);
 
   const galleryMedia = useMemo(
     () => normalizeGalleryMedia(product, { allowVideos }),
@@ -1098,7 +1098,7 @@ const quantityTierBadges = useMemo(() => {
 
     try {
         if (qtyInCart > 1) {
-        decrementCartItem(product.id, 1);
+        onDecreaseCartItem(product.id, qtyInCart - 1);
         return;
       }
       onRemoveFromCart(product.id);

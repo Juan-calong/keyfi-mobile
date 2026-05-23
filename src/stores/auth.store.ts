@@ -9,10 +9,12 @@ import {
   loadTokenWithBiometrics,
   disableBiometricLogin,
 } from "../core/security/keychain";
-import { AuthService } from "../core/api/services/auth.service";
+import { AuthService, type SocialLoginPayload } from "../core/api/services/auth.service";
 import { ProfilesService } from "../core/api/services/profiles.service";
 import { decode as atob } from "base-64";
 import { removePushTokenFromBackend } from "../core/push/push.service";
+import { useCartStore } from "./cart.store";
+import { queryClient } from "../app/AppProviders";
 
 function decodeJwtPayload(token: string): any | null {
   try {
@@ -76,6 +78,69 @@ function clearAirbridgeUserSafe() {
   }
 }
 
+function getTokenUserId(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const sub = decodeJwtPayload(token)?.sub;
+  if (sub == null) return null;
+  const normalized = String(sub).trim();
+  return normalized || null;
+}
+
+function clearSessionScopedClientState() {
+  useCartStore.getState().clear();
+  queryClient.clear();
+}
+
+function getErrorStatus(e: any): number | null {
+  const status = e?.response?.status;
+  return typeof status === "number" ? status : null;
+}
+
+function getErrorCode(e: any): string {
+  return String(
+    e?.response?.data?.code ??
+      e?.response?.data?.error ??
+      e?.code ??
+      ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function getErrorMessage(e: any): string {
+  return String(
+    e?.response?.data?.message ?? e?.message ?? ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function isDefinitiveAuthFailure(e: any): boolean {
+  const status = getErrorStatus(e);
+  const code = getErrorCode(e);
+  const message = getErrorMessage(e);
+
+  if (status === 401 || status === 403) {
+    return true;
+  }
+
+  const authErrorTokens = [
+    "TOKEN_INVALID",
+    "TOKEN_EXPIRED",
+    "INVALID_TOKEN",
+    "EXPIRED_TOKEN",
+    "SESSION_INVALID",
+    "SESSION_EXPIRED",
+    "INVALID_SESSION",
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+  ];
+
+  return authErrorTokens.some(
+    (token) => code.includes(token) || message.includes(token)
+  );
+}
+
 export type Role =
   | "SALON_OWNER"
   | "SELLER"
@@ -98,6 +163,7 @@ type AuthState = {
 
   setSession: (token: string, role?: Role | null) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  loginWithSocial: (payload: SocialLoginPayload) => Promise<any>;
   loginWithBiometrics: () => Promise<void>;
 
   queueBiometricSetup: (email: string) => Promise<void>;
@@ -146,7 +212,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           try {
             await get().syncMe();
-          } catch (e: any) {
+          } catch {
             await clearToken();
             clearAirbridgeUserSafe();
 
@@ -165,7 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             hydrated: true,
           });
           return;
-        } catch (e: any) {
+        } catch {
           await clearToken();
           clearAirbridgeUserSafe();
 
@@ -185,6 +251,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
+      clearSessionScopedClientState();
+
       set({
         token,
         activeRole: role,
@@ -200,7 +268,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           hydrated: true,
         });
-      } catch (e: any) {
+      } catch {
         await clearToken();
         clearAirbridgeUserSafe();
 
@@ -213,7 +281,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           hydrated: true,
         });
       }
-    } catch (e: any) {
+    } catch {
       await clearToken();
       clearAirbridgeUserSafe();
 
@@ -232,6 +300,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setNeedsOnboarding: (v) => set({ needsOnboarding: v }),
 
   setSession: async (token, role = null) => {
+    const previousToken = get().token;
+    const previousUserId = getTokenUserId(previousToken);
+    const nextUserId = getTokenUserId(token);
+    const shouldClearScopedState =
+      previousUserId !== nextUserId || (!previousUserId && !!nextUserId);
+
+    if (shouldClearScopedState) {
+      clearSessionScopedClientState();
+    }
     await saveToken(token);
 
     const payload = decodeJwtPayload(token);
@@ -249,7 +326,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       await get().syncMe();
-    } catch (e: any) {
+    } catch {
       clearAirbridgeUserSafe();
     }
   },
@@ -262,75 +339,140 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!token) throw new Error("Login não retornou token.");
 
       await get().setSession(token, data?.user?.role ?? null);
+      await get().queueBiometricSetup(email);
     } catch (e: any) {
       throw e;
     }
   },
 
+    loginWithSocial: async (payload) => {
+    const data = await AuthService.loginWithSocial(payload);
+    const token = data?.accessToken ?? data?.token;
+
+    if (!token) throw new Error("Login social não retornou token.");
+
+    await get().setSession(token, data?.user?.role ?? null);
+    return data;
+  },
+
   loginWithBiometrics: async () => {
-    try {
-      const creds = await loadTokenWithBiometrics();
-      const token = creds?.token;
+    const clearBiometricSession = async () => {
+      await clearToken();
+      await disableBiometricLogin();
+      clearAirbridgeUserSafe();
 
-      if (!token) {
-        throw new Error("Biometria não está habilitada neste aparelho.");
-      }
+      set({
+        token: null,
+        activeRole: null,
+        needsOnboarding: false,
+        needsBiometricSetup: false,
+        pendingBiometricEmail: null,
+      });
+    };
 
-      const payload = decodeJwtPayload(token);
+      const clearActiveSessionOnly = async () => {
+      await clearToken();
+      clearAirbridgeUserSafe();
+      set({
+        token: null,
+        activeRole: null,
+        needsOnboarding: false,
+        needsBiometricSetup: false,
+        pendingBiometricEmail: null,
+      });
+    };
+
+    const creds = await loadTokenWithBiometrics();
+    let token = creds?.token?.trim();
+
+    if (!token) {
+      await clearBiometricSession();
+      throw new Error(
+        "Não foi possível acessar sua biometria. Entre com email e senha novamente."
+      );
+    }
+
+    const applyTokenToState = async (nextToken: string) => {
+      const payload = decodeJwtPayload(nextToken);
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
+      await saveToken(nextToken);
+
       set({
-        token,
+        token: nextToken,
         activeRole: role,
         needsOnboarding: onboardingStatus === "INCOMPLETE",
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
       });
+      };
+      await applyTokenToState(token);
 
-      await saveToken(token);
+    if (isJwtExpired(token)) {
+      try {
+        await get().refreshSession();
+        token = get().token?.trim();
 
-      if (isJwtExpired(token)) {
-        try {
-          await get().refreshSession();
-        } catch (e: any) {
-          await clearToken();
-          await disableBiometricLogin();
-          clearAirbridgeUserSafe();
+        if (!token || isJwtExpired(token)) {
+          throw new Error("Refresh não renovou a sessão biométrica.");
+        }
 
-          set({
-            token: null,
-            activeRole: null,
-            needsOnboarding: false,
-            needsBiometricSetup: false,
-            pendingBiometricEmail: null,
+        if (creds?.email) {
+          await saveBiometricToken({
+            email: creds.email,
+            token,
           });
+        }
+      } catch (e: any) {
+        const status = getErrorStatus(e);
+        const code = getErrorCode(e);
+        const message = String(e?.message ?? "");
 
+        console.warn("[BIOMETRIC_LOGIN][REFRESH_FAILED]", {
+          status,
+          code,
+          message,
+        });
+
+        if (isDefinitiveAuthFailure(e)) {
+          await clearBiometricSession();
           throw new Error(
             "Sua sessão biométrica expirou. Entre com email e senha novamente."
           );
         }
+
+        await clearActiveSessionOnly();
+        throw new Error(
+          "Não foi possível validar sua sessão agora. Verifique sua conexão e tente novamente."
+        );
+        }
       }
 
-      try {
-        await get().syncMe();
-      } catch (e: any) {
-
-        await clearToken();
-        clearAirbridgeUserSafe();
-
-        set({
-          token: null,
-          activeRole: null,
-          needsOnboarding: false,
-          needsBiometricSetup: false,
-          pendingBiometricEmail: null,
-        });
-
-        throw e;
-      }
+    try {
+      await get().syncMe();
     } catch (e: any) {
-      throw e;
+      const status = getErrorStatus(e);
+      const code = getErrorCode(e);
+      const message = String(e?.message ?? "");
+
+      console.warn("[BIOMETRIC_LOGIN][SYNC_FAILED]", {
+        status,
+        code,
+        message,
+      });
+
+      if (isDefinitiveAuthFailure(e)) {
+        await clearBiometricSession();
+        throw new Error(
+          "Sua sessão biométrica expirou. Entre com email e senha novamente."
+        );
+      }
+
+      await clearActiveSessionOnly();
+      throw new Error(
+        "Não foi possível validar sua sessão agora. Verifique sua conexão e tente novamente."
+      );
     }
   },
 
@@ -360,7 +502,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         needsBiometricSetup: true,
         pendingBiometricEmail: normalizedEmail,
       });
-    } catch (e: any) {
+    } catch {
       set({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
@@ -473,6 +615,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: async () => {
+    clearSessionScopedClientState();
     await clearToken();
     clearAirbridgeUserSafe();
 
@@ -488,7 +631,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       await AuthService.logout();
-    } catch (e: any) {
+    } catch {
     }
 
     await removePushTokenFromBackend();

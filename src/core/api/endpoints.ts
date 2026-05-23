@@ -15,6 +15,7 @@ export const endpoints = {
     emailVerifyRequest: "/auth/email/verify/request",
     passwordForgot: "/auth/password/forgot",
     passwordReset: "/auth/password/reset",
+    social: "/auth/social",
   },
 
   onboarding: {
@@ -50,6 +51,13 @@ products: {
   },
 
   cart: {
+    byUser: "/cart",
+    addItem: "/cart/items",
+    setItemQty: (productId: string) => `/cart/items/${productId}`,
+    removeItem: (productId: string) => `/cart/items/${productId}`,
+    clear: "/cart",
+    applyCoupon: "/cart/coupon",
+    removeCoupon: "/cart/coupon",
     preview: "/cart/preview",
   },
 

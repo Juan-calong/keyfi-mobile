@@ -12,9 +12,22 @@ export type SessionItem = {
   isActive: boolean;
 };
 
+export type SocialProvider = "GOOGLE" | "APPLE";
+
+export type SocialLoginPayload = {
+  provider: SocialProvider;
+  idToken?: string;
+  identityToken?: string;
+};
+
 export const AuthService = {
   login: async (email: string, password: string) => {
     const res = await api.post(endpoints.auth.login, { email, password });
+    return res.data;
+  },
+
+    loginWithSocial: async (payload: SocialLoginPayload) => {
+    const res = await api.post(endpoints.auth.social, payload);
     return res.data;
   },
 

@@ -6,6 +6,7 @@ import {
   StatusBar,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -77,9 +78,21 @@ export function BiometricSetupScreen() {
 
       <View style={styles.hairline} />
 
-      <Container>
-        <View style={styles.content}>
-          <View style={styles.heroCard}>
+<ScrollView
+  style={styles.scroll}
+  contentContainerStyle={[
+    styles.scrollContent,
+    {
+      paddingTop: 20,
+      paddingBottom: Math.max(insets.bottom + 20, 28),
+    },
+  ]}
+  keyboardShouldPersistTaps="handled"
+  showsVerticalScrollIndicator={false}
+>
+  <Container>
+    <View style={styles.content}>
+      <View style={styles.heroCard}>
             <LinearGradient
               colors={[COLORS.primaryA, COLORS.primaryB]}
               start={{ x: 0, y: 0 }}
@@ -91,7 +104,7 @@ export function BiometricSetupScreen() {
 
             <Text style={styles.title}>Deseja ativar biometria neste aparelho?</Text>
             <Text style={styles.subtitle}>
-              Use Face ID ou digital para facilitar seus próximos acessos ao app.
+              Use a biometria deste aparelho para entrar mais rápido.
             </Text>
           </View>
 
@@ -153,6 +166,7 @@ export function BiometricSetupScreen() {
           </View>
         </View>
       </Container>
+    </ScrollView>
 
       <IosAlert
         visible={!!alert}
@@ -190,11 +204,13 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#E2E8F0",
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    paddingVertical: 28,
-  },
+scrollContent: {
+  flexGrow: 1,
+},
+
+content: {
+  width: "100%",
+},
   heroCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
@@ -203,6 +219,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 26,
     alignItems: "center",
+    width: "100%",
   },
   iconCircle: {
     width: 72,
@@ -234,6 +251,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     padding: 18,
     gap: 14,
+    width: "100%",
   },
   infoRow: {
     flexDirection: "row",
@@ -248,6 +266,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 24,
+    width: "100%",
   },
   primaryButton: {
     borderRadius: 18,
@@ -255,6 +274,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonBg: {
     minHeight: 56,
+    paddingHorizontal: 16,
     borderRadius: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -286,5 +306,8 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.7,
+  },
+  scroll: {
+    flex: 1,
   },
 });
