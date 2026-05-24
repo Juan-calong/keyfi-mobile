@@ -12,11 +12,12 @@ import {
   View,
 } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { friendlyError } from "../../core/errors/friendlyError";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   CheckoutAddressValues,
@@ -52,6 +53,9 @@ export function SharedCheckoutAddressScreen({
   initialAddress,
   onContinue,
 }: Props) {
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  
   const [form, setForm] = React.useState<CheckoutAddressValues>({
     zipCode: "",
     zipcode: "",
@@ -64,7 +68,6 @@ export function SharedCheckoutAddressScreen({
   });
 
   const [didHydrate, setDidHydrate] = React.useState(false);
-  const insets = useSafeAreaInsets();
 
   const meQ = useQuery({
     queryKey: ["profile-me-checkout-address", profileMode],
@@ -219,27 +222,35 @@ export function SharedCheckoutAddressScreen({
 
   return (
     <KeyboardAvoidingView
-      style={s.root}
+      style={[s.root, { paddingTop: insets.top }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* Header com botão de voltar */}
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+          <Text style={s.backBtnText}>{"< Voltar"}</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
-  contentContainerStyle={[
-    s.content,
-    { paddingBottom: 140 + insets.bottom },
-  ]}
-  keyboardShouldPersistTaps="handled"
->
+        contentContainerStyle={[
+          s.content,
+          { paddingBottom: 160 + insets.bottom },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={s.title}>{title}</Text>
         <Text style={s.subtitle}>{subtitle}</Text>
 
         {loading ? (
           <View style={s.loadingBox}>
-            <ActivityIndicator />
+            <ActivityIndicator color="#000" />
             <Text style={s.loadingText}>Carregando endereço...</Text>
           </View>
         ) : null}
 
-        <View style={s.card}>
+        <View style={s.formContainer}>
           <Text style={s.label}>CEP</Text>
           <View style={s.cepRow}>
             <TextInput
@@ -256,9 +267,9 @@ export function SharedCheckoutAddressScreen({
               onPress={() => cepLookupMut.mutate(form.zipCode)}
             >
               {cepLookupMut.isPending ? (
-                <ActivityIndicator color="#111" />
+                <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={s.cepButtonText}>Buscar CEP</Text>
+                <Text style={s.cepButtonText}>Buscar</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -321,9 +332,13 @@ export function SharedCheckoutAddressScreen({
         </View>
       </ScrollView>
 
-      <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
+      {/* Footer Fixo */}
+      <View style={[s.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
+        <Text style={s.disclaimerText}>
+          Aviso: O endereço informado aqui será usado apenas para esta entrega e não alterará os dados salvos no seu perfil.
+        </Text>
         <TouchableOpacity style={s.primaryBtn} onPress={validateAndContinue}>
-          <Text style={s.primaryBtnText}>Continuar para entrega</Text>
+          <Text style={s.primaryBtnText}>Salvar endereço</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -331,19 +346,38 @@ export function SharedCheckoutAddressScreen({
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F7F7F7" },
-  content: { padding: 18, paddingBottom: 120 },
+  root: { 
+    flex: 1, 
+    backgroundColor: "#FFFFFF" 
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  backBtn: {
+    paddingVertical: 8,
+    alignSelf: "flex-start",
+  },
+  backBtnText: {
+    fontSize: 16,
+    color: "#111",
+    fontWeight: "600",
+  },
+  content: { 
+    paddingHorizontal: 20, 
+  },
   title: {
     fontSize: 28,
     fontWeight: "800",
     color: "#111",
-    marginTop: 18,
+    marginTop: 8,
   },
   subtitle: {
-    marginTop: 6,
-    marginBottom: 18,
+    marginTop: 4,
+    marginBottom: 24,
     color: "#666",
-    fontSize: 14,
+    fontSize: 15,
   },
   loadingBox: {
     paddingVertical: 18,
@@ -351,51 +385,51 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  loadingText: { color: "#555" },
-  card: {
-    backgroundColor: "#FFF",
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#ECECEC",
+  loadingText: { 
+    color: "#555" 
+  },
+  formContainer: {
+    // Removido o card cinza/com borda para um design mais "clean"
   },
   label: {
-    fontSize: 13,
-    color: "#555",
+    fontSize: 14,
+    color: "#333",
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: 12,
     fontWeight: "600",
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    backgroundColor: "#FFF",
+    height: 50,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#F3F4F6", // Fundo cinza bem claro
     color: "#111",
+    fontSize: 15,
   },
   cepRow: {
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
   },
-  cepInput: { flex: 1 },
+  cepInput: { 
+    flex: 1 
+  },
   cepButton: {
-    height: 48,
-    minWidth: 110,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "#F1D07A",
+    height: 50,
+    minWidth: 100,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: "#111", // Botão Preto
     alignItems: "center",
     justifyContent: "center",
   },
   cepButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   cepButtonText: {
-    color: "#111",
+    color: "#FFF", // Texto Branco
     fontWeight: "700",
+    fontSize: 14,
   },
   row: {
     flexDirection: "row",
@@ -404,27 +438,34 @@ const s = StyleSheet.create({
   col: {
     flex: 1,
   },
-footer: {
-  position: "absolute",
-  left: 0,
-  right: 0,
-  bottom: 0,
-  paddingTop: 12,
-  paddingHorizontal: 16,
-  borderTopWidth: 1,
-  borderTopColor: "#ECECEC",
-  backgroundColor: "#F7F7F7",
-},
+  footer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: "#777",
+    textAlign: "center",
+    marginBottom: 12,
+    lineHeight: 16,
+  },
   primaryBtn: {
-    height: 52,
-    borderRadius: 999,
-    backgroundColor: "#F1D07A",
+    height: 54,
+    borderRadius: 12,
+    backgroundColor: "#111", // Botão Preto
     alignItems: "center",
     justifyContent: "center",
   },
   primaryBtnText: {
-    color: "#111",
-    fontWeight: "800",
+    color: "#FFF", // Texto Branco
+    fontWeight: "700",
     fontSize: 16,
   },
 });
