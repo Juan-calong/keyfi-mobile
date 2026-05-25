@@ -4,7 +4,11 @@ import { endpoints } from "../endpoints";
 export type OnboardingSalonPayload = {
     salon: {
         name: string;
+        legalName?: string;
+        tradeName?: string;
         cnpj: string;
+        hasStateRegistration?: boolean;
+        stateRegistration?: string;
         cep?: string;
         street?: string;
         number?: string;

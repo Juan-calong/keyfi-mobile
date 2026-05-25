@@ -12,6 +12,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   TextInputProps,
+  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -84,6 +85,10 @@ function normalizeUF(v: string) {
 
 function normalizeCEP(v: string) {
   return onlyDigits(v).slice(0, 8);
+}
+
+function normalizeStateRegistration(v: string) {
+  return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
 function maskCNPJ(digits: string) {
@@ -300,8 +305,11 @@ export function RegisterSalonScreen() {
   const ownerPasswordRef = useRef<TextInput>(null);
 
   const salonNameRef = useRef<TextInput>(null);
+  const legalNameRef = useRef<TextInput>(null);
+  const tradeNameRef = useRef<TextInput>(null);
   const salonEmailRef = useRef<TextInput>(null);
   const cnpjRef = useRef<TextInput>(null);
+  const stateRegistrationRef = useRef<TextInput>(null);
   const cepRef = useRef<TextInput>(null);
   const streetRef = useRef<TextInput>(null);
   const numberRef = useRef<TextInput>(null);
@@ -316,8 +324,11 @@ export function RegisterSalonScreen() {
     ownerEmail: false,
     ownerPassword: false,
     salonName: false,
+    legalName: false,
+    tradeName: false,
     salonEmail: false,
     cnpj: false,
+    stateRegistration: false,
     cep: false,
     street: false,
     number: false,
@@ -334,8 +345,12 @@ export function RegisterSalonScreen() {
   const [ownerSecure, setOwnerSecure] = useState(true);
 
   const [salonName, setSalonName] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [tradeName, setTradeName] = useState("");
   const [salonEmail, setSalonEmail] = useState("");
   const [cnpjMasked, setCnpjMasked] = useState("");
+  const [hasStateRegistration, setHasStateRegistration] = useState(false);
+  const [stateRegistration, setStateRegistration] = useState("");
 
   const [cep, setCep] = useState("");
   const [street, setStreet] = useState("");
@@ -352,6 +367,8 @@ export function RegisterSalonScreen() {
   const lastCnpjFetchedRef = useRef("");
   const addressManuallyEditedRef = useRef(false);
   const salonNameManuallyEditedRef = useRef(false);
+  const legalNameManuallyEditedRef = useRef(false);
+  const tradeNameManuallyEditedRef = useRef(false);
 
   function markAddressEdited() {
     addressManuallyEditedRef.current = true;
@@ -388,7 +405,7 @@ export function RegisterSalonScreen() {
     try {
       const data = await fetchCompanyByCnpj(cleanCnpj);
 
-      const tradeName = String(data.tradeName ?? "").trim();
+      const tradeNameValue = String(data.tradeName ?? "").trim();
       const companyName = String(data.companyName ?? "").trim();
       const mainCnae = String(data.cnae ?? "").trim();
       const secondary = Array.isArray(data.secondaryCnaes)
@@ -398,14 +415,22 @@ export function RegisterSalonScreen() {
       setCnpjMasked(maskCNPJ(data.cnpj || cleanCnpj));
       setCompanyInfo({
         companyName,
-        tradeName,
+        tradeName: tradeNameValue,
         status: String(data.status ?? "").trim(),
         cnae: mainCnae,
         secondaryCnaes: secondary,
       });
 
+      if (!legalNameManuallyEditedRef.current && companyName.length >= 2) {
+        setLegalName(companyName);
+      }
+
+      if (!tradeNameManuallyEditedRef.current && tradeNameValue.length >= 2) {
+        setTradeName(tradeNameValue);
+      }
+
       if (!salonNameManuallyEditedRef.current && !salonName.trim()) {
-        const preferredName = tradeName || companyName;
+        const preferredName = tradeNameValue || companyName;
         if (preferredName.length >= 2) {
           setSalonName(preferredName);
         }
@@ -485,8 +510,11 @@ export function RegisterSalonScreen() {
     ownerPassword: false,
 
     salonName: false,
+    legalName: false,
+    tradeName: false,
     salonEmail: false,
     cnpj: false,
+    stateRegistration: false,
 
     cep: false,
     street: false,
@@ -505,7 +533,10 @@ export function RegisterSalonScreen() {
   const canStep1 = ownerNameOk && ownerEmailOk && ownerPassOk;
 
   const salonNameOk = salonName.trim().length >= 2;
+  const legalNameOk = legalName.trim().length >= 2;
+  const tradeNameOk = true;
   const salonEmailOk = isEmail(salonEmail);
+  const stateRegistrationOk = !hasStateRegistration || stateRegistration.trim().length >= 1;
 
   const cnpjDigits = useMemo(() => onlyDigits(cnpjMasked).slice(0, 14), [cnpjMasked]);
   const cnpjOk = cnpjDigits.length === 14 && cnpjValidator.isValid(cnpjDigits);
@@ -524,8 +555,11 @@ export function RegisterSalonScreen() {
 
   const canStep2 =
     salonNameOk &&
+    legalNameOk &&
+    tradeNameOk &&
     salonEmailOk &&
     cnpjOk &&
+    stateRegistrationOk &&
     cepOk &&
     streetOk &&
     numberOk &&
@@ -553,8 +587,11 @@ export function RegisterSalonScreen() {
     setTouched((s) => ({
       ...s,
       salonName: true,
+      legalName: true,
+      tradeName: true,
       salonEmail: true,
       cnpj: true,
+      stateRegistration: true,
       cep: true,
       street: true,
       number: true,
@@ -598,7 +635,13 @@ export function RegisterSalonScreen() {
         },
         salon: {
           name: salonName.trim(),
+          legalName: legalName.trim(),
+          tradeName: tradeName.trim(),
           cnpj: cnpjDigits,
+          hasStateRegistration,
+          stateRegistration: hasStateRegistration
+            ? normalizeStateRegistration(stateRegistration)
+            : undefined,
           email: salonEmail.trim().toLowerCase(),
           cep: cepDigits,
           street: street.trim(),
@@ -655,8 +698,11 @@ export function RegisterSalonScreen() {
   const showOwnerPassErr = touched.ownerPassword && !ownerPassOk;
 
   const showSalonNameErr = touched.salonName && !salonNameOk;
+  const showLegalNameErr = touched.legalName && !legalNameOk;
+  const showTradeNameErr = touched.tradeName && !tradeNameOk;
   const showSalonEmailErr = touched.salonEmail && !salonEmailOk;
   const showCnpjErr = touched.cnpj && !cnpjOk;
+  const showStateRegistrationErr = touched.stateRegistration && hasStateRegistration && !stateRegistrationOk;
   const showCepErr = touched.cep && !cepOk;
   const showStreetErr = touched.street && !streetOk;
   const showNumberErr = touched.number && !numberOk;
@@ -851,12 +897,98 @@ export function RegisterSalonScreen() {
                         <InfoItem label="Nome fantasia" value={companyInfo.tradeName} />
                         <InfoItem label="Status" value={companyInfo.status} />
                         <Text style={styles.infoHelp}>
-                          Endereço e nome abaixo foram preenchidos automaticamente. Ajuste se necessário.
+                          Razão social e nome fantasia abaixo podem ser preenchidos automaticamente. Ajuste se necessário.
                         </Text>
                       </View>
                     ) : null}
 
                     <View style={styles.gap} />
+
+                    <FieldLabel icon="document-text-outline" label="Razão social" />
+                    <InputRow
+                      inputRef={legalNameRef}
+                      value={legalName}
+                      onChangeText={(text) => {
+                        legalNameManuallyEditedRef.current = true;
+                        setLegalName(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, legalName: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, legalName: false }));
+                        setTouched((s) => ({ ...s, legalName: true }));
+                      }}
+                      placeholder="Razão social do CNPJ"
+                      error={showLegalNameErr}
+                      focused={focused.legalName}
+                      returnKeyType="next"
+                      onSubmitEditing={() => tradeNameRef.current?.focus()}
+                    />
+                    <ErrorText show={showLegalNameErr} text="Razão social muito curta." />
+
+                    <View style={styles.gap} />
+
+                    <FieldLabel icon="pricetags-outline" label="Nome fantasia" />
+                    <InputRow
+                      inputRef={tradeNameRef}
+                      value={tradeName}
+                      onChangeText={(text) => {
+                        tradeNameManuallyEditedRef.current = true;
+                        setTradeName(text);
+                      }}
+                      onFocus={() => setFocused((s) => ({ ...s, tradeName: true }))}
+                      onBlur={() => {
+                        setFocused((s) => ({ ...s, tradeName: false }));
+                        setTouched((s) => ({ ...s, tradeName: true }));
+                      }}
+                      placeholder="Nome fantasia do CNPJ"
+                      error={showTradeNameErr}
+                      focused={focused.tradeName}
+                      returnKeyType="next"
+                      onSubmitEditing={() => salonNameRef.current?.focus()}
+                    />
+                    <ErrorText show={showTradeNameErr} text="Nome fantasia muito curto." />
+
+                    <View style={styles.switchBlock}>
+                      <View style={styles.switchTextGroup}>
+                        <Text style={styles.switchTitle}>Possui inscrição estadual</Text>
+                        <Text style={styles.switchSubtitle}>
+                          Quando ativo, a inscrição estadual passa a ser obrigatória.
+                        </Text>
+                      </View>
+                      <Switch
+                        value={hasStateRegistration}
+                        onValueChange={(next) => {
+                          setHasStateRegistration(next);
+                          if (!next) setStateRegistration("");
+                        }}
+                        trackColor={{ false: "#CBD5E1", true: COLORS.primary }}
+                        thumbColor="#FFFFFF"
+                      />
+                    </View>
+
+                    {hasStateRegistration ? (
+                      <>
+                        <FieldLabel icon="card-outline" label="Inscrição estadual" />
+                        <InputRow
+                          inputRef={stateRegistrationRef}
+                          value={stateRegistration}
+                          onChangeText={(text) => setStateRegistration(normalizeStateRegistration(text))}
+                          onFocus={() => setFocused((s) => ({ ...s, stateRegistration: true }))}
+                          onBlur={() => {
+                            setFocused((s) => ({ ...s, stateRegistration: false }));
+                            setTouched((s) => ({ ...s, stateRegistration: true }));
+                          }}
+                          placeholder="Digite a inscrição estadual"
+                          error={showStateRegistrationErr}
+                          focused={focused.stateRegistration}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                          returnKeyType="next"
+                          onSubmitEditing={() => salonNameRef.current?.focus()}
+                        />
+                        <ErrorText show={showStateRegistrationErr} text="Inscrição estadual obrigatória." />
+                      </>
+                    ) : null}
 
                     <FieldLabel icon="business-outline" label="Nome do salão" />
                     <InputRow
@@ -1334,6 +1466,32 @@ const styles = StyleSheet.create({
 
   gap: {
     height: 4,
+  },
+
+  switchBlock: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 16,
+  },
+
+  switchTextGroup: {
+    flex: 1,
+  },
+
+  switchTitle: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  switchSubtitle: {
+    marginTop: 4,
+    color: COLORS.sub,
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
   },
 
   infoCard: {

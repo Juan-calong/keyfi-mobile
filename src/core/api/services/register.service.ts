@@ -17,7 +17,11 @@ export type RegisterSalonPayload = {
   };
   salon: {
     name: string;
+    legalName?: string;
+    tradeName?: string;
     cnpj: string;
+    hasStateRegistration?: boolean;
+    stateRegistration?: string;
     email: string;
     cep: string;
     street: string;
