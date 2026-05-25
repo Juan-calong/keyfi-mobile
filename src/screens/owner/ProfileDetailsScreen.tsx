@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
+  Switch,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -113,10 +114,25 @@ function pickSalonAddress(me: any) {
 }
 function pickSalonLegalName(me: any) {
   const salon = pickSalon(me);
+  return trim(salon?.legalName || "");
+}
+
+function pickSalonName(me: any) {
+  const salon = pickSalon(me);
   return trim(salon?.name || "");
 }
+
+function pickSalonTradeName(me: any) {
+  const salon = pickSalon(me);
+  return trim(salon?.tradeName || "");
+}
+
+function pickSalonStateRegistration(me: any) {
+  const salon = pickSalon(me);
+  return trim(salon?.stateRegistration || "");
+}
 function pickSalonDisplayName(me: any) {
-  return cleanMeiLikeName(pickSalonLegalName(me));
+  return cleanMeiLikeName(pickSalonName(me));
 }
 
 function hasAnyAddressValue(addr: any) {
@@ -223,6 +239,10 @@ type EditFieldKey =
   | "user.complement"
   | "salon.name"
   | "salon.email"
+  | "salon.legalName"
+  | "salon.tradeName"
+  | "salon.hasStateRegistration"
+  | "salon.stateRegistration"
   | "salon.cep"
   | "salon.street"
   | "salon.number"
@@ -301,6 +321,29 @@ const fieldConfigs: Record<EditFieldKey, EditConfig> = {
     title: "Editar nome do salão",
     placeholder: "Meu salão",
     schema: z.string().min(1, "Informe o nome"),
+  },
+  "salon.legalName": {
+    title: "Editar razão social",
+    placeholder: "Razão social",
+    schema: z.string().min(1, "Informe a razão social"),
+    normalize: (v) => trim(v),
+  },
+  "salon.tradeName": {
+    title: "Editar nome fantasia",
+    placeholder: "Nome fantasia",
+    schema: z.string().min(1, "Informe o nome fantasia"),
+    normalize: (v) => trim(v),
+  },
+  "salon.hasStateRegistration": {
+    title: "Possui inscrição estadual",
+    placeholder: "Sim ou não",
+    schema: z.boolean(),
+  },
+  "salon.stateRegistration": {
+    title: "Editar inscrição estadual",
+    placeholder: "Inscrição estadual",
+    schema: z.string().optional(),
+    normalize: (v) => trim(v),
   },
   "salon.email": {
     title: "Editar e-mail do salão",
@@ -390,6 +433,14 @@ function getCurrentValue(me: any, field: EditFieldKey) {
 
     case "salon.name":
       return salon?.name ?? "";
+    case "salon.legalName":
+      return pickSalonLegalName(me);
+    case "salon.tradeName":
+      return pickSalonTradeName(me);
+    case "salon.hasStateRegistration":
+      return !!salon?.hasStateRegistration;
+    case "salon.stateRegistration":
+      return pickSalonStateRegistration(me);
     case "salon.email":
       return salon?.email ?? "";
     case "salon.cep":
@@ -521,6 +572,42 @@ export function OwnerProfileDetailsScreen() {
     const raw = String(editValue ?? "");
     const normalized = cfg.normalize ? cfg.normalize(raw) : raw;
 
+    if (editField === "salon.hasStateRegistration") {
+      const nextHasStateRegistration = raw === "true" || raw === "1";
+      const currentStateRegistration = pickSalonStateRegistration(me);
+
+      if (nextHasStateRegistration && !currentStateRegistration) {
+        setEditError("Informe a inscrição estadual antes de ativar.");
+        return;
+      }
+
+      await patchM.mutateAsync({
+        salon: {
+          hasStateRegistration: nextHasStateRegistration,
+          stateRegistration: nextHasStateRegistration ? currentStateRegistration : "",
+        },
+      });
+      return;
+    }
+
+    if (editField === "salon.stateRegistration") {
+      const nextStateRegistration = String(normalized ?? "").trim();
+      const currentHasStateRegistration = !!pickSalon(me)?.hasStateRegistration;
+
+      if (currentHasStateRegistration && !nextStateRegistration) {
+        setEditError("Informe a inscrição estadual.");
+        return;
+      }
+
+      await patchM.mutateAsync({
+        salon: {
+          hasStateRegistration: nextStateRegistration ? true : currentHasStateRegistration,
+          stateRegistration: nextStateRegistration,
+        },
+      });
+      return;
+    }
+
     const parsed = cfg.schema.safeParse(normalized);
     if (!parsed.success) {
       const first = parsed.error.issues?.[0]?.message || "Valor inválido";
@@ -638,6 +725,44 @@ export function OwnerProfileDetailsScreen() {
                 />
 
                 <InfoRow label="CNPJ" value={String(salonCnpj)} iconName="briefcase-outline" />
+
+                <InfoRow
+                  label="Razão social"
+                  value={String(pickSalonLegalName(me) || "—")}
+                  iconName="document-text-outline"
+                  editable
+                  onPress={() => openEdit("salon.legalName")}
+                />
+
+                <InfoRow
+                  label="Nome fantasia"
+                  value={String(pickSalonTradeName(me) || "—")}
+                  iconName="pricetags-outline"
+                  editable
+                  onPress={() => openEdit("salon.tradeName")}
+                />
+
+                <InfoRow
+                  label="Possui inscrição estadual"
+                  value={
+  salon?.hasStateRegistration === true
+    ? "Sim"
+    : salon?.hasStateRegistration === false
+      ? "Não"
+      : "Não informado"
+}
+                  iconName="card-outline"
+                  editable
+                  onPress={() => openEdit("salon.hasStateRegistration")}
+                />
+
+                <InfoRow
+                  label="Inscrição estadual"
+                  value={pickSalonStateRegistration(me) || "Não informada"}
+                  iconName="card-outline"
+                  editable
+                  onPress={() => openEdit("salon.stateRegistration")}
+                />
 
                 <InfoRow
                   label="E-mail do salão"
@@ -771,32 +896,66 @@ export function OwnerProfileDetailsScreen() {
                       {editField ? fieldConfigs[editField].title : "Editar"}
                     </Text>
 
-                    <TextInput
-                      value={editValue}
-                      onChangeText={(txt) => {
-                        if (editField === "user.cep" || editField === "salon.cep") {
-                          setEditValue(formatCep(txt));
-                        } else {
-                          setEditValue(txt);
+                    {editField === "salon.hasStateRegistration" ? (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          borderWidth: 1,
+                          borderColor: editError ? "#FCA5A5" : t.colors.border,
+                          borderRadius: 14,
+                          paddingHorizontal: 12,
+                          paddingVertical: 12,
+                        }}
+                      >
+                        <View style={{ flex: 1, paddingRight: 12 }}>
+                          <Text style={{ fontSize: 14, fontWeight: "800", color: t.colors.text }}>
+                            {editValue === "true" ? "Sim" : "Não"}
+                          </Text>
+                          <Text style={{ marginTop: 2, fontSize: 12, fontWeight: "600", color: t.colors.text2 }}>
+                            Ative apenas se a inscrição estadual estiver informada.
+                          </Text>
+                        </View>
+                        <Switch
+                          value={editValue === "true"}
+                          onValueChange={(next) => {
+                            setEditValue(next ? "true" : "false");
+                            setEditError(null);
+                          }}
+                          trackColor={{ false: "#CBD5E1", true: "#111827" }}
+                          thumbColor="#FFFFFF"
+                          disabled={patchM.isPending}
+                        />
+                      </View>
+                    ) : (
+                      <TextInput
+                        value={editValue}
+                        onChangeText={(txt) => {
+                          if (editField === "user.cep" || editField === "salon.cep") {
+                            setEditValue(formatCep(txt));
+                          } else {
+                            setEditValue(txt);
+                          }
+                          setEditError(null);
+                        }}
+                        placeholder={editField ? fieldConfigs[editField].placeholder : ""}
+                        keyboardType={editField ? fieldConfigs[editField].keyboardType : "default"}
+                        editable={!patchM.isPending}
+                        autoCapitalize={
+                          editField === "user.state" || editField === "salon.state" ? "characters" : "sentences"
                         }
-                        setEditError(null);
-                      }}
-                      placeholder={editField ? fieldConfigs[editField].placeholder : ""}
-                      keyboardType={editField ? fieldConfigs[editField].keyboardType : "default"}
-                      editable={!patchM.isPending}
-                      autoCapitalize={
-                        editField === "user.state" || editField === "salon.state" ? "characters" : "sentences"
-                      }
-                      style={{
-                        borderWidth: 1,
-                        borderColor: editError ? "#FCA5A5" : t.colors.border,
-                        borderRadius: 14,
-                        paddingHorizontal: 12,
-                        paddingVertical: 12,
-                        fontSize: 16,
-                        color: t.colors.text,
-                      }}
-                    />
+                        style={{
+                          borderWidth: 1,
+                          borderColor: editError ? "#FCA5A5" : t.colors.border,
+                          borderRadius: 14,
+                          paddingHorizontal: 12,
+                          paddingVertical: 12,
+                          fontSize: 16,
+                          color: t.colors.text,
+                        }}
+                      />
+                    )}
 
                     {cepEditing ? (
                       <Text
@@ -809,6 +968,20 @@ export function OwnerProfileDetailsScreen() {
                         }}
                       >
                         Ao salvar o CEP, rua, bairro, cidade e UF serão atualizados automaticamente.
+                      </Text>
+                    ) : null}
+
+                    {editField === "salon.stateRegistration" ? (
+                      <Text
+                        style={{
+                          marginTop: 8,
+                          color: "#64748B",
+                          fontSize: 12,
+                          fontWeight: "700",
+                          lineHeight: 17,
+                        }}
+                      >
+                        Se a inscrição estadual estiver vazia, o campo pode ficar desativado no perfil.
                       </Text>
                     ) : null}
 
