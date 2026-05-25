@@ -18,15 +18,17 @@ import { useAuthStore } from "../stores/auth.store";
 
 const Drawer = createDrawerNavigator();
 
-const DRAWER_BG = "#F4F2EE";
-const CARD_BG = "#FBF9F6";
-const ITEM_BG = "#F8F5F1";
-const ITEM_BG_PRESSED = "#EEE8E1";
-const ICON_BG = "#ECE7E0";
-const TEXT_DARK = "#2F2A24";
-const TEXT_MUTED = "#7B746B";
-const BORDER = "#E2DBD2";
-const ICON_COLOR = "#8A8177";
+// --- PALETA DARK PREMIUM ---
+const DRAWER_BG = "#141414";       
+const CARD_BG = "#1F1F1F";         
+const ITEM_BG = "transparent";     
+const ITEM_BG_PRESSED = "#2A2A2A"; 
+const ICON_BG = "#2A2A2A";         
+const TEXT_DARK = "#F2F2F2";       
+const TEXT_MUTED = "#8E8E93";      
+const BORDER = "#2C2C2C";          
+const DIVIDER = "#2C2C2C";         
+const ICON_COLOR = "#E5E5EA";      
 
 function DrawerMenuItem({
   icon,
@@ -42,7 +44,7 @@ function DrawerMenuItem({
       onPress={onPress}
       style={({ pressed }) => [
         s.menuItem,
-        pressed && { backgroundColor: ITEM_BG_PRESSED, opacity: 0.96 },
+        pressed && { backgroundColor: ITEM_BG_PRESSED },
       ]}
     >
       <View style={s.iconWrap}>
@@ -66,6 +68,7 @@ function OwnerDrawerContent(props: any) {
       style={s.scroll}
     >
       <View style={s.container}>
+        {/* Header - Painel da Loja */}
         <View style={s.headerCard}>
           <View style={s.avatar}>
             <Icon name="storefront-outline" size={24} color={ICON_COLOR} />
@@ -77,6 +80,10 @@ function OwnerDrawerContent(props: any) {
           </View>
         </View>
 
+        {/* Título de Seção */}
+        <Text style={s.sectionLabel}>Navegação</Text>
+
+        {/* Menu de Navegação - Sem fundo envolvente */}
         <View style={s.menuCard}>
           <DrawerMenuItem
             icon="home-outline"
@@ -84,11 +91,15 @@ function OwnerDrawerContent(props: any) {
             onPress={() => props.navigation.navigate(OWNER_SCREENS.Tabs)}
           />
 
+          <View style={s.divider} />
+
           <DrawerMenuItem
             icon="receipt-outline"
             label="Pedidos"
             onPress={() => props.navigation.navigate(OWNER_SCREENS.Orders)}
           />
+
+          <View style={s.divider} />
 
           <DrawerMenuItem
             icon="wallet-outline"
@@ -96,11 +107,15 @@ function OwnerDrawerContent(props: any) {
             onPress={() => props.navigation.navigate(OWNER_SCREENS.Wallet)}
           />
 
+          <View style={s.divider} />
+
           <DrawerMenuItem
             icon="notifications-outline"
             label="Notificações"
             onPress={() => props.navigation.navigate(OWNER_SCREENS.Notifications)}
           />
+
+          <View style={s.divider} />
 
           <DrawerMenuItem
             icon="person-circle-outline"
@@ -109,6 +124,7 @@ function OwnerDrawerContent(props: any) {
           />
         </View>
 
+        {/* Footer - Sair */}
         <View style={s.footer}>
           <Pressable
             onPress={async () => {
@@ -119,7 +135,7 @@ function OwnerDrawerContent(props: any) {
             }}
             style={({ pressed }) => [
               s.logoutButton,
-              pressed && { backgroundColor: ITEM_BG_PRESSED, opacity: 0.96 },
+              pressed && { backgroundColor: ITEM_BG_PRESSED },
             ]}
           >
             <Icon name="log-out-outline" size={18} color={TEXT_DARK} />
@@ -138,7 +154,7 @@ export function OwnerDrawer() {
       screenOptions={{
         headerShown: false,
         drawerType: "front",
-        overlayColor: "rgba(0,0,0,0.18)",
+        overlayColor: "rgba(0,0,0,0.6)", // Overlay escurecido
         drawerStyle: {
           backgroundColor: DRAWER_BG,
           width: 304,
@@ -204,7 +220,7 @@ const s = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: BORDER,
-    marginBottom: 18,
+    marginBottom: 28,
   },
 
   avatar: {
@@ -213,57 +229,67 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EAE4DC",
-    borderWidth: 1,
-    borderColor: "#D8D0C5",
+    backgroundColor: ICON_BG,
     marginRight: 14,
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "900",
+    fontSize: 17,
+    fontWeight: "600",
     color: TEXT_DARK,
   },
 
   headerSubtitle: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "400",
     color: TEXT_MUTED,
   },
 
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 16,
+    marginLeft: 16,
+  },
+
   menuCard: {
-    backgroundColor: CARD_BG,
-    borderRadius: 24,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
+    paddingHorizontal: 0, 
   },
 
   menuItem: {
-    minHeight: 58,
-    borderRadius: 18,
-    paddingHorizontal: 14,
+    minHeight: 58, 
+    borderRadius: 14,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: ITEM_BG,
-    marginBottom: 8,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: DIVIDER,
+    marginHorizontal: 16,
+    marginVertical: 10,
   },
 
   iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ICON_BG,
-    marginRight: 12,
+    marginRight: 14,
   },
 
   menuLabel: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "500",
     color: TEXT_DARK,
   },
 
@@ -276,8 +302,8 @@ const s = StyleSheet.create({
     height: 56,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#DCD5CB",
-    backgroundColor: "#FCFAF7",
+    borderColor: BORDER,
+    backgroundColor: CARD_BG,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -286,7 +312,7 @@ const s = StyleSheet.create({
   logoutText: {
     marginLeft: 10,
     fontSize: 15,
-    fontWeight: "900",
+    fontWeight: "600",
     color: TEXT_DARK,
   },
 });
