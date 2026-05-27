@@ -235,15 +235,17 @@ function FlatChip({
 export function CustomerBuyScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
   const isTablet = width >= 768;
+  const isTabletLandscape = isTablet && width > height;
+  const numColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
+  const horizontalListPadding = isTablet ? 12 : 4;
+  const gridGap = isTablet ? 12 : 4;
 
-  const numColumns = 2;
-  const horizontalListPadding = 4;
-  const gridGap = 4;
-
-  const cardWidth = Math.floor((width - horizontalListPadding * 2 - gridGap) / 2);
+  const cardWidth = Math.floor(
+    (width - horizontalListPadding * 2 - gridGap * (numColumns - 1)) / numColumns
+  );
 
   const token = useAuthStore((s) => s.token);
   const activeRole = useAuthStore((s) => s.activeRole);
@@ -702,8 +704,11 @@ onRetry={() => {
               key="customer-grid-2"
               numColumns={numColumns}
               keyExtractor={(i) => i.id}
-              contentContainerStyle={styles.listContent}
-              columnWrapperStyle={styles.columnWrap}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingLeft: horizontalListPadding, paddingRight: horizontalListPadding },
+              ]}
+              columnWrapperStyle={[styles.columnWrap, isTablet && { gap: gridGap }]}
               onScrollToIndexFailed={(info) => {
                 const offset = Math.max(0, info.averageItemLength * info.index);
                 listRef.current?.scrollToOffset({ offset, animated: true });
@@ -760,8 +765,6 @@ const promoBadgeLabel =
   resolvePromoBadgeLabel({ promo });
 
                 const img = getProductImageUrl(item);
-                const isLeft = index % 2 === 0;
-
                 const ratingValue = getProductRating(item);
                 const reviewsCount = getProductReviewsCount(item);
 
@@ -805,7 +808,7 @@ const promoBadgeLabel =
                     outOfStock={out}
                     highlighted={isHighlighted}
                     width={cardWidth}
-                    marginLeft={isLeft ? 0 : gridGap}
+                    marginLeft={0}
                     onPress={() => openDetails(item.id)}
                     onToggleCart={onPressToggle}
                   />
@@ -907,8 +910,6 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingTop: 6,
-    paddingLeft: 4,
-    paddingRight: 4,
     paddingBottom: 140,
     backgroundColor: WHITE,
   },

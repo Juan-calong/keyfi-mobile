@@ -1,8 +1,9 @@
 import React from "react";
-import { GestureResponderEvent, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { GestureResponderEvent, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 
 import { ProductFavoriteButton } from "../../../features/components/product-details/ProductFavoriteButton";
+import { ProductImageFrame } from "../../../ui/components/ProductImageFrame";
 
 type Props = {
   productId: string;
@@ -63,6 +64,10 @@ export function OwnerProductGridCard({
   onPress,
   onToggleCart,
 }: Props) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isTabletLandscape = screenWidth >= 768 && screenWidth > screenHeight;
+  const imageResizeMode = "cover";
+
   return (
     <Pressable
       onPress={onPress}
@@ -75,16 +80,12 @@ export function OwnerProductGridCard({
           highlighted && styles.cardHighlight,
         ]}
       >
-        <View style={styles.cardImageWrap}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.cardImage} resizeMode="cover" />
-          ) : (
-            <Image
-              source={{ uri: "https://dummyimage.com/400x400/ffffff/000000.png&text=NO+IMAGE" }}
-              style={styles.cardImage}
-              resizeMode="contain"
-            />
-          )}
+        <View style={[styles.cardImageWrap, isTabletLandscape && styles.cardImageWrapTablet]}>
+          <ProductImageFrame
+            uri={imageUri ?? null}
+            backgroundColor="#F4EFE3"
+            resizeMode={imageResizeMode}
+          />
 
           {!!promoBadgeLabel && !(outOfStock && !inCart) ? (
             <View style={styles.cardPromoBadge}>
@@ -163,14 +164,14 @@ const styles = StyleSheet.create({
   cardImageWrap: {
     width: "100%",
     aspectRatio: 1,
-    backgroundColor: "#F7F4F3",
+    backgroundColor: "#F4EFE3",
+    padding: 0,
     overflow: "hidden",
     position: "relative",
   },
 
-  cardImage: {
-    width: "100%",
-    height: "100%",
+  cardImageWrapTablet: {
+    aspectRatio: 1.08,
   },
 
   cardPromoBadge: {

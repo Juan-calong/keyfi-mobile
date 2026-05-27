@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "../../core/api/client";
 import { endpoints } from "../../core/api/endpoints";
 import { friendlyError } from "../../core/errors/friendlyError";
+import { useBreakpoints } from "../../ui/responsive";
 
 import {
   CheckoutAddressValues,
@@ -55,6 +56,9 @@ export function SharedCheckoutAddressScreen({
 }: Props) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const bp = useBreakpoints();
+  const contentMaxWidth = bp.width >= 1024 ? 980 : bp.isTablet ? 820 : undefined;
+  const isTabletLandscape = bp.isTablet && bp.width > bp.height;
   
   const [form, setForm] = React.useState<CheckoutAddressValues>({
     zipCode: "",
@@ -227,7 +231,10 @@ export function SharedCheckoutAddressScreen({
     >
       {/* Header com botão de voltar */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[s.backBtn, isTabletLandscape && s.backBtnTablet]}
+        >
           <Text style={s.backBtnText}>{"< Voltar"}</Text>
         </TouchableOpacity>
       </View>
@@ -235,6 +242,7 @@ export function SharedCheckoutAddressScreen({
       <ScrollView
         contentContainerStyle={[
           s.content,
+          contentMaxWidth ? { width: "100%", maxWidth: contentMaxWidth, alignSelf: "center" } : null,
           { paddingBottom: 160 + insets.bottom },
         ]}
         keyboardShouldPersistTaps="handled"
@@ -334,12 +342,17 @@ export function SharedCheckoutAddressScreen({
 
       {/* Footer Fixo */}
       <View style={[s.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
-        <Text style={s.disclaimerText}>
-          Aviso: O endereço informado aqui será usado apenas para esta entrega e não alterará os dados salvos no seu perfil.
-        </Text>
-        <TouchableOpacity style={s.primaryBtn} onPress={validateAndContinue}>
-          <Text style={s.primaryBtnText}>Salvar endereço</Text>
-        </TouchableOpacity>
+        <View style={[s.footerInner, contentMaxWidth ? { maxWidth: contentMaxWidth } : null]}>
+          <Text style={s.disclaimerText}>
+            Aviso: O endereço informado aqui será usado apenas para esta entrega e não alterará os dados salvos no seu perfil.
+          </Text>
+          <TouchableOpacity
+            style={[s.primaryBtn, isTabletLandscape && s.primaryBtnTablet]}
+            onPress={validateAndContinue}
+          >
+            <Text style={s.primaryBtnText}>Salvar endereço</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -358,6 +371,9 @@ const s = StyleSheet.create({
   backBtn: {
     paddingVertical: 8,
     alignSelf: "flex-start",
+  },
+  backBtnTablet: {
+    paddingVertical: 10,
   },
   backBtnText: {
     fontSize: 16,
@@ -449,6 +465,10 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
   },
+  footerInner: {
+    width: "100%",
+    alignSelf: "center",
+  },
   disclaimerText: {
     fontSize: 12,
     color: "#777",
@@ -462,6 +482,11 @@ const s = StyleSheet.create({
     backgroundColor: "#111", // Botão Preto
     alignItems: "center",
     justifyContent: "center",
+  },
+  primaryBtnTablet: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
   },
   primaryBtnText: {
     color: "#FFF", // Texto Branco

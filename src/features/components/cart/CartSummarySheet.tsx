@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useBreakpoints } from "../../../ui/responsive";
 import { CartCouponSection } from "./CartCouponSection";
 import { CartSummarySection } from "./CartSummarySection";
 import type { CartPreviewResp } from "./cart.shared.types";
@@ -38,12 +39,17 @@ export function CartSummarySheet({
   summary,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const bp = useBreakpoints();
+  const isTabletLandscape = bp.isTablet && bp.width > bp.height;
+  const sheetWidthStyle = isTabletLandscape
+    ? { maxWidth: 820, width: "100%", alignSelf: "center" as const }
+    : null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={s.sheetKeyboard} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable style={s.sheetOverlay} onPress={onClose} />
-        <View style={[s.sheetWrap, { paddingBottom: insets.bottom + 16 }]}> 
+        <View style={[s.sheetWrap, sheetWidthStyle, { paddingBottom: insets.bottom + 16 }]}>
           <View style={s.sheetHandle} />
 
           <View style={s.sheetHeaderRow}>

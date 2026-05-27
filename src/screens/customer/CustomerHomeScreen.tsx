@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Linking,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
@@ -631,21 +632,27 @@ function PreviewGrid({
   onAddToCart,
   onRemoveFromCart,
   qtyById,
+  numColumns,
+  cardWidth,
+  gridGap,
 }: {
   data: PreviewItem[];
   onPressItem: (id: string) => void;
   onAddToCart: (id: string) => void;
   onRemoveFromCart: (id: string) => void;
   qtyById: Record<string, number>;
+  numColumns: number;
+  cardWidth?: number;
+  gridGap: number;
 }) {
   return (
     <FlatList
       data={data}
       extraData={qtyById}
       keyExtractor={(i) => String(i.id)}
-      numColumns={2}
+      numColumns={numColumns}
       scrollEnabled={false}
-      columnWrapperStyle={styles.gridRow}
+      columnWrapperStyle={[styles.gridRow, gridGap ? { gap: gridGap } : null]}
       contentContainerStyle={styles.gridContent}
       renderItem={({ item }) => {
         const productId = String(item.id);
@@ -653,7 +660,7 @@ function PreviewGrid({
         const hasRating = Number(item.ratingValue ?? 0) > 0;
 
         return (
-           <View style={styles.cardWrap}>
+          <View style={[styles.cardWrap, cardWidth ? { width: cardWidth } : null]}>
             <CustomerProductGridCard
               productId={productId}
               name={item.name}
@@ -680,6 +687,17 @@ export function CustomerHomeScreen() {
   const PAGE_BG = "#FFFFFF";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isTabletLandscape = isTablet && width > height;
+  const previewNumColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
+  const previewGridGap = isTablet ? 12 : 0;
+  const previewOuterPadding = isTablet ? 12 : 6;
+  const previewCardWidth = isTablet
+    ? Math.floor(
+        (width - previewOuterPadding * 2 - previewGridGap * (previewNumColumns - 1)) / previewNumColumns
+      )
+    : undefined;
 
   const token = useAuthStore((s) => s.token);
   const activeRole = useAuthStore((s) => s.activeRole);
@@ -1159,12 +1177,15 @@ export function CustomerHomeScreen() {
                       <HomeSectionHeader title="Promoções" />
                       <Hairline />
 
-                      <PreviewGrid
+                        <PreviewGrid
                         data={promoPreview}
                         onPressItem={(id) => goToProductDetails(id)}
                         onAddToCart={handleAddToCart}
-                        onRemoveFromCart={handleRemoveFromCart}
+                       onRemoveFromCart={handleRemoveFromCart}
                         qtyById={qtyById}
+                        numColumns={previewNumColumns}
+                        cardWidth={previewCardWidth}
+                        gridGap={previewGridGap}
                       />
 
                       <View style={{ height: 6 }} />
@@ -1187,6 +1208,9 @@ export function CustomerHomeScreen() {
                       onAddToCart={handleAddToCart}
                       onRemoveFromCart={handleRemoveFromCart}
                       qtyById={qtyById}
+                      numColumns={previewNumColumns}
+                      cardWidth={previewCardWidth}
+                      gridGap={previewGridGap}
                     />
 
                   )}
@@ -1203,6 +1227,7 @@ export function CustomerHomeScreen() {
 const styles = StyleSheet.create({
 container: {
   flex: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
   position: "relative",
 },
@@ -1214,7 +1239,7 @@ container: {
   },
 
   gridRow: {
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     marginBottom: 10,
   },
 
@@ -1232,8 +1257,9 @@ container: {
     ...StyleSheet.absoluteFillObject,
   },
 
-  list: {
+list: {
   flex: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
 },
    
@@ -1303,21 +1329,25 @@ container: {
     opacity: 0.65,
   },
 
-  content: {
+content: {
   flexGrow: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
   paddingBottom: 20,
   },
 
   stack: {
+    width: "100%",
     gap: 0,
   },
 
   topHeroSection: {
+    width: "100%",
     backgroundColor: "#000000",
   },
 
   productsSection: {
+    width: "100%",
     backgroundColor: "#FFFFFF",
     paddingTop: 10,
     paddingHorizontal: 6,

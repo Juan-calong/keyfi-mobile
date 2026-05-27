@@ -4,15 +4,15 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Image,
   Pressable,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Loading, ErrorState } from "../../../ui/components/State";
+import { ProductImageFrame } from "../../../ui/components/ProductImageFrame";
 import { ProductFavoriteButton } from "../../components/product-details/ProductFavoriteButton";
 
 const GOLD = "#B8943C";
@@ -20,8 +20,6 @@ const BG = "#FCF9F3";
 const CARD = "#FFFDF9";
 const MUTED = "#7A7165";
 const BORDER = "rgba(200,164,93,0.18)";
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 16 * 2 - 12) / 2;
 
 type FavoriteFilter = "all" | "promos" | "available";
 
@@ -123,8 +121,19 @@ export function SharedFavoritesScreen({
   onOpenProduct,
 }: SharedFavoritesScreenProps) {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isTabletLandscape = isTablet && width > height;
+  const numColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
+  const horizontalPadding = isTablet ? 12 : 16;
+  const columnGap = isTablet ? 12 : 12;
+  const cardWidth = isTablet
+    ? Math.floor((width - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns)
+    : undefined;
+  const imageResizeMode = "cover";
   const [selectedFilter, setSelectedFilter] =
     React.useState<FavoriteFilter>("all");
+  const imageHeight = cardWidth ? Math.max(160, Math.round(cardWidth * 0.90)) : 150;
 
   const filteredItems = React.useMemo(() => {
     if (selectedFilter === "promos") {
@@ -148,27 +157,28 @@ export function SharedFavoritesScreen({
     const price = getFavoritePrice(item);
 
     return (
-      <Pressable onPress={() => onOpenProduct(item)} style={s.card}>
-        <View style={s.imageWrap}>
-          {image ? (
-            <Image source={{ uri: image }} style={s.image} resizeMode="cover" />
-          ) : (
-            <View style={s.imageFallback}>
-              <Icon name="image-outline" size={28} color={GOLD} />
-            </View>
-          )}
+      <View style={[s.cardWrap, cardWidth ? { width: cardWidth } : null]}>
+        <Pressable onPress={() => onOpenProduct(item)} style={s.card}>
+          <View style={[s.imageWrap, { height: imageHeight }]}>
+            <ProductImageFrame
+              uri={image}
+              fallbackLabel="Sem imagem"
+              fallbackIconSize={24}
+              backgroundColor="#F4EFE3"
+              resizeMode={imageResizeMode}
+            />
 
-          <ProductFavoriteButton
-            productId={item.id}
-            initialFavorited={true}
-            containerStyle={s.heartBadge}
-            size={16}
-            activeColor="#E11D48"
-            inactiveColor="#2E2A29"
-          />
-        </View>
+            <ProductFavoriteButton
+              productId={item.id}
+              initialFavorited={true}
+              containerStyle={s.heartBadge}
+              size={16}
+              activeColor="#E11D48"
+              inactiveColor="#2E2A29"
+            />
+          </View>
 
-        <View style={s.cardBody}>
+          <View style={s.cardBody}>
           <Text numberOfLines={2} style={s.productName}>
             {item.name}
           </Text>
@@ -189,7 +199,8 @@ export function SharedFavoritesScreen({
             </View>
           </View>
         </View>
-      </Pressable>
+        </Pressable>
+      </View>
     );
   };
 
@@ -270,9 +281,9 @@ export function SharedFavoritesScreen({
           <FlatList
             data={filteredItems}
             keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={s.row}
-            contentContainerStyle={s.listContent}
+            numColumns={numColumns}
+            columnWrapperStyle={[s.row, isTablet && { gap: columnGap, justifyContent: "flex-start" }]}
+            contentContainerStyle={[s.listContent, { paddingHorizontal: horizontalPadding }]}
             showsVerticalScrollIndicator={false}
             renderItem={renderItem}
             ListEmptyComponent={
@@ -300,7 +311,7 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
   errorWrap: { paddingHorizontal: 16, marginTop: 12 },
-  listContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 110 },
+  listContent: { paddingTop: 8, paddingBottom: 110 },
   filtersRow: {
     flexDirection: "row",
     gap: 10,
@@ -322,8 +333,11 @@ const s = StyleSheet.create({
   filterChipText: { fontSize: 13.5, fontWeight: "700", color: "#111111" },
   filterChipTextActive: { color: "#FFFDF8" },
   row: { justifyContent: "space-between", marginBottom: 12 },
+  cardWrap: {
+    width: "48.6%",
+  },
   card: {
-    width: CARD_WIDTH,
+    width: "100%",
     backgroundColor: CARD,
     borderRadius: 18,
     overflow: "hidden",
@@ -335,14 +349,13 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-  imageWrap: {
-    position: "relative",
-    width: "100%",
-    height: 150,
-    backgroundColor: "#F4EFE3",
-  },
-  image: { width: "100%", height: "100%" },
-  imageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
+imageWrap: {
+  position: "relative",
+  width: "100%",
+  backgroundColor: "#F4EFE3",
+  padding: 0,
+  overflow: "hidden",
+},
   heartBadge: {
     position: "absolute",
     top: 10,

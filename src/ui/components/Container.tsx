@@ -9,6 +9,7 @@ type ContainerProps = {
 
 export function Container({ children, style }: ContainerProps) {
   const bp = useBreakpoints();
+  const contentMaxWidth = bp.contentMaxWidth ?? bp.maxWidth;
 
   return (
     <View
@@ -22,13 +23,31 @@ export function Container({ children, style }: ContainerProps) {
         style,
       ]}
     >
-      {children}
+      <View
+        style={[
+          s.content,
+          contentMaxWidth
+            ? {
+                maxWidth: contentMaxWidth,
+                alignSelf: "center",
+              }
+            : null,
+        ]}
+      >
+        {children}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   base: {
+    flex: 1,
     width: "100%",
+  },
+
+  content: {
+    width: "100%",
+    flexGrow: 1,
   },
 });

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Linking,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -523,12 +524,18 @@ function PreviewGrid({
   onAddToCart,
   onRemoveFromCart,
   qtyById,
+  numColumns,
+  cardWidth,
+  gridGap,
 }: {
   data: PreviewItem[];
   onPressItem: (id: string) => void;
   onAddToCart: (id: string) => void;
   onRemoveFromCart: (id: string) => void;
   qtyById: Record<string, number>;
+  numColumns: number;
+  cardWidth?: number;
+  gridGap: number;
 }) {
 
 
@@ -537,9 +544,9 @@ function PreviewGrid({
       data={data}
       extraData={qtyById}
       keyExtractor={(i) => String(i.id)}
-      numColumns={2}
+      numColumns={numColumns}
       scrollEnabled={false}
-      columnWrapperStyle={styles.gridRow}
+      columnWrapperStyle={[styles.gridRow, gridGap ? { gap: gridGap } : null]}
       contentContainerStyle={styles.gridContent}
       renderItem={({ item }) => {
         const productId = String(item.id);
@@ -547,7 +554,7 @@ function PreviewGrid({
 
 
         return (
-           <View style={styles.cardWrap}>
+          <View style={[styles.cardWrap, cardWidth ? { width: cardWidth } : null]}>
             <OwnerProductGridCard
               productId={productId}
               name={item.name}
@@ -573,6 +580,17 @@ export function OwnerHomeScreen() {
   const DARK_BG = "#0F0F0F";
   const nav = useNavigation<any>();
   const tabBarHeight = useBottomTabBarHeight();
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isTabletLandscape = isTablet && width > height;
+  const previewNumColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
+  const previewGridGap = isTablet ? 12 : 0;
+  const previewOuterPadding = isTablet ? 12 : 6;
+  const previewCardWidth = isTablet
+    ? Math.floor(
+        (width - previewOuterPadding * 2 - previewGridGap * (previewNumColumns - 1)) / previewNumColumns
+      )
+    : undefined;
 
   const token = useAuthStore((s) => s.token);
   const activeRole = useAuthStore((s) => s.activeRole);
@@ -1028,6 +1046,9 @@ return (
             onAddToCart={handleAddToCart}
            onRemoveFromCart={handleRemoveFromCart}
             qtyById={qtyById}
+            numColumns={previewNumColumns}
+            cardWidth={previewCardWidth}
+            gridGap={previewGridGap}
           />
 
           <View style={{ height: 6 }} />
@@ -1049,6 +1070,9 @@ return (
           onAddToCart={handleAddToCart}
           onRemoveFromCart={handleRemoveFromCart}
           qtyById={qtyById}
+          numColumns={previewNumColumns}
+          cardWidth={previewCardWidth}
+          gridGap={previewGridGap}
         />
       )}
     </View>
@@ -1064,33 +1088,39 @@ return (
 const styles = StyleSheet.create({
 container: {
   flex: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
   position: "relative",
 },
 
-  content: {
+content: {
   flexGrow: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
   paddingBottom: 20,
   },
 
   list: {
   flex: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
 },
 
 stack: {
   flexGrow: 1,
+  width: "100%",
   gap: 0,
   backgroundColor: "#FFFFFF",
 },
 
 topHeroSection: {
+  width: "100%",
   backgroundColor: "#0F0F0F",
 },
 
 productsSection: {
   flexGrow: 1,
+  width: "100%",
   backgroundColor: "#FFFFFF",
   paddingTop: 10,
   paddingHorizontal: 6,
@@ -1104,7 +1134,7 @@ productsSection: {
   },
 
   gridRow: {
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     marginBottom: 10,
   },
 

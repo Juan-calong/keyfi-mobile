@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
+import { useBreakpoints } from "../responsive";
 
 type BannerItem = {
   id: string;
@@ -29,6 +30,7 @@ export function HomeHeroCarousel({
   autoSlideInterval = 3500,
   variant = "default",
 }: Props) {
+  const bp = useBreakpoints();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<BannerItem> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -36,6 +38,10 @@ export function HomeHeroCarousel({
   const [activeIndex, setActiveIndex] = useState(0);
 
   const bannerWidth = useMemo(() => width, [width]);
+  const isLandscape = bp.width > bp.height;
+  const bannerHeight = bp.isTablet ? (isLandscape ? 184 : 220) : 250;
+  const imageResizeMode = bp.isTablet && isLandscape ? "contain" : "cover";
+  const imageStyle = bp.isTablet && isLandscape ? styles.imageContain : styles.imageCover;
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -115,12 +121,16 @@ export function HomeHeroCarousel({
     return (
 <Pressable
   onPress={() => onPressItem(item)}
-  style={[styles.singleWrap, dark && styles.singleWrapDark, { width: bannerWidth }]}
+  style={[
+    styles.singleWrap,
+    dark && styles.singleWrapDark,
+    { width: bannerWidth, height: bannerHeight },
+  ]}
 >
   <Image
     source={{ uri: item.imageUrl }}
-    style={styles.image}
-    resizeMode="cover"
+    style={[styles.imageBase, imageStyle]}
+    resizeMode={imageResizeMode}
   />
 </Pressable>
     );
@@ -151,12 +161,16 @@ return (
       renderItem={({ item }) => (
         <Pressable
           onPress={() => onPressItem(item)}
-          style={[styles.slideWrap, dark && styles.slideWrapDark, { width: bannerWidth }]}
+          style={[
+            styles.slideWrap,
+            dark && styles.slideWrapDark,
+            { width: bannerWidth, height: bannerHeight },
+          ]}
         >
           <Image
             source={{ uri: item.imageUrl }}
-            style={styles.image}
-            resizeMode="cover"
+            style={[styles.imageBase, imageStyle]}
+            resizeMode={imageResizeMode}
           />
         </Pressable>
       )}
@@ -181,7 +195,6 @@ return (
 
 const styles = StyleSheet.create({
 root: {
-  height: 250,
   backgroundColor: "#0F0F0F",
   overflow: "hidden",
   position: "relative",
@@ -192,7 +205,6 @@ root: {
   },
 
 singleWrap: {
-  height: 250,
   borderRadius: 0,
   overflow: "hidden",
   backgroundColor: "#0F0F0F",
@@ -204,7 +216,6 @@ singleWrap: {
   },
 
 slideWrap: {
-  height: 250,
   borderRadius: 0,
   overflow: "hidden",
   backgroundColor: "#0F0F0F",
@@ -215,12 +226,22 @@ slideWrap: {
     backgroundColor: "#0F0F0F",
   },
 
-  image: {
+  imageBase: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#0F0F0F",
+  },
+
+  imageCover: {
     width: "106%",
     height: "106%",
     marginLeft: "-3%",
     marginTop: "0%",
-    backgroundColor: "#0F0F0F",
+  },
+
+  imageContain: {
+    width: "100%",
+    height: "100%",
   },
 
   dotsWrap: {
