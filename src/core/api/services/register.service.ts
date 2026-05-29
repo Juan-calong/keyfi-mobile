@@ -24,12 +24,12 @@ export type RegisterSalonPayload = {
     hasStateRegistration?: boolean;
     stateRegistration?: string | null;
     email: string;
-    cep?: string;
-    street?: string;
-    number?: string;
-    district?: string;
-    city?: string;
-    state?: string;
+    cep: string;
+    street: string;
+    number: string;
+    district: string;
+    city: string;
+    state: string;
     complement?: string;
   };
   referralToken?: string;

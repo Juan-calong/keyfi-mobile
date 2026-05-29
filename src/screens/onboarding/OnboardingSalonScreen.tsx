@@ -45,6 +45,10 @@ function normalizeStateRegistration(v: any) {
   return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
+function normalizeUF(v: any) {
+  return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 2);
+}
+
 function TaxpayerOption({
   title,
   description,
@@ -100,6 +104,13 @@ export function OnboardingSalonScreen() {
   const stateRegistrationRequired = selectedTaxpayerType === "CONTRIBUTOR";
   const stateRegistrationOk = !stateRegistrationRequired || stateRegistration.trim().length > 0;
   const taxpayerTypeOk = !!selectedTaxpayerType;
+  const cepOk = onlyDigits(cep).length === 8;
+  const streetOk = street.trim().length >= 2;
+  const numberOk = number.trim().length >= 1;
+  const districtOk = district.trim().length >= 2;
+  const cityOk = city.trim().length >= 2;
+  const stateUF = normalizeUF(state);
+  const stateOk = stateUF.length === 2;
 
   const can =
     name.trim().length >= 2 &&
@@ -107,7 +118,13 @@ export function OnboardingSalonScreen() {
     tradeName.trim().length >= 2 &&
     onlyDigits(cnpj).length === 14 &&
     taxpayerTypeOk &&
-    stateRegistrationOk;
+    stateRegistrationOk &&
+    cepOk &&
+    streetOk &&
+    numberOk &&
+    districtOk &&
+    cityOk &&
+    stateOk;
 
   const payload = useMemo(() => {
     const cnpj14 = onlyDigits(cnpj);
@@ -127,12 +144,12 @@ export function OnboardingSalonScreen() {
         hasStateRegistration: taxpayerType === "CONTRIBUTOR",
         stateRegistration:
           taxpayerType === "CONTRIBUTOR" ? normalizedStateRegistration || null : null,
-        cep: cep.trim() || undefined,
-        street: street.trim() || undefined,
-        number: number.trim() || undefined,
-        district: district.trim() || undefined,
-        city: city.trim() || undefined,
-        state: state.trim() || undefined,
+        cep: onlyDigits(cep),
+        street: street.trim(),
+        number: number.trim(),
+        district: district.trim(),
+        city: city.trim(),
+        state: stateUF,
         complement: complement.trim() || undefined,
       },
       referralToken: ref ? ref : undefined,
@@ -150,8 +167,8 @@ export function OnboardingSalonScreen() {
     number,
     district,
     city,
-    state,
     complement,
+    stateUF,
   ]);
 
   const mut = useMutation({
@@ -279,7 +296,7 @@ export function OnboardingSalonScreen() {
 
           <Card>
             <Text style={{ color: "rgba(234,240,255,0.85)", fontWeight: "900" }}>
-              Endereço (opcional por enquanto)
+              Endereço do salão
             </Text>
 
             <Text style={labelStyle}>CEP</Text>

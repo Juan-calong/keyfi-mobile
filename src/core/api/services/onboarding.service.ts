@@ -10,12 +10,12 @@ export type OnboardingSalonPayload = {
         icmsTaxpayerType?: "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR";
         hasStateRegistration?: boolean;
         stateRegistration?: string | null;
-        cep?: string;
-        street?: string;
-        number?: string;
-        district?: string;
-        city?: string;
-        state?: string;
+        cep: string;
+        street: string;
+        number: string;
+        district: string;
+        city: string;
+        state: string;
         complement?: string;
     };
     referralToken?: string;
