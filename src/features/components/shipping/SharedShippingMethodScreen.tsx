@@ -633,6 +633,12 @@ export function SharedShippingMethodScreen({
     null
   );
   const insets = useSafeAreaInsets();
+const footerBottomOffset =
+  Platform.OS === "android"
+    ? Math.max(insets.bottom, 60)
+    : Math.max(insets.bottom, 0);
+
+  const footerReservedSpace = 120 + footerBottomOffset;
   const continueLockRef = useRef(false);
   const orderAttemptKeyRef = useRef<string | null>(null);
 
@@ -1050,7 +1056,10 @@ const idempotencyKey = `order-${Date.now()}-${Math.random()
         ) : (
           <>
             <ScrollView
-              contentContainerStyle={[s.scroll, { paddingBottom: 150 + insets.bottom }]}
+contentContainerStyle={[
+  s.scroll,
+  { paddingBottom: footerReservedSpace },
+]}
               showsVerticalScrollIndicator={false}
             >
               <Text style={s.sectionEyebrow}>Opções de envio</Text>
@@ -1146,11 +1155,17 @@ const isSame =
                   </Text>
                 </View>
               </View>
-
-              <View style={{ height: 130 }} />
             </ScrollView>
 
-            <View style={[s.ctaWrap, { paddingBottom: insets.bottom + 12 }]}>
+            <View
+  style={[
+    s.ctaWrap,
+    {
+      bottom: footerBottomOffset,
+      paddingBottom: 10,
+    },
+  ]}
+>
               <View style={s.hairline} />
 <Pressable
   onPress={handleContinue}

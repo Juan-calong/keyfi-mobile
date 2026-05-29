@@ -6,7 +6,23 @@ export type MeDTO = {
   id: string;
   role: "SALON_OWNER" | "SELLER" | "ADMIN" | "CUSTOMER" | "PENDING";
   onboardingStatus?: string;
-  // pode ter mais campos, não precisa tipar tudo agora
+  salon?: {
+    name?: string;
+    legalName?: string;
+    tradeName?: string;
+    cnpj?: string;
+    email?: string;
+    icmsTaxpayerType?: "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR" | null;
+    hasStateRegistration?: boolean | null;
+    stateRegistration?: string | null;
+    cep?: string;
+    street?: string;
+    number?: string;
+    district?: string;
+    city?: string;
+    state?: string;
+    complement?: string;
+  } | null;
 };
 
 export const ProfilesService = {

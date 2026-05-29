@@ -780,7 +780,7 @@ export function SharedProductDetails({
   allowVideos = false,
   viewerMode = "OWNER",
 }: Props) {
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(
     null
@@ -812,8 +812,15 @@ export function SharedProductDetails({
     galleryListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
   }, [product?.id]);
 
-  const galleryCardWidth = screenWidth;
-  const galleryHeight = Math.min(Math.max(screenWidth * 1.02, 340), 470);
+  const [galleryViewportWidth, setGalleryViewportWidth] = useState(screenWidth);
+
+  const isTablet = screenWidth >= 768;
+  const isTabletLandscape = isTablet && screenWidth > screenHeight;
+  const galleryCardWidth = Math.max(galleryViewportWidth, 1);
+
+  const galleryHeight = isTabletLandscape
+  ? Math.min(Math.max(screenHeight * 0.44, 300), 360)
+  : Math.min(Math.max(screenWidth * 1.02, 340), 470);
 
   const out = product ? isOutOfStock(product) : false;
   const alreadyInCart = !!product && qtyInCart > 0;
@@ -1237,56 +1244,87 @@ const quantityTierBadges = useMemo(() => {
   ]}
 >
             <View style={[s.mainCard, { backgroundColor: PRODUCT_DETAILS_BG }]}>
-              <View style={[s.galleryWrap, { height: galleryHeight }]}>
+              <View
+  style={[
+    s.galleryWrap,
+    {
+      height: galleryHeight,
+      backgroundColor: PRODUCT_DETAILS_BG,
+    },
+  ]}
+  onLayout={(e) => {
+    const nextWidth = Math.round(e.nativeEvent.layout.width);
+
+    if (nextWidth > 0 && nextWidth !== galleryViewportWidth) {
+      setGalleryViewportWidth(nextWidth);
+    }
+  }}
+>
                 {galleryMedia.length > 0 ? (
-                  <FlatList
-                    ref={galleryListRef}
-                    data={galleryMedia}
-                    horizontal
-                    pagingEnabled
-                    nestedScrollEnabled
-                    decelerationRate="fast"
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item) => `${item.type}-${item.id}`}
-                    onMomentumScrollEnd={(e) => {
-                      const nextIndex = Math.round(
-                        e.nativeEvent.contentOffset.x / galleryCardWidth
-                      );
-                      setGalleryIndex(nextIndex);
-                    }}
+<FlatList
+  ref={galleryListRef}
+  data={galleryMedia}
+  horizontal
+  pagingEnabled
+  nestedScrollEnabled
+  decelerationRate="fast"
+  showsHorizontalScrollIndicator={false}
+  extraData={galleryCardWidth}
+  getItemLayout={(_, index) => ({
+    length: galleryCardWidth,
+    offset: galleryCardWidth * index,
+    index,
+  })}
+  keyExtractor={(item) => `${item.type}-${item.id}`}
+  onMomentumScrollEnd={(e) => {
+    const nextIndex = Math.round(
+      e.nativeEvent.contentOffset.x / galleryCardWidth
+    );
+    setGalleryIndex(nextIndex);
+  }}
                     renderItem={({ item, index }) => {
                       const isVideo = item.type === "video";
                       const imageSource = item.thumbnailUrl || item.url;
 
                       return (
-                        <Pressable
-                          style={[
-                            s.galleryItem,
-                            { width: galleryCardWidth, height: galleryHeight },
-                          ]}
-                           onPress={() => handleOpenMediaViewer(index)}
-                        >
-                          {imageSource ? (
-                            <Image
-                              source={{ uri: imageSource }}
-                              style={s.heroImg}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View style={s.heroPh}>
-                              <Text style={s.phText}>
-                                {isVideo ? "Sem capa" : "Sem imagem"}
-                              </Text>
-                            </View>
-                          )}
+<Pressable
+  style={[
+    s.galleryItem,
+    {
+      width: galleryCardWidth,
+      height: galleryHeight,
+      backgroundColor: PRODUCT_DETAILS_BG,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+  ]}
+  onPress={() => handleOpenMediaViewer(index)}
+>
+  {imageSource ? (
+    <Image
+      source={{ uri: imageSource }}
+      style={{
+        width: "100%",
+        height: "100%",
+      }}
+      resizeMode={isTabletLandscape ? "contain" : "cover"}
+    />
+  ) : (
+    <View style={s.heroPh}>
+      <Text style={s.phText}>
+        {isVideo ? "Sem capa" : "Sem imagem"}
+      </Text>
+    </View>
+  )}
 
-                          {isVideo ? (
-                            <View style={s.videoBadge}>
-                              <Icon name="play-circle" size={18} color="#FFFFFF" />
-                              <Text style={s.videoBadgeText}>Vídeo</Text>
-                            </View>
-                          ) : null}
-                        </Pressable>
+  {isVideo ? (
+    <View style={s.videoBadge}>
+      <Icon name="play-circle" size={18} color="#FFFFFF" />
+      <Text style={s.videoBadgeText}>Vídeo</Text>
+    </View>
+  ) : null}
+</Pressable>
                       );
                     }}
                   />

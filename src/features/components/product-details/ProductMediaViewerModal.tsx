@@ -209,7 +209,11 @@ export function ProductMediaViewerModal({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isCurrentImageZoomed, setIsCurrentImageZoomed] = useState(false);
 
-  const viewerWidth = Math.min(screenWidth - 24, 420);
+  const isTablet = screenWidth >= 768;
+  const isTabletLandscape = isTablet && screenWidth > screenHeight;
+  const viewerWidth = isTabletLandscape
+    ? screenWidth - 24
+    : Math.min(screenWidth - 24, 420);
   const viewerHeight = Math.min(screenHeight * 0.62, 430);
 
   useEffect(() => {
@@ -342,6 +346,7 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
               data={validMedia}
               horizontal
               pagingEnabled
+              style={{ width: viewerWidth }}
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item, idx) => `${item?.type}-${item?.id ?? idx}`}
               renderItem={renderItem}

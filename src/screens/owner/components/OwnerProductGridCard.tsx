@@ -66,6 +66,8 @@ export function OwnerProductGridCard({
 }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isTabletLandscape = screenWidth >= 768 && screenWidth > screenHeight;
+  const isTabletCard = screenWidth >= 768;
+  const imageBackgroundColor = isTabletCard ? WHITE : "#F4EFE3";
   const imageResizeMode = "cover";
 
   return (
@@ -80,10 +82,16 @@ export function OwnerProductGridCard({
           highlighted && styles.cardHighlight,
         ]}
       >
-        <View style={[styles.cardImageWrap, isTabletLandscape && styles.cardImageWrapTablet]}>
+        <View
+          style={[
+            styles.cardImageWrap,
+            isTabletLandscape && styles.cardImageWrapTablet,
+            { backgroundColor: imageBackgroundColor },
+          ]}
+        >
           <ProductImageFrame
             uri={imageUri ?? null}
-            backgroundColor="#F4EFE3"
+            backgroundColor={imageBackgroundColor}
             resizeMode={imageResizeMode}
           />
 

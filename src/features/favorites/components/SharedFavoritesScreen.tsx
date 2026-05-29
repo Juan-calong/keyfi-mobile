@@ -130,6 +130,7 @@ export function SharedFavoritesScreen({
   const cardWidth = isTablet
     ? Math.floor((width - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns)
     : undefined;
+  const imageBackgroundColor = isTablet ? CARD : "#F4EFE3";
   const imageResizeMode = "cover";
   const [selectedFilter, setSelectedFilter] =
     React.useState<FavoriteFilter>("all");
@@ -159,12 +160,17 @@ export function SharedFavoritesScreen({
     return (
       <View style={[s.cardWrap, cardWidth ? { width: cardWidth } : null]}>
         <Pressable onPress={() => onOpenProduct(item)} style={s.card}>
-          <View style={[s.imageWrap, { height: imageHeight }]}>
+          <View
+            style={[
+              s.imageWrap,
+              { height: imageHeight, backgroundColor: imageBackgroundColor },
+            ]}
+          >
             <ProductImageFrame
               uri={image}
               fallbackLabel="Sem imagem"
               fallbackIconSize={24}
-              backgroundColor="#F4EFE3"
+              backgroundColor={imageBackgroundColor}
               resizeMode={imageResizeMode}
             />
 
@@ -349,13 +355,13 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
   },
-imageWrap: {
-  position: "relative",
-  width: "100%",
-  backgroundColor: "#F4EFE3",
-  padding: 0,
-  overflow: "hidden",
-},
+  imageWrap: {
+    position: "relative",
+    width: "100%",
+    backgroundColor: "#F4EFE3",
+    padding: 0,
+    overflow: "hidden",
+  },
   heartBadge: {
     position: "absolute",
     top: 10,

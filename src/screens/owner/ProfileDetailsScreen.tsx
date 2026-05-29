@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Switch,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -131,6 +130,38 @@ function pickSalonStateRegistration(me: any) {
   const salon = pickSalon(me);
   return trim(salon?.stateRegistration || "");
 }
+
+function normalizeStateRegistration(v: any) {
+  return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
+}
+
+type IcmsTaxpayerType = "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR";
+
+function pickSalonIcmsTaxpayerType(me: any): IcmsTaxpayerType | "" {
+  const salon = pickSalon(me);
+  const current = String(salon?.icmsTaxpayerType || "").trim().toUpperCase();
+
+  if (current === "CONTRIBUTOR" || current === "EXEMPT" || current === "NON_CONTRIBUTOR") {
+    return current;
+  }
+
+  if (salon?.hasStateRegistration === true) return "CONTRIBUTOR";
+  if (salon?.hasStateRegistration === false) return "NON_CONTRIBUTOR";
+  return "";
+}
+
+function formatIcmsTaxpayerTypeLabel(value: IcmsTaxpayerType | "") {
+  switch (value) {
+    case "CONTRIBUTOR":
+      return "Contribuinte ICMS, possui Inscrição Estadual";
+    case "EXEMPT":
+      return "Isento de Inscrição Estadual";
+    case "NON_CONTRIBUTOR":
+      return "Não contribuinte ICMS";
+    default:
+      return "Não informado";
+  }
+}
 function pickSalonDisplayName(me: any) {
   return cleanMeiLikeName(pickSalonName(me));
 }
@@ -227,6 +258,68 @@ function InfoRow({ label, value, iconName, editable, onPress }: InfoRowProps) {
   );
 }
 
+function TaxpayerOption({
+  title,
+  description,
+  selected,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={false}
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          alignItems: "flex-start",
+          gap: 12,
+          borderWidth: 1,
+          borderColor: selected ? "rgba(17,24,39,0.35)" : t.colors.border,
+          backgroundColor: selected ? "rgba(17,24,39,0.04)" : "#FFF",
+          borderRadius: 14,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          opacity: pressed ? 0.92 : 1,
+        },
+      ]}
+    >
+      <View
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          borderWidth: 1,
+          borderColor: selected ? "rgba(17,24,39,0.55)" : t.colors.border,
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 2,
+        }}
+      >
+        <View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: selected ? "#111827" : "transparent",
+          }}
+        />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: "900", color: t.colors.text }}>{title}</Text>
+        <Text style={{ marginTop: 4, fontSize: 12, fontWeight: "600", color: t.colors.text2, lineHeight: 16 }}>
+          {description}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 type EditFieldKey =
   | "user.name"
   | "user.phone"
@@ -241,7 +334,7 @@ type EditFieldKey =
   | "salon.email"
   | "salon.legalName"
   | "salon.tradeName"
-  | "salon.hasStateRegistration"
+  | "salon.icmsTaxpayerType"
   | "salon.stateRegistration"
   | "salon.cep"
   | "salon.street"
@@ -334,16 +427,16 @@ const fieldConfigs: Record<EditFieldKey, EditConfig> = {
     schema: z.string().min(1, "Informe o nome fantasia"),
     normalize: (v) => trim(v),
   },
-  "salon.hasStateRegistration": {
-    title: "Possui inscrição estadual",
-    placeholder: "Sim ou não",
-    schema: z.boolean(),
+  "salon.icmsTaxpayerType": {
+    title: "Situação da Inscrição Estadual",
+    placeholder: "Selecione uma opção",
+    schema: z.enum(["CONTRIBUTOR", "EXEMPT", "NON_CONTRIBUTOR"]),
   },
   "salon.stateRegistration": {
     title: "Editar inscrição estadual",
     placeholder: "Inscrição estadual",
     schema: z.string().optional(),
-    normalize: (v) => trim(v),
+    normalize: (v) => normalizeStateRegistration(v),
   },
   "salon.email": {
     title: "Editar e-mail do salão",
@@ -437,8 +530,8 @@ function getCurrentValue(me: any, field: EditFieldKey) {
       return pickSalonLegalName(me);
     case "salon.tradeName":
       return pickSalonTradeName(me);
-    case "salon.hasStateRegistration":
-      return !!salon?.hasStateRegistration;
+    case "salon.icmsTaxpayerType":
+      return pickSalonIcmsTaxpayerType(me);
     case "salon.stateRegistration":
       return pickSalonStateRegistration(me);
     case "salon.email":
@@ -484,6 +577,7 @@ export function OwnerProfileDetailsScreen() {
 
   const salon = pickSalon(me);
   const salonDisplayName = pickSalonDisplayName(me);
+  const salonIcmsTaxpayerType = pickSalonIcmsTaxpayerType(me);
 
   const salonEmail = salon?.email || "—";
   const salonCnpj = formatCnpj(salon?.cnpj || "");
@@ -504,6 +598,7 @@ export function OwnerProfileDetailsScreen() {
   const [editOpen, setEditOpen] = useState(false);
   const [editField, setEditField] = useState<EditFieldKey | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [editSecondaryValue, setEditSecondaryValue] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
 
   const patchM = useMutation({
@@ -526,6 +621,7 @@ export function OwnerProfileDetailsScreen() {
 
     setEditField(field);
     setEditValue(current ? String(current) : "");
+    setEditSecondaryValue(field === "salon.icmsTaxpayerType" ? pickSalonStateRegistration(me) : "");
     setEditError(null);
     setEditOpen(true);
   }
@@ -572,19 +668,25 @@ export function OwnerProfileDetailsScreen() {
     const raw = String(editValue ?? "");
     const normalized = cfg.normalize ? cfg.normalize(raw) : raw;
 
-    if (editField === "salon.hasStateRegistration") {
-      const nextHasStateRegistration = raw === "true" || raw === "1";
-      const currentStateRegistration = pickSalonStateRegistration(me);
+    if (editField === "salon.icmsTaxpayerType") {
+      const nextType = String(normalized ?? "").trim().toUpperCase() as IcmsTaxpayerType;
+      const nextStateRegistration = String(editSecondaryValue ?? "").trim();
 
-      if (nextHasStateRegistration && !currentStateRegistration) {
-        setEditError("Informe a inscrição estadual antes de ativar.");
+      if (!nextType) {
+        setEditError("Selecione a situação da Inscrição Estadual.");
+        return;
+      }
+
+      if (nextType === "CONTRIBUTOR" && !nextStateRegistration) {
+        setEditError("Inscrição Estadual é obrigatória para contribuinte de ICMS.");
         return;
       }
 
       await patchM.mutateAsync({
         salon: {
-          hasStateRegistration: nextHasStateRegistration,
-          stateRegistration: nextHasStateRegistration ? currentStateRegistration : "",
+          icmsTaxpayerType: nextType,
+          hasStateRegistration: nextType === "CONTRIBUTOR",
+          stateRegistration: nextType === "CONTRIBUTOR" ? nextStateRegistration : null,
         },
       });
       return;
@@ -592,17 +694,18 @@ export function OwnerProfileDetailsScreen() {
 
     if (editField === "salon.stateRegistration") {
       const nextStateRegistration = String(normalized ?? "").trim();
-      const currentHasStateRegistration = !!pickSalon(me)?.hasStateRegistration;
+      const currentType = pickSalonIcmsTaxpayerType(me);
 
-      if (currentHasStateRegistration && !nextStateRegistration) {
-        setEditError("Informe a inscrição estadual.");
+      if ((currentType === "CONTRIBUTOR" || currentType === "") && !nextStateRegistration) {
+        setEditError("Inscrição Estadual é obrigatória para contribuinte de ICMS.");
         return;
       }
 
       await patchM.mutateAsync({
         salon: {
-          hasStateRegistration: nextStateRegistration ? true : currentHasStateRegistration,
-          stateRegistration: nextStateRegistration,
+          icmsTaxpayerType: "CONTRIBUTOR",
+          hasStateRegistration: true,
+          stateRegistration: nextStateRegistration || null,
         },
       });
       return;
@@ -743,26 +846,22 @@ export function OwnerProfileDetailsScreen() {
                 />
 
                 <InfoRow
-                  label="Possui inscrição estadual"
-                  value={
-  salon?.hasStateRegistration === true
-    ? "Sim"
-    : salon?.hasStateRegistration === false
-      ? "Não"
-      : "Não informado"
-}
+                  label="Situação da Inscrição Estadual"
+                  value={formatIcmsTaxpayerTypeLabel(salonIcmsTaxpayerType)}
                   iconName="card-outline"
                   editable
-                  onPress={() => openEdit("salon.hasStateRegistration")}
+                  onPress={() => openEdit("salon.icmsTaxpayerType")}
                 />
 
-                <InfoRow
-                  label="Inscrição estadual"
-                  value={pickSalonStateRegistration(me) || "Não informada"}
-                  iconName="card-outline"
-                  editable
-                  onPress={() => openEdit("salon.stateRegistration")}
-                />
+                {salonIcmsTaxpayerType === "CONTRIBUTOR" ? (
+                  <InfoRow
+                    label="Inscrição estadual"
+                    value={pickSalonStateRegistration(me) || "Não informada"}
+                    iconName="card-outline"
+                    editable
+                    onPress={() => openEdit("salon.stateRegistration")}
+                  />
+                ) : null}
 
                 <InfoRow
                   label="E-mail do salão"
@@ -896,37 +995,65 @@ export function OwnerProfileDetailsScreen() {
                       {editField ? fieldConfigs[editField].title : "Editar"}
                     </Text>
 
-                    {editField === "salon.hasStateRegistration" ? (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          borderWidth: 1,
-                          borderColor: editError ? "#FCA5A5" : t.colors.border,
-                          borderRadius: 14,
-                          paddingHorizontal: 12,
-                          paddingVertical: 12,
-                        }}
-                      >
-                        <View style={{ flex: 1, paddingRight: 12 }}>
-                          <Text style={{ fontSize: 14, fontWeight: "800", color: t.colors.text }}>
-                            {editValue === "true" ? "Sim" : "Não"}
-                          </Text>
-                          <Text style={{ marginTop: 2, fontSize: 12, fontWeight: "600", color: t.colors.text2 }}>
-                            Ative apenas se a inscrição estadual estiver informada.
-                          </Text>
-                        </View>
-                        <Switch
-                          value={editValue === "true"}
-                          onValueChange={(next) => {
-                            setEditValue(next ? "true" : "false");
-                            setEditError(null);
-                          }}
-                          trackColor={{ false: "#CBD5E1", true: "#111827" }}
-                          thumbColor="#FFFFFF"
-                          disabled={patchM.isPending}
-                        />
+                    {editField === "salon.icmsTaxpayerType" ? (
+                      <View style={{ gap: 10 }}>
+                        {[
+                          {
+                            value: "CONTRIBUTOR" as const,
+                            title: "Contribuinte ICMS, possui Inscrição Estadual",
+                            description: "A IE é obrigatória e será enviada ao backend.",
+                          },
+                          {
+                            value: "EXEMPT" as const,
+                            title: "Isento de Inscrição Estadual",
+                            description: "A IE será limpa e enviada como nula.",
+                          },
+                          {
+                            value: "NON_CONTRIBUTOR" as const,
+                            title: "Não contribuinte ICMS",
+                            description: "A IE será limpa e enviada como nula.",
+                          },
+                        ].map((option) => (
+                          <TaxpayerOption
+                            key={option.value}
+                            title={option.title}
+                            description={option.description}
+                            selected={editValue === option.value}
+                            onPress={() => {
+                              setEditValue(option.value);
+                              setEditError(null);
+                            }}
+                          />
+                        ))}
+                        {editValue === "CONTRIBUTOR" ? (
+                          <View style={{ marginTop: 2 }}>
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: t.colors.text2, marginBottom: 6 }}>
+                              Inscrição estadual
+                            </Text>
+                            <TextInput
+                              value={editSecondaryValue}
+                              onChangeText={(txt) => {
+                                setEditSecondaryValue(normalizeStateRegistration(txt));
+                                setEditError(null);
+                              }}
+                              placeholder="Digite a inscrição estadual"
+                              editable={!patchM.isPending}
+                              autoCapitalize="characters"
+                              style={{
+                                borderWidth: 1,
+                                borderColor: editError ? "#FCA5A5" : t.colors.border,
+                                borderRadius: 14,
+                                paddingHorizontal: 12,
+                                paddingVertical: 12,
+                                fontSize: 16,
+                                color: t.colors.text,
+                              }}
+                            />
+                          </View>
+                        ) : null}
+                        <Text style={{ marginTop: 2, color: "#64748B", fontSize: 12, fontWeight: "700", lineHeight: 17 }}>
+                          Selecione "Contribuinte ICMS" somente se a inscrição estadual estiver informada.
+                        </Text>
                       </View>
                     ) : (
                       <TextInput
@@ -981,7 +1108,7 @@ export function OwnerProfileDetailsScreen() {
                           lineHeight: 17,
                         }}
                       >
-                        Se a inscrição estadual estiver vazia, o campo pode ficar desativado no perfil.
+                        Este campo só fica disponível quando a situação fiscal é Contribuinte ICMS.
                       </Text>
                     ) : null}
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -12,7 +13,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   TextInputProps,
-  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -91,6 +91,30 @@ function normalizeStateRegistration(v: string) {
   return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
+type IcmsTaxpayerType = "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR";
+
+const TAXPAYER_OPTIONS: Array<{
+  value: IcmsTaxpayerType;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "CONTRIBUTOR",
+    title: "Contribuinte ICMS, possui Inscrição Estadual",
+    description: "A IE é obrigatória e será enviada ao backend.",
+  },
+  {
+    value: "EXEMPT",
+    title: "Isento de Inscrição Estadual",
+    description: "A IE será limpa e enviada como nula.",
+  },
+  {
+    value: "NON_CONTRIBUTOR",
+    title: "Não contribuinte ICMS",
+    description: "A IE será limpa e enviada como nula.",
+  },
+];
+
 function maskCNPJ(digits: string) {
   const d = digits.slice(0, 14);
   const p1 = d.slice(0, 2);
@@ -119,6 +143,37 @@ function FieldLabel({ icon, label }: { icon: string; label: string }) {
 function ErrorText({ show, text }: { show: boolean; text: string }) {
   if (!show) return null;
   return <Text style={styles.errorText}>{text}</Text>;
+}
+
+function TaxpayerOption({
+  title,
+  description,
+  selected,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.taxpayerOption,
+        selected && styles.taxpayerOptionSelected,
+        pressed && styles.taxpayerOptionPressed,
+      ]}
+    >
+      <View style={styles.taxpayerOptionDotWrap}>
+        <View style={[styles.taxpayerOptionDot, selected && styles.taxpayerOptionDotSelected]} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.taxpayerOptionTitle}>{title}</Text>
+        <Text style={styles.taxpayerOptionDesc}>{description}</Text>
+      </View>
+    </Pressable>
+  );
 }
 
 type InputRowProps = {
@@ -267,7 +322,7 @@ export function RegisterSalonScreen() {
             setReferralToken((prev) => prev || normalized);
           }
         }
-      } catch (e) {
+      } catch {
         // Falha ao carregar convite pendente não deve bloquear o cadastro.
       } finally {
         pendingInvitePrefilledRef.current = true;
@@ -328,6 +383,7 @@ export function RegisterSalonScreen() {
     tradeName: false,
     salonEmail: false,
     cnpj: false,
+    icmsTaxpayerType: false,
     stateRegistration: false,
     cep: false,
     street: false,
@@ -349,7 +405,7 @@ export function RegisterSalonScreen() {
   const [tradeName, setTradeName] = useState("");
   const [salonEmail, setSalonEmail] = useState("");
   const [cnpjMasked, setCnpjMasked] = useState("");
-  const [hasStateRegistration, setHasStateRegistration] = useState(false);
+  const [icmsTaxpayerType, setIcmsTaxpayerType] = useState<IcmsTaxpayerType | "">("");
   const [stateRegistration, setStateRegistration] = useState("");
 
   const [cep, setCep] = useState("");
@@ -514,6 +570,7 @@ export function RegisterSalonScreen() {
     tradeName: false,
     salonEmail: false,
     cnpj: false,
+    icmsTaxpayerType: false,
     stateRegistration: false,
 
     cep: false,
@@ -536,7 +593,9 @@ export function RegisterSalonScreen() {
   const legalNameOk = legalName.trim().length >= 2;
   const tradeNameOk = true;
   const salonEmailOk = isEmail(salonEmail);
-  const stateRegistrationOk = !hasStateRegistration || stateRegistration.trim().length >= 1;
+  const selectedTaxpayerType = icmsTaxpayerType || null;
+  const taxpayerTypeOk = !!selectedTaxpayerType;
+  const stateRegistrationOk = selectedTaxpayerType !== "CONTRIBUTOR" || stateRegistration.trim().length >= 1;
 
   const cnpjDigits = useMemo(() => onlyDigits(cnpjMasked).slice(0, 14), [cnpjMasked]);
   const cnpjOk = cnpjDigits.length === 14 && cnpjValidator.isValid(cnpjDigits);
@@ -559,6 +618,7 @@ export function RegisterSalonScreen() {
     tradeNameOk &&
     salonEmailOk &&
     cnpjOk &&
+    taxpayerTypeOk &&
     stateRegistrationOk &&
     cepOk &&
     streetOk &&
@@ -591,6 +651,7 @@ export function RegisterSalonScreen() {
       tradeName: true,
       salonEmail: true,
       cnpj: true,
+      icmsTaxpayerType: true,
       stateRegistration: true,
       cep: true,
       street: true,
@@ -638,10 +699,12 @@ export function RegisterSalonScreen() {
           legalName: legalName.trim(),
           tradeName: tradeName.trim(),
           cnpj: cnpjDigits,
-          hasStateRegistration,
-          stateRegistration: hasStateRegistration
-            ? normalizeStateRegistration(stateRegistration)
-            : undefined,
+          icmsTaxpayerType: selectedTaxpayerType || undefined,
+          hasStateRegistration: selectedTaxpayerType === "CONTRIBUTOR",
+          stateRegistration:
+            selectedTaxpayerType === "CONTRIBUTOR"
+              ? normalizeStateRegistration(stateRegistration)
+              : null,
           email: salonEmail.trim().toLowerCase(),
           cep: cepDigits,
           street: street.trim(),
@@ -702,7 +765,9 @@ export function RegisterSalonScreen() {
   const showTradeNameErr = touched.tradeName && !tradeNameOk;
   const showSalonEmailErr = touched.salonEmail && !salonEmailOk;
   const showCnpjErr = touched.cnpj && !cnpjOk;
-  const showStateRegistrationErr = touched.stateRegistration && hasStateRegistration && !stateRegistrationOk;
+  const showTaxpayerTypeErr = !taxpayerTypeOk;
+  const showStateRegistrationErr =
+    touched.stateRegistration && selectedTaxpayerType === "CONTRIBUTOR" && !stateRegistrationOk;
   const showCepErr = touched.cep && !cepOk;
   const showStreetErr = touched.street && !streetOk;
   const showNumberErr = touched.number && !numberOk;
@@ -948,25 +1013,32 @@ export function RegisterSalonScreen() {
                     />
                     <ErrorText show={showTradeNameErr} text="Nome fantasia muito curto." />
 
-                    <View style={styles.switchBlock}>
-                      <View style={styles.switchTextGroup}>
-                        <Text style={styles.switchTitle}>Possui inscrição estadual</Text>
-                        <Text style={styles.switchSubtitle}>
-                          Quando ativo, a inscrição estadual passa a ser obrigatória.
-                        </Text>
+                    <View style={styles.taxpayerBlock}>
+                      <Text style={styles.switchTitle}>Situação da Inscrição Estadual</Text>
+                      <Text style={styles.switchSubtitle}>
+                        Selecione a classificação fiscal do salão. A IE só é exigida para contribuinte de ICMS.
+                      </Text>
+                      <View style={{ marginTop: 10, gap: 10 }}>
+                        {TAXPAYER_OPTIONS.map((option) => (
+                          <TaxpayerOption
+                            key={option.value}
+                            title={option.title}
+                            description={option.description}
+                            selected={selectedTaxpayerType === option.value}
+                            onPress={() => {
+                              setIcmsTaxpayerType(option.value);
+                              setTouched((s) => ({ ...s, icmsTaxpayerType: true }));
+                              if (option.value !== "CONTRIBUTOR") {
+                                setStateRegistration("");
+                              }
+                            }}
+                          />
+                        ))}
                       </View>
-                      <Switch
-                        value={hasStateRegistration}
-                        onValueChange={(next) => {
-                          setHasStateRegistration(next);
-                          if (!next) setStateRegistration("");
-                        }}
-                        trackColor={{ false: "#CBD5E1", true: COLORS.primary }}
-                        thumbColor="#FFFFFF"
-                      />
+                      <ErrorText show={showTaxpayerTypeErr} text="Selecione a situação da Inscrição Estadual." />
                     </View>
 
-                    {hasStateRegistration ? (
+                    {selectedTaxpayerType === "CONTRIBUTOR" ? (
                       <>
                         <FieldLabel icon="card-outline" label="Inscrição estadual" />
                         <InputRow
@@ -986,7 +1058,10 @@ export function RegisterSalonScreen() {
                           returnKeyType="next"
                           onSubmitEditing={() => salonNameRef.current?.focus()}
                         />
-                        <ErrorText show={showStateRegistrationErr} text="Inscrição estadual obrigatória." />
+                        <ErrorText
+                          show={showStateRegistrationErr}
+                          text="Inscrição Estadual é obrigatória para contribuinte de ICMS."
+                        />
                       </>
                     ) : null}
 
@@ -1487,6 +1562,67 @@ const styles = StyleSheet.create({
   },
 
   switchSubtitle: {
+    marginTop: 4,
+    color: COLORS.sub,
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
+  },
+
+  taxpayerBlock: {
+    marginTop: 16,
+  },
+
+  taxpayerOption: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+
+  taxpayerOptionSelected: {
+    borderColor: COLORS.focus,
+    backgroundColor: COLORS.inputBgFocus,
+  },
+
+  taxpayerOptionPressed: {
+    opacity: 0.92,
+  },
+
+  taxpayerOptionDotWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: COLORS.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+
+  taxpayerOptionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "transparent",
+  },
+
+  taxpayerOptionDotSelected: {
+    backgroundColor: COLORS.focus,
+  },
+
+  taxpayerOptionTitle: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "900",
+  },
+
+  taxpayerOptionDesc: {
     marginTop: 4,
     color: COLORS.sub,
     fontSize: 11,

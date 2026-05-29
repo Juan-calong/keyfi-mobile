@@ -7,8 +7,9 @@ export type OnboardingSalonPayload = {
         legalName?: string;
         tradeName?: string;
         cnpj: string;
+        icmsTaxpayerType?: "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR";
         hasStateRegistration?: boolean;
-        stateRegistration?: string;
+        stateRegistration?: string | null;
         cep?: string;
         street?: string;
         number?: string;
