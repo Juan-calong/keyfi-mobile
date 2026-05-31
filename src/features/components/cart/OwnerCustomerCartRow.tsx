@@ -1,6 +1,7 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { AppImage } from "../../../ui/components/AppImage";
 import { s } from "./cart.shared.styles";
 import { formatBRL, toNumberBR } from "./cart.shared.utils";
 import type { CartPreviewItem } from "./cart.shared.types";
@@ -33,13 +34,14 @@ export function OwnerCustomerCartRow({
     <Pressable onPress={() => onOpenProduct(row.productId)} style={s.productCard}>
       <View style={s.productTopRow}>
         <View style={s.thumbWrap}>
-          {row.product?.imageUrl ? (
-            <Image source={{ uri: row.product.imageUrl }} style={s.thumb} resizeMode="contain" />
-          ) : (
-            <View style={s.thumbPh}>
-              <Text style={s.thumbPhText}>Sem imagem</Text>
-            </View>
-          )}
+          <AppImage
+            uri={row.product?.imageUrl ?? null}
+            style={s.thumb}
+            resizeMode="contain"
+            backgroundColor="#FCFCFD"
+            fallbackLabel="Sem imagem"
+            fallbackIconSize={20}
+          />
         </View>
 
         <View style={s.rowMiddle}>

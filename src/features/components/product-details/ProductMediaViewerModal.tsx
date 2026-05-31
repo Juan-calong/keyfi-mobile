@@ -63,29 +63,41 @@ function ZoomableImage({
   const translateY = useSharedValue(0);
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
 
   function notifyZoomState(zoomed: boolean) {
     onZoomStateChange?.(zoomed);
   }
 
-useEffect(() => {
-  scale.value = 1;
-  savedScale.value = 1;
-  translateX.value = 0;
-  translateY.value = 0;
-  savedX.value = 0;
-  savedY.value = 0;
-  onZoomStateChange?.(false);
-}, [resetKey]);
+  useEffect(() => {
+    scale.value = 1;
+    savedScale.value = 1;
+    translateX.value = 0;
+    translateY.value = 0;
+    savedX.value = 0;
+    savedY.value = 0;
+    setLoadState("loading");
+    onZoomStateChange?.(false);
+  }, [
+    onZoomStateChange,
+    resetKey,
+    uri,
+    scale,
+    savedScale,
+    translateX,
+    translateY,
+    savedX,
+    savedY,
+  ]);
 
-useAnimatedReaction(
-  () => scale.value > ZOOM_THRESHOLD,
-  (isZoomed, prevIsZoomed) => {
-    if (isZoomed !== prevIsZoomed) {
-      runOnJS(notifyZoomState)(isZoomed);
+  useAnimatedReaction(
+    () => scale.value > ZOOM_THRESHOLD,
+    (isZoomed, prevIsZoomed) => {
+      if (isZoomed !== prevIsZoomed) {
+        runOnJS(notifyZoomState)(isZoomed);
+      }
     }
-  }
-);
+  );
 
   const resetZoom = () => {
     "worklet";
@@ -190,9 +202,35 @@ useAnimatedReaction(
       <Animated.View style={[s.viewerImageWrap, { width, height }]}>
         <Animated.Image
           source={{ uri }}
-          style={[s.viewerImage, { width, height }, imageStyle]}
+          style={[
+            s.viewerImage,
+            { width, height },
+            imageStyle,
+            loadState === "loaded" ? null : { opacity: 0 },
+          ]}
           resizeMode="contain"
+          onLoad={() => setLoadState("loaded")}
+          onError={() => setLoadState("error")}
         />
+
+        {loadState === "loading" ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[s.viewerImagePlaceholder, { width, height }]}
+          >
+            <View style={s.viewerImageSkeletonCard} />
+            <View style={s.viewerImageSkeletonLine} />
+          </Animated.View>
+        ) : null}
+
+        {loadState === "error" ? (
+          <View
+            pointerEvents="none"
+            style={[s.viewerImageFallback, { width, height }]}
+          >
+            <Text style={s.viewerImageFallbackText}>Imagem indisponível</Text>
+          </View>
+        ) : null}
       </Animated.View>
     </GestureDetector>
   );

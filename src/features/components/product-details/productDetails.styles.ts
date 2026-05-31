@@ -1092,13 +1092,69 @@ viewerPage: {
 },
 
 viewerImageWrap: {
+  position: "relative",
   justifyContent: "center",
   alignItems: "center",
   overflow: "hidden",
+  backgroundColor: "#F4ECE6",
 },
 
 viewerImage: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
   borderRadius: 18,
+},
+
+viewerImagePlaceholder: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#F4EFE3",
+},
+
+viewerImageSkeletonCard: {
+  width: "56%",
+  maxWidth: 150,
+  minWidth: 84,
+  aspectRatio: 1,
+  borderRadius: 22,
+  backgroundColor: "rgba(255,255,255,0.32)",
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: "rgba(0,0,0,0.04)",
+},
+
+viewerImageSkeletonLine: {
+  marginTop: 12,
+  width: "36%",
+  maxWidth: 110,
+  height: 10,
+  borderRadius: 999,
+  backgroundColor: "rgba(255,255,255,0.34)",
+},
+
+viewerImageFallback: {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#F4EFE3",
+  paddingHorizontal: 14,
+},
+
+viewerImageFallbackText: {
+  color: "#7A7165",
+  fontSize: 13,
+  fontWeight: "700",
 },
 
 viewerVideoCard: {

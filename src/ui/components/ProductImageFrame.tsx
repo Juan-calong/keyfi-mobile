@@ -1,17 +1,16 @@
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
+import { StyleSheet, type ImageResizeMode, type StyleProp, type ViewStyle } from "react-native";
+
+import { AppImage } from "./AppImage";
 
 type Props = {
   uri?: string | null;
   fallbackLabel?: string;
   fallbackIconSize?: number;
   backgroundColor?: string;
-  resizeMode?: "contain" | "cover" | "stretch" | "center";
+  resizeMode?: ImageResizeMode;
+  style?: StyleProp<ViewStyle>;
 };
-
-const FALLBACK_BG = "#F4EFE3";
-const GOLD = "#B8943C";
 
 export function ProductImageFrame({
   uri,
@@ -19,45 +18,23 @@ export function ProductImageFrame({
   fallbackIconSize = 26,
   backgroundColor = "#F7F4F3",
   resizeMode = "contain",
+  style,
 }: Props) {
-  if (uri) {
-    return (
-      <Image
-        source={{ uri }}
-        style={[styles.image, { backgroundColor }]}
-        resizeMode={resizeMode}
-      />
-    );
-  }
-
   return (
-    <View style={[styles.fallback, { backgroundColor }]}>
-      <Icon name="image-outline" size={fallbackIconSize} color={GOLD} />
-      <Text style={styles.fallbackText} numberOfLines={1}>
-        {fallbackLabel}
-      </Text>
-    </View>
+    <AppImage
+      uri={uri}
+      style={[styles.fill, style]}
+      backgroundColor={backgroundColor}
+      resizeMode={resizeMode}
+      fallbackLabel={fallbackLabel}
+      fallbackIconSize={fallbackIconSize}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  image: {
+  fill: {
     width: "100%",
     height: "100%",
-  },
-
-  fallback: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: FALLBACK_BG,
-    gap: 4,
-  },
-
-  fallbackText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: "700",
-    color: "#7A7165",
   },
 });

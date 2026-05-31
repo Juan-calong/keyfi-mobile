@@ -1,7 +1,8 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card } from "../components/Card";
 import { t } from "../tokens";
+import { AppImage } from "./AppImage";
 
 export type UIProduct = {
     price: number;
@@ -16,11 +17,14 @@ export function ProductCard({ item, onPress }: { item: UIProduct; onPress: (p: U
         <Pressable onPress={() => onPress(item)} style={{ flex: 1 }}>
             <Card style={s.card}>
                 <View style={s.imgWrap}>
-                    {item.imageUri ? (
-                        <Image source={{ uri: item.imageUri }} style={s.img} />
-                    ) : (
-                        <View style={s.placeholder} />
-                    )}
+                    <AppImage
+                        uri={item.imageUri}
+                        style={s.img}
+                        resizeMode="contain"
+                        backgroundColor={t.colors.surface2}
+                        fallbackLabel="Sem imagem"
+                        fallbackIconSize={24}
+                    />
                 </View>
 
                 <Text style={s.name} numberOfLines={2}>
@@ -49,9 +53,7 @@ const s = StyleSheet.create({
         borderColor: t.colors.border,
     },
 
-    img: { width: "100%", height: "100%", resizeMode: "contain" },
-
-    placeholder: { width: "100%", height: "100%", backgroundColor: t.colors.surface2 },
+    img: { width: "100%", height: "100%" },
     name: {
         fontWeight: "900",
         color: t.colors.text,

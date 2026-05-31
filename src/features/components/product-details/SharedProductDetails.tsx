@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import { resolvePromoPriceData } from "../../../core/utils/promoPricing";
 import { ProductFavoriteButton } from "./ProductFavoriteButton";
 import { AppBackButton } from "../../../ui/components/AppBackButton";
 import { ProductMediaViewerModal } from "./ProductMediaViewerModal";
+import { AppImage } from "../../../ui/components/AppImage";
 
 import type {
   Product,
@@ -799,6 +800,7 @@ export function SharedProductDetails({
     useState<ReviewSubmitMode>(null);
 
   const galleryListRef = useRef<FlatList<ProductMedia> | null>(null);
+  const prefetchedImageUrls = useRef(new Set<string>());
   const addLock = useRef(false);
   const queryClient = useQueryClient();
 
@@ -810,6 +812,7 @@ export function SharedProductDetails({
     setDraftComment("");
     setDraftRating(0);
     galleryListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+    prefetchedImageUrls.current.clear();
   }, [product?.id]);
 
   const [galleryViewportWidth, setGalleryViewportWidth] = useState(screenWidth);
@@ -829,6 +832,38 @@ export function SharedProductDetails({
     () => normalizeGalleryMedia(product, { allowVideos }),
     [product, allowVideos]
   );
+
+  useEffect(() => {
+    if (!product?.id || galleryMedia.length === 0) return;
+
+    const targets = new Set<string>();
+
+    const currentIndex = Math.min(
+      Math.max(galleryIndex, 0),
+      galleryMedia.length - 1
+    );
+
+    const candidates = [
+      galleryMedia[0],
+      galleryMedia[currentIndex - 1],
+      galleryMedia[currentIndex],
+      galleryMedia[currentIndex + 1],
+      galleryMedia[currentIndex + 2],
+    ].filter(Boolean);
+
+    for (const item of candidates) {
+      if (item?.type !== "image") continue;
+
+      const url = item.thumbnailUrl || item.url;
+      if (url) targets.add(url);
+    }
+
+    targets.forEach((url) => {
+      if (prefetchedImageUrls.current.has(url)) return;
+      prefetchedImageUrls.current.add(url);
+      Image.prefetch(url).catch(() => {});
+    });
+  }, [galleryIndex, galleryMedia, product?.id]);
 
   const shortDescriptionText = normalizeText(
     (product as any)?.description ??
@@ -1286,7 +1321,7 @@ const quantityTierBadges = useMemo(() => {
                       const isVideo = item.type === "video";
                       const imageSource = item.thumbnailUrl || item.url;
 
-                      return (
+                    return (
 <Pressable
   style={[
     s.galleryItem,
@@ -1302,13 +1337,15 @@ const quantityTierBadges = useMemo(() => {
   onPress={() => handleOpenMediaViewer(index)}
 >
   {imageSource ? (
-    <Image
-      source={{ uri: imageSource }}
+    <AppImage
+      uri={imageSource}
       style={{
         width: "100%",
         height: "100%",
       }}
       resizeMode={isTabletLandscape ? "contain" : "cover"}
+      backgroundColor={PRODUCT_DETAILS_BG}
+      fallbackLabel={isVideo ? "Sem capa" : "Sem imagem"}
     />
   ) : (
     <View style={s.heroPh}>
@@ -1838,10 +1875,13 @@ const quantityTierBadges = useMemo(() => {
                             }}
                           >
                             {relatedImg ? (
-                              <Image
-                                source={{ uri: relatedImg }}
+                              <AppImage
+                                uri={relatedImg}
                                 style={{ width: "100%", height: "100%" }}
                                 resizeMode="cover"
+                                backgroundColor="#F7F4F3"
+                                fallbackLabel="Sem imagem"
+                                fallbackIconSize={22}
                               />
                             ) : (
                               <View

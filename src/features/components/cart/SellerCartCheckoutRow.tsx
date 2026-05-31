@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { AppImage } from "../../../ui/components/AppImage";
 import { formatBRL, toNumberBR } from "./cart.shared.utils";
 
 type SellerPreviewLineLike = {
@@ -32,17 +33,14 @@ export function SellerCartCheckoutRow({
   return (
     <View style={s.row}>
       <View style={s.thumb}>
-        {item._img ? (
-          <Image
-            source={{ uri: String(item._img) }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="contain"
-          />
-        ) : (
-          <View style={s.thumbPh}>
-            <Text style={s.thumbPhText}>Sem imagem</Text>
-          </View>
-        )}
+        <AppImage
+          uri={item._img ? String(item._img) : null}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="contain"
+          backgroundColor="#FCFCFD"
+          fallbackLabel="Sem imagem"
+          fallbackIconSize={20}
+        />
       </View>
 
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
