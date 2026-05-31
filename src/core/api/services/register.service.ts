@@ -1,5 +1,6 @@
 import { api } from "../client";
 import { endpoints } from "../endpoints";
+import { createIdempotencyKey } from "../idempotency";
 
 export type RegisterSellerPayload = {
   name: string;
@@ -39,12 +40,20 @@ export const RegisterService = {
   registerSeller: async (payload: RegisterSellerPayload) =>
     (await api.post(endpoints.auth.registerSeller, payload)).data,
 
-  registerSalon: async (payload: RegisterSalonPayload) =>
-    (await api.post(endpoints.auth.registerSalon, payload)).data,
+  registerSalon: async (payload: RegisterSalonPayload, idempotencyKey?: string) =>
+    (
+      await api.post(endpoints.auth.registerSalon, payload, {
+        headers: { "Idempotency-Key": idempotencyKey || createIdempotencyKey("auth-register-salon") },
+      })
+    ).data,
 
   createSeller: async (payload: RegisterSellerPayload) =>
     (await api.post(endpoints.auth.registerSeller, payload)).data,
 
-  createSalon: async (payload: RegisterSalonPayload) =>
-    (await api.post(endpoints.auth.registerSalon, payload)).data,
+  createSalon: async (payload: RegisterSalonPayload, idempotencyKey?: string) =>
+    (
+      await api.post(endpoints.auth.registerSalon, payload, {
+        headers: { "Idempotency-Key": idempotencyKey || createIdempotencyKey("auth-register-salon") },
+      })
+    ).data,
 };

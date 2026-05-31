@@ -1,5 +1,6 @@
 import { api } from "../client";
 import { endpoints } from "../endpoints";
+import { createIdempotencyKey } from "../idempotency";
 
 export type OnboardingSalonPayload = {
     salon: {
@@ -33,8 +34,13 @@ export type OnboardingSalonResponse = {
 };
 
 export const OnboardingService = {
-    salon: async (payload: OnboardingSalonPayload) => {
-        const res = await api.post<OnboardingSalonResponse>(endpoints.onboarding.salon, payload);
+    salon: async (payload: OnboardingSalonPayload, idempotencyKey?: string) => {
+        const key = idempotencyKey || createIdempotencyKey("onboarding-salon");
+        const res = await api.post<OnboardingSalonResponse>(
+          endpoints.onboarding.salon,
+          payload,
+          { headers: { "Idempotency-Key": key } }
+        );
         return res.data;
     },
 

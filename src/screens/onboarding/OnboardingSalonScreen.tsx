@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { View, Text, TextInput, Alert, ScrollView, Pressable } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import { Screen } from "../../ui/components/Screen";
@@ -6,6 +6,7 @@ import { Container } from "../../ui/components/Container";
 import { Card } from "../../ui/components/Card";
 import { Button } from "../../ui/components/Button";
 import { t } from "../../ui/tokens";
+import { createIdempotencyKey } from "../../core/api/idempotency";
 import { OnboardingService } from "../../core/api/services/onboarding.service";
 import { useAuthStore } from "../../stores/auth.store";
 
@@ -82,6 +83,7 @@ function TaxpayerOption({
 
 export function OnboardingSalonScreen() {
   const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const [name, setName] = useState("Meu Salão");
   const [legalName, setLegalName] = useState("");
@@ -172,7 +174,11 @@ export function OnboardingSalonScreen() {
   ]);
 
   const mut = useMutation({
-    mutationFn: async () => OnboardingService.salon(payload),
+    mutationFn: async () => {
+      const key = idempotencyKeyRef.current || createIdempotencyKey("onboarding-salon");
+      idempotencyKeyRef.current = key;
+      return OnboardingService.salon(payload, key);
+    },
     onSuccess: () => {
       setNeedsOnboarding(false);
       Alert.alert("OK", "Cadastro do salão concluído!");
@@ -185,6 +191,9 @@ export function OnboardingSalonScreen() {
         e?.message ||
         "Falha ao concluir cadastro.";
       Alert.alert("Erro", msg);
+    },
+    onSettled: () => {
+      idempotencyKeyRef.current = null;
     },
   });
 

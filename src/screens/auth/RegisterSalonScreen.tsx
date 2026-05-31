@@ -26,6 +26,7 @@ import { Screen } from "../../ui/components/Screen";
 import { Container } from "../../ui/components/Container";
 
 import { api } from "../../core/api/client";
+import { createIdempotencyKey } from "../../core/api/idempotency";
 import { endpoints } from "../../core/api/endpoints";
 import { useAuthStore } from "../../stores/auth.store";
 import { friendlyError } from "../../core/errors/friendlyError";
@@ -678,15 +679,17 @@ export function RegisterSalonScreen() {
   }
 
   async function submit() {
-    markTouchedStep2();
-    if (!canStep2 || loading || inCooldown) return;
+    if (submittingRef.current || loading) return;
 
-    if (submittingRef.current) return;
+    markTouchedStep2();
+    if (!canStep2 || inCooldown) return;
+
     submittingRef.current = true;
+    setLoading(true);
 
     try {
       Keyboard.dismiss();
-      setLoading(true);
+      const idempotencyKey = createIdempotencyKey("auth-register-salon");
 
       const response = await api.post(endpoints.auth.registerSalon, {
         owner: {
@@ -715,6 +718,10 @@ export function RegisterSalonScreen() {
           complement: complement.trim() || "",
         },
         referralToken: tokenNorm ? tokenNorm : undefined,
+      }, {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
       });
 
       await clearPendingInvite();
@@ -779,10 +786,11 @@ export function RegisterSalonScreen() {
   const topPad = Math.max(insets.top, 10);
 
   const left = secondsLeft();
+  const isSubmitting = loading || submittingRef.current;
   const ctaDisabled =
-    (step === 1 ? !canStep1 : !canStep2) || loading || (step === 2 && inCooldown);
+    (step === 1 ? !canStep1 : !canStep2) || isSubmitting || (step === 2 && inCooldown);
 
-  const ctaText = loading
+  const ctaText = isSubmitting
     ? "Criando..."
     : step === 1
     ? "Próximo"
@@ -1313,7 +1321,7 @@ export function RegisterSalonScreen() {
               ]}
             >
               <Text style={styles.btnText}>{ctaText}</Text>
-              {!loading && !inCooldown && (
+              {!isSubmitting && !inCooldown && (
                  <Ionicons name="arrow-forward" size={20} color={COLORS.primaryText} style={styles.btnIcon} />
               )}
             </Pressable>
