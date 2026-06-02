@@ -54,8 +54,8 @@ android {
         applicationId "com.keyfi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 40
-        versionName "43.0.1"
+        versionCode 41
+        versionName "42.0.0"
     }
 
     signingConfigs {
