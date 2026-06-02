@@ -652,7 +652,7 @@ function PreviewGrid({
       keyExtractor={(i) => String(i.id)}
       numColumns={numColumns}
       scrollEnabled={false}
-      columnWrapperStyle={[styles.gridRow, gridGap ? { gap: gridGap } : null]}
+      columnWrapperStyle={[styles.gridRow, { gap: gridGap }]}
       contentContainerStyle={styles.gridContent}
       renderItem={({ item }) => {
         const productId = String(item.id);
@@ -691,13 +691,15 @@ export function CustomerHomeScreen() {
   const isTablet = width >= 768;
   const isTabletLandscape = isTablet && width > height;
   const previewNumColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
-  const previewGridGap = isTablet ? 12 : 0;
-  const previewOuterPadding = isTablet ? 12 : 6;
-  const previewCardWidth = isTablet
-    ? Math.floor(
-        (width - previewOuterPadding * 2 - previewGridGap * (previewNumColumns - 1)) / previewNumColumns
-      )
-    : undefined;
+  const previewGridGap = 12;
+  const previewOuterPadding = 6;
+  const previewCardWidth = Math.max(
+    0,
+    Math.floor(
+      (width - previewOuterPadding * 2 - previewGridGap * (previewNumColumns - 1)) /
+        previewNumColumns
+    )
+  );
 
   const token = useAuthStore((s) => s.token);
   const activeRole = useAuthStore((s) => s.activeRole);

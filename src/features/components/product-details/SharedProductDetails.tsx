@@ -710,6 +710,8 @@ function ProductStickyCartFooter({
   qtyInCart,
   out,
   alreadyInCart,
+  bottomInset,
+  footerPaddingBottom,
   onAdd,
   onRemove,
   onGoToCart,
@@ -717,13 +719,19 @@ function ProductStickyCartFooter({
   qtyInCart: number;
   out: boolean;
   alreadyInCart: boolean;
+  bottomInset: number;
+  footerPaddingBottom: number;
   onAdd: () => void;
   onRemove: () => void;
   onGoToCart: () => void;
 }) {
-  const insets = useSafeAreaInsets();
   return (
-    <View style={[s.floatingCartBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View
+      style={[
+        s.floatingCartBar,
+        { bottom: bottomInset, paddingBottom: footerPaddingBottom },
+      ]}
+    >
       <View style={s.cartActionRow}>
         <View style={s.qtyPill}>
           <Pressable
@@ -782,6 +790,7 @@ export function SharedProductDetails({
   viewerMode = "OWNER",
 }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(
     null
@@ -824,6 +833,9 @@ export function SharedProductDetails({
   const galleryHeight = isTabletLandscape
   ? Math.min(Math.max(screenHeight * 0.44, 300), 360)
   : Math.min(Math.max(screenWidth * 1.02, 340), 470);
+  const footerBottomOffset = Math.max(insets.bottom + 12, 22);
+  const footerPaddingBottom = Math.max(insets.bottom, 12);
+  const scrollBottomPadding = 190 + footerBottomOffset + footerPaddingBottom;
 
   const out = product ? isOutOfStock(product) : false;
   const alreadyInCart = !!product && qtyInCart > 0;
@@ -1274,7 +1286,7 @@ const quantityTierBadges = useMemo(() => {
     s.scrollContent,
     {
       backgroundColor: PRODUCT_DETAILS_BG,
-      paddingBottom: 190,
+      paddingBottom: scrollBottomPadding,
     },
   ]}
 >
@@ -2083,6 +2095,8 @@ const quantityTierBadges = useMemo(() => {
             qtyInCart={qtyInCart}
             out={out}
             alreadyInCart={alreadyInCart}
+            bottomInset={footerBottomOffset}
+            footerPaddingBottom={footerPaddingBottom}
             onAdd={handleAddToCart}
             onRemove={handleRemoveFromCart}
             onGoToCart={onGoToCart}

@@ -394,7 +394,8 @@ quantityOfferText: {
   cartActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+    gap: 16,
   },
 
   qtyGroup: {
@@ -404,7 +405,7 @@ quantityOfferText: {
   },
 
     qtyPill: {
-    width: 128,
+    width: 120,
     height: 54,
     borderRadius: 20,
     borderWidth: 1,
@@ -471,6 +472,7 @@ quantityOfferText: {
     height: 54,
     borderRadius: 20,
     backgroundColor: "#050505",
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -1066,7 +1068,6 @@ viewerContent: {
   width: "100%",
   alignItems: "center",
   justifyContent: "center",
-  paddingHorizontal: 12,
 },
 
 viewerHeader: {
@@ -1084,11 +1085,13 @@ viewerCounter: {
 viewerBody: {
   borderRadius: 18,
   overflow: "hidden",
+  backgroundColor: "#F4ECE6",
 },
 
 viewerPage: {
   justifyContent: "center",
   alignItems: "center",
+  overflow: "hidden",
 },
 
 viewerImageWrap: {

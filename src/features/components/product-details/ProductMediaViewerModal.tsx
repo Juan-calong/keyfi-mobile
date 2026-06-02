@@ -38,8 +38,9 @@ type ZoomableImageProps = {
   width: number;
   height: number;
   enabled: boolean;
-  panEnabled: boolean;
-  resetKey: string;
+  isZoomed: boolean;
+  zoomResetKey: string;
+  imageLoadKey: string;
   onZoomStateChange?: (zoomed: boolean) => void;
 };
 
@@ -48,8 +49,9 @@ function ZoomableImage({
   width,
   height,
   enabled,
-  panEnabled,
-  resetKey,
+  isZoomed,
+  zoomResetKey,
+  imageLoadKey,
   onZoomStateChange,
 }: ZoomableImageProps) {
   const ZOOM_THRESHOLD = 1.02;
@@ -63,10 +65,15 @@ function ZoomableImage({
   const translateY = useSharedValue(0);
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
-  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
+  const [loadState, setLoadState] = useState<"loaded" | "error">("loaded");
+  const onZoomStateChangeRef = useRef(onZoomStateChange);
+
+  useEffect(() => {
+    onZoomStateChangeRef.current = onZoomStateChange;
+  }, [onZoomStateChange]);
 
   function notifyZoomState(zoomed: boolean) {
-    onZoomStateChange?.(zoomed);
+    onZoomStateChangeRef.current?.(zoomed);
   }
 
   useEffect(() => {
@@ -76,19 +83,12 @@ function ZoomableImage({
     translateY.value = 0;
     savedX.value = 0;
     savedY.value = 0;
-    setLoadState("loading");
-    onZoomStateChange?.(false);
-  }, [
-    onZoomStateChange,
-    resetKey,
-    uri,
-    scale,
-    savedScale,
-    translateX,
-    translateY,
-    savedX,
-    savedY,
-  ]);
+    onZoomStateChangeRef.current?.(false);
+  }, [zoomResetKey]);
+
+  useEffect(() => {
+    setLoadState("loaded");
+  }, [imageLoadKey]);
 
   useAnimatedReaction(
     () => scale.value > ZOOM_THRESHOLD,
@@ -115,6 +115,9 @@ function ZoomableImage({
 
   const pinch = Gesture.Pinch()
     .enabled(enabled)
+    .onStart(() => {
+      runOnJS(notifyZoomState)(true);
+    })
     .onUpdate((e) => {
       const next = savedScale.value * e.scale;
       scale.value = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
@@ -133,6 +136,11 @@ function ZoomableImage({
       }
 
       runOnJS(notifyZoomState)(true);
+    })
+    .onFinalize(() => {
+      if (scale.value <= ZOOM_THRESHOLD) {
+        runOnJS(notifyZoomState)(false);
+      }
     });
 
   const doubleTap = Gesture.Tap()
@@ -157,11 +165,10 @@ function ZoomableImage({
     });
 
   const pan = Gesture.Pan()
-    .enabled(enabled)
+    .enabled(enabled && isZoomed)
+    .minDistance(6)
     .onUpdate((e) => {
       if (scale.value <= ZOOM_THRESHOLD) {
-        translateX.value = 0;
-        translateY.value = 0;
         return;
       }
 
@@ -176,7 +183,10 @@ function ZoomableImage({
     })
     .onEnd(() => {
       if (scale.value <= ZOOM_THRESHOLD) {
-        resetZoom();
+        translateX.value = 0;
+        translateY.value = 0;
+        savedX.value = 0;
+        savedY.value = 0;
         return;
       }
 
@@ -185,9 +195,7 @@ function ZoomableImage({
       runOnJS(notifyZoomState)(true);
     });
 
-  const composed = panEnabled
-  ? Gesture.Simultaneous(pinch, pan, doubleTap)
-  : Gesture.Simultaneous(pinch, doubleTap);
+  const composed = Gesture.Simultaneous(pinch, pan, doubleTap);
 
   const imageStyle = useAnimatedStyle(() => ({
     transform: [
@@ -206,22 +214,11 @@ function ZoomableImage({
             s.viewerImage,
             { width, height },
             imageStyle,
-            loadState === "loaded" ? null : { opacity: 0 },
           ]}
           resizeMode="contain"
           onLoad={() => setLoadState("loaded")}
           onError={() => setLoadState("error")}
         />
-
-        {loadState === "loading" ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[s.viewerImagePlaceholder, { width, height }]}
-          >
-            <View style={s.viewerImageSkeletonCard} />
-            <View style={s.viewerImageSkeletonLine} />
-          </Animated.View>
-        ) : null}
 
         {loadState === "error" ? (
           <View
@@ -249,10 +246,16 @@ export function ProductMediaViewerModal({
 
   const isTablet = screenWidth >= 768;
   const isTabletLandscape = isTablet && screenWidth > screenHeight;
-  const viewerWidth = isTabletLandscape
-    ? screenWidth - 24
-    : Math.min(screenWidth - 24, 420);
-  const viewerHeight = Math.min(screenHeight * 0.62, 430);
+  const viewerHeight = Math.min(screenHeight * 0.62, 445);
+  const viewerHorizontalInset = isTabletLandscape ? 24 : 48;
+  const viewerMaxWidth = isTabletLandscape ? screenWidth - 24 : 400;
+
+const viewerWidth = Math.max(
+  1,
+  Math.round(Math.min(screenWidth - viewerHorizontalInset, viewerMaxWidth))
+);
+  const viewerWidthStyle = { width: viewerWidth };
+  const pageStyle = { width: viewerWidth, height: viewerHeight };
 
   useEffect(() => {
     if (!visible) return;
@@ -262,16 +265,9 @@ export function ProductMediaViewerModal({
 
     setCurrentIndex(safeIndex);
     setIsCurrentImageZoomed(false);
-
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToIndex?.({
-        index: safeIndex,
-        animated: false,
-      });
-    });
   }, [visible, initialIndex, media.length]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!visible) {
       setIsCurrentImageZoomed(false);
     }
@@ -280,12 +276,31 @@ export function ProductMediaViewerModal({
 
   const validMedia = useMemo(() => media ?? [], [media]);
 
-function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
-  const x = e.nativeEvent.contentOffset.x;
-  const next = Math.round(x / viewerWidth);
-  setCurrentIndex(next);
-  setIsCurrentImageZoomed(false);
-}
+  useEffect(() => {
+    if (!visible || viewerWidth <= 0 || validMedia.length === 0) return;
+
+    const safeIndex =
+      Math.min(Math.max(initialIndex, 0), validMedia.length - 1);
+
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex?.({
+        index: safeIndex,
+        animated: false,
+      });
+    });
+  }, [visible, viewerWidth, initialIndex, validMedia.length]);
+
+  function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    if (viewerWidth <= 0) return;
+
+    const x = e.nativeEvent.contentOffset.x;
+    const next = Math.min(
+      Math.max(Math.round(x / viewerWidth), 0),
+      validMedia.length - 1
+    );
+    setCurrentIndex(next);
+    setIsCurrentImageZoomed(false);
+  }
 
   useEffect(() => {
     setIsCurrentImageZoomed(false);
@@ -296,16 +311,13 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const imageUri = item?.thumbnailUrl || item?.url;
 
     return (
-      <View style={[s.viewerPage, { width: viewerWidth, height: viewerHeight }]}>
+      <View style={[s.viewerPage, pageStyle]}>
         {isVideo ? (
           <View
             style={[
               s.viewerVideoCard,
-              {
-                width: viewerWidth,
-                height: viewerHeight,
-                borderRadius: 18,
-              },
+              pageStyle,
+              { borderRadius: 18 },
             ]}
           >
             {item?.url ? (
@@ -330,17 +342,18 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
             )}
           </View>
         ) : imageUri ? (
-<ZoomableImage
-  uri={imageUri}
-  width={viewerWidth}
-  height={viewerHeight}
-  enabled={currentIndex === index}
-  panEnabled={currentIndex === index && isCurrentImageZoomed}
-  resetKey={`${visible}-${currentIndex}-${item.id}`}
-  onZoomStateChange={(zoomed) => {
-    if (index === currentIndex) setIsCurrentImageZoomed(zoomed);
-  }}
-/>
+          <ZoomableImage
+            uri={imageUri}
+            width={viewerWidth}
+            height={viewerHeight}
+            enabled={currentIndex === index}
+            isZoomed={currentIndex === index && isCurrentImageZoomed}
+            zoomResetKey={`${visible}-${currentIndex}-${item.id}`}
+            imageLoadKey={imageUri}
+            onZoomStateChange={(zoomed) => {
+              if (index === currentIndex) setIsCurrentImageZoomed(zoomed);
+            }}
+          />
         ) : (
           <View
             style={{
@@ -371,31 +384,34 @@ function handleMomentumEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
       <View style={s.viewerRoot}>
         <Pressable style={s.viewerBackdrop} onPress={onClose} />
 
-        <View style={s.viewerContent}>
+        <View style={[s.viewerContent, viewerWidthStyle]}>
           <View style={s.viewerHeader}>
             <Text style={s.viewerCounter}>
               {validMedia.length ? `${currentIndex + 1}/${validMedia.length}` : "0/0"}
             </Text>
           </View>
 
-          <View style={[s.viewerBody, { height: viewerHeight }]}>
-            <FlatList
-              ref={listRef}
-              data={validMedia}
-              horizontal
-              pagingEnabled
-              style={{ width: viewerWidth }}
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item, idx) => `${item?.type}-${item?.id ?? idx}`}
-              renderItem={renderItem}
-              onMomentumScrollEnd={handleMomentumEnd}
-              getItemLayout={(_, index) => ({
-                length: viewerWidth,
-                offset: viewerWidth * index,
-                index,
-              })}
-               scrollEnabled={!isCurrentImageZoomed}
-            />
+          <View style={[s.viewerBody, viewerWidthStyle, { height: viewerHeight }]}>
+            {validMedia.length > 0 ? (
+              <FlatList
+                ref={listRef}
+                data={validMedia}
+                extraData={`${currentIndex}-${isCurrentImageZoomed}`}
+                horizontal
+                pagingEnabled
+                style={viewerWidthStyle}
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item, idx) => `${item?.type}-${item?.id ?? idx}`}
+                renderItem={renderItem}
+                onMomentumScrollEnd={handleMomentumEnd}
+                getItemLayout={(_, index) => ({
+                  length: viewerWidth,
+                  offset: viewerWidth * index,
+                  index,
+                })}
+                scrollEnabled={!isCurrentImageZoomed}
+              />
+            ) : null}
           </View>
 
           {validMedia.length > 1 ? (

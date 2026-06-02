@@ -240,11 +240,12 @@ export function CustomerBuyScreen() {
   const isTablet = width >= 768;
   const isTabletLandscape = isTablet && width > height;
   const numColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
-  const horizontalListPadding = isTablet ? 12 : 4;
-  const gridGap = isTablet ? 12 : 4;
+  const horizontalListPadding = isTablet ? 12 : 6;
+  const gridGap = 12;
 
-  const cardWidth = Math.floor(
-    (width - horizontalListPadding * 2 - gridGap * (numColumns - 1)) / numColumns
+  const cardWidth = Math.max(
+    0,
+    Math.floor((width - horizontalListPadding * 2 - gridGap * (numColumns - 1)) / numColumns)
   );
 
   const token = useAuthStore((s) => s.token);
@@ -708,7 +709,7 @@ onRetry={() => {
                 styles.listContent,
                 { paddingLeft: horizontalListPadding, paddingRight: horizontalListPadding },
               ]}
-              columnWrapperStyle={[styles.columnWrap, isTablet && { gap: gridGap }]}
+              columnWrapperStyle={[styles.columnWrap, { gap: gridGap }]}
               onScrollToIndexFailed={(info) => {
                 const offset = Math.max(0, info.averageItemLength * info.index);
                 listRef.current?.scrollToOffset({ offset, animated: true });
