@@ -20,6 +20,18 @@ export type SocialLoginPayload = {
   identityToken?: string;
 };
 
+export type CorrectVerificationEmailPayload = {
+  currentEmail: string;
+  password: string;
+  newEmail: string;
+};
+
+export type CorrectVerificationEmailResponse = {
+  ok: boolean;
+  email: string;
+  nextStep?: "VERIFY_EMAIL";
+};
+
 export const AuthService = {
   login: async (email: string, password: string) => {
     const res = await api.post(endpoints.auth.login, { email, password });
@@ -55,6 +67,16 @@ export const AuthService = {
 
   deleteOtherSessions: async () => {
     const res = await api.delete(endpoints.auth.sessions);
+    return res.data;
+  },
+
+  correctVerificationEmail: async (
+    payload: CorrectVerificationEmailPayload
+  ): Promise<CorrectVerificationEmailResponse> => {
+    const res = await api.patch<CorrectVerificationEmailResponse>(
+      endpoints.auth.emailVerifyEmail,
+      payload
+    );
     return res.data;
   },
 };

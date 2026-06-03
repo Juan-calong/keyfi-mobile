@@ -19,6 +19,7 @@ function isPublicRoute(url: string) {
     url === "/auth/register/salon" ||
     url === "/auth/register/customer" ||
     url === "/auth/email/verify/confirm" ||
+    url === "/auth/email/verify/email" ||
     url === "/auth/email/verify/request" ||
     url === "/auth/password/forgot" ||
     url === "/auth/password/reset" ||
@@ -125,20 +126,18 @@ api.interceptors.request.use((config) => {
   const publicRoute = isPublicRoute(url);
   const rid = reqId();
 
-    if (!publicRoute) {
-  const guardPath = normalizeGuardPath(url);
-  const hasExplicitRule = EXPLICIT_ROUTE_ACCESS.has(guardPath);
+  if (!publicRoute) {
+    const guardPath = normalizeGuardPath(url);
+    const hasExplicitRule = EXPLICIT_ROUTE_ACCESS.has(guardPath);
 
-  if (hasExplicitRule) {
-    if (!hasExplicitRouteAccess(guardPath, role)) {
-      throw roleGuard(config, "Blocked route for this role");
-    }
-  } else {
-    if (!hasAreaRoleAccess(guardPath, role)) {
+    if (hasExplicitRule) {
+      if (!hasExplicitRouteAccess(guardPath, role)) {
+        throw roleGuard(config, "Blocked route for this role");
+      }
+    } else if (!hasAreaRoleAccess(guardPath, role)) {
       throw roleGuard(config, "Blocked restricted area for this role");
     }
   }
-}
 
   if (config.headers instanceof AxiosHeaders) {
     config.headers.set("x-request-id", rid);
@@ -182,30 +181,30 @@ api.interceptors.request.use((config) => {
       ? config.headers.get("Authorization")
       : (config.headers as any)?.Authorization;
 
-if (__DEV__) {
-  apiLog("[API][REQ]", {
-    method,
-    path: safeApiPath(url),
-    public: publicRoute,
-    role,
-    hasTokenInStore: Boolean(token),
-    hasAuthorizationHeader: Boolean(authHeader),
-    rid,
-  });
-}
+  if (__DEV__) {
+    apiLog("[API][REQ]", {
+      method,
+      path: safeApiPath(url),
+      public: publicRoute,
+      role,
+      hasTokenInStore: Boolean(token),
+      hasAuthorizationHeader: Boolean(authHeader),
+      rid,
+    });
+  }
 
   return config;
 });
 
 api.interceptors.response.use(
   (res) => {
-if (__DEV__) {
-  apiLog("[API][RES][OK]", {
-    status: res.status,
-    path: safeApiPath(res.config?.url),
-    dataSummary: summarizeResponseData(res.data),
-  });
-}
+    if (__DEV__) {
+      apiLog("[API][RES][OK]", {
+        status: res.status,
+        path: safeApiPath(res.config?.url),
+        dataSummary: summarizeResponseData(res.data),
+      });
+    }
     return res;
   },
   async (err) => {
@@ -214,27 +213,27 @@ if (__DEV__) {
     const config = err?.config;
     const path = String(config?.url || "");
 
-if (__DEV__) {
-  apiLog("[API][RES][ERROR]", {
-    status,
-    path: safeApiPath(path),
-    dataSummary: summarizeResponseData(data),
-    message: err?.message,
-    code: err?.code,
-    isAxiosError: Boolean(err?.isAxiosError),
-    hasResponse: Boolean(err?.response),
-    hasRequest: Boolean(err?.request),
-    retry: Boolean(config?._retry),
-  });
-}
+    if (__DEV__) {
+      apiLog("[API][RES][ERROR]", {
+        status,
+        path: safeApiPath(path),
+        dataSummary: summarizeResponseData(data),
+        message: err?.message,
+        code: err?.code,
+        isAxiosError: Boolean(err?.isAxiosError),
+        hasResponse: Boolean(err?.response),
+        hasRequest: Boolean(err?.request),
+        retry: Boolean(config?._retry),
+      });
+    }
 
     if (status === 403) {
-if (__DEV__) {
-  apiLog("[API][403]", {
-    path: safeApiPath(path),
-    action: "forbidden_no_recursive_sync",
-  });
-}
+      if (__DEV__) {
+        apiLog("[API][403]", {
+          path: safeApiPath(path),
+          action: "forbidden_no_recursive_sync",
+        });
+      }
 
       return Promise.reject(err);
     }
@@ -245,13 +244,13 @@ if (__DEV__) {
     if (status === 401 && !isAuthRoute && !alreadyRetried) {
       (config as any)._retry = true;
 
-if (__DEV__) {
-  apiLog("[API][401]", {
-    path: safeApiPath(path),
-    hasRefreshPromise: Boolean(refreshPromise),
-    action: "trying_refresh_with_queue",
-  });
-}
+      if (__DEV__) {
+        apiLog("[API][401]", {
+          path: safeApiPath(path),
+          hasRefreshPromise: Boolean(refreshPromise),
+          action: "trying_refresh_with_queue",
+        });
+      }
 
       try {
         if (!refreshPromise) {
@@ -259,13 +258,13 @@ if (__DEV__) {
             .getState()
             .refreshSession()
             .catch(async (refreshErr: any) => {
-if (__DEV__) {
-  apiLog("[API][401][REFRESH_FAIL]", {
-    message: refreshErr?.message,
-    status: refreshErr?.response?.status,
-    dataSummary: summarizeResponseData(refreshErr?.response?.data),
-  });
-}
+              if (__DEV__) {
+                apiLog("[API][401][REFRESH_FAIL]", {
+                  message: refreshErr?.message,
+                  status: refreshErr?.response?.status,
+                  dataSummary: summarizeResponseData(refreshErr?.response?.data),
+                });
+              }
 
               await useAuthStore.getState().resetSession();
               throw refreshErr;
@@ -277,11 +276,11 @@ if (__DEV__) {
 
         await refreshPromise;
 
-if (__DEV__) {
-  apiLog("[API][401][REFRESH_OK]", {
-    retrying: safeApiPath(path),
-  });
-}
+        if (__DEV__) {
+          apiLog("[API][401][REFRESH_OK]", {
+            retrying: safeApiPath(path),
+          });
+        }
 
         return api(config);
       } catch (refreshErr) {

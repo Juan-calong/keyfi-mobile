@@ -12,6 +12,7 @@ export const endpoints = {
     registerSalon: "/auth/register/salon",
     registerCustomer: "/auth/register/customer",
     emailVerifyConfirm: "/auth/email/verify/confirm",
+    emailVerifyEmail: "/auth/email/verify/email",
     emailVerifyRequest: "/auth/email/verify/request",
     passwordForgot: "/auth/password/forgot",
     passwordReset: "/auth/password/reset",
