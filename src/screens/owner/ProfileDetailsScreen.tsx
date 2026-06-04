@@ -50,7 +50,6 @@ function formatPhoneBR(value?: string | null) {
   const p2 = d.slice(7, 11);
   return `(${dd}) ${p1}${p2 ? "-" + p2 : ""}`;
 }
-
 function formatCnpj(value?: string | null) {
   const d = onlyDigits(value);
   if (d.length !== 14) return value || "—";
@@ -177,7 +176,6 @@ function hasAnyAddressValue(addr: any) {
     addr?.complement
   );
 }
-
 function pickMergedAddress(me: any) {
   const saddr = pickSalonAddress(me);
   const uaddr = pickUserAddress(me);
@@ -331,7 +329,6 @@ type EditFieldKey =
   | "user.state"
   | "user.complement"
   | "salon.name"
-  | "salon.email"
   | "salon.legalName"
   | "salon.tradeName"
   | "salon.icmsTaxpayerType"
@@ -438,13 +435,6 @@ const fieldConfigs: Record<EditFieldKey, EditConfig> = {
     schema: z.string().optional(),
     normalize: (v) => normalizeStateRegistration(v),
   },
-  "salon.email": {
-    title: "Editar e-mail do salão",
-    placeholder: "contato@meusalao.com",
-    keyboardType: "email-address",
-    schema: z.string().email("E-mail inválido"),
-    normalize: (v) => trim(v),
-  },
   "salon.cep": {
     title: "Editar CEP do salão",
     placeholder: "00000-000",
@@ -534,8 +524,6 @@ function getCurrentValue(me: any, field: EditFieldKey) {
       return pickSalonIcmsTaxpayerType(me);
     case "salon.stateRegistration":
       return pickSalonStateRegistration(me);
-    case "salon.email":
-      return salon?.email ?? "";
     case "salon.cep":
       return saddr.cep ?? "";
     case "salon.street":
@@ -579,7 +567,6 @@ export function OwnerProfileDetailsScreen() {
   const salonDisplayName = pickSalonDisplayName(me);
   const salonIcmsTaxpayerType = pickSalonIcmsTaxpayerType(me);
 
-  const salonEmail = salon?.email || "—";
   const salonCnpj = formatCnpj(salon?.cnpj || "");
 
   const mergedAddr = pickMergedAddress(me);
@@ -816,7 +803,19 @@ export function OwnerProfileDetailsScreen() {
                 <View style={{ height: 1, backgroundColor: t.colors.border, opacity: 0.6, marginVertical: 16 }} />
 
                 <InfoRow label="Nome" value={userName} iconName="person-outline" editable onPress={() => openEdit("user.name")} />
-                <InfoRow label="Email" value={email} iconName="mail-outline" />
+                <InfoRow label="E-mail de login" value={email} iconName="mail-outline" />
+                <Text
+                  style={{
+                    marginTop: -4,
+                    marginBottom: 12,
+                    marginLeft: 46,
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: t.colors.text2,
+                  }}
+                >
+                  Usado para acessar a conta e recuperar senha.
+                </Text>
                 <InfoRow label="Telefone" value={phone} iconName="call-outline" editable onPress={() => openEdit("user.phone")} />
 
                 <InfoRow
@@ -863,13 +862,6 @@ export function OwnerProfileDetailsScreen() {
                   />
                 ) : null}
 
-                <InfoRow
-                  label="E-mail do salão"
-                  value={String(salonEmail)}
-                  iconName="mail-outline"
-                  editable
-                  onPress={() => openEdit("salon.email")}
-                />
 
                 <InfoRow
                   label="CEP"

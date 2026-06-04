@@ -57,7 +57,6 @@ export function DebugCreateAccountsScreen() {
     const [salonName, setSalonName] = useState("Salao Teste");
     const [salonCnpj, setSalonCnpj] = useState(makeCnpj14());
     const [salonCnaes, setSalonCnaes] = useState("9602-5/01");
-    const [salonEmail, setSalonEmail] = useState(makeEmail("salon"));
     const [salonPass, setSalonPass] = useState("NovaSenha123");
 
     const [salonCode, setSalonCode] = useState(""); // opcional
@@ -69,7 +68,7 @@ export function DebugCreateAccountsScreen() {
             email: normalize(sellerEmail).toLowerCase(),
             password: normalize(sellerPass),
             referralToken: sellerCode ? normalizeCode(sellerCode) : undefined,
-        }),
+        }) as any,
         [sellerName, sellerEmail, sellerPass, sellerCode]
     );
 
@@ -84,12 +83,11 @@ export function DebugCreateAccountsScreen() {
                 name: normalize(salonName),
                 cnpj: normalize(salonCnpj),
                 cnaes: normalize(salonCnaes),
-                email: normalize(salonEmail).toLowerCase(),
                 password: normalize(salonPass),
             },
             referralToken: salonCode ? normalizeCode(salonCode) : undefined,
-        }),
-        [ownerName, ownerEmail, ownerPass, salonName, salonCnpj, salonCnaes, salonEmail, salonPass, salonCode]
+        }) as any,
+        [ownerName, ownerEmail, ownerPass, salonName, salonCnpj, salonCnaes, salonPass, salonCode]
     );
 
     const createSellerMut = useMutation({
@@ -262,15 +260,6 @@ export function DebugCreateAccountsScreen() {
                             placeholderTextColor={t.colors.text2}
                         />
 
-                        <Text style={styles.label}>Email do salão</Text>
-                        <TextInput
-                            value={salonEmail}
-                            onChangeText={setSalonEmail}
-                            autoCapitalize="none"
-                            style={styles.input}
-                            placeholder="salon@example.com"
-                            placeholderTextColor={t.colors.text2}
-                        />
 
                         <Text style={styles.label}>Senha do salão</Text>
                         <TextInput
@@ -299,7 +288,6 @@ export function DebugCreateAccountsScreen() {
                                 variant="ghost"
                                 onPress={() => {
                                     setOwnerEmail(makeEmail("owner"));
-                                    setSalonEmail(makeEmail("salon"));
                                 }}
                             />
                             <Button title="Gerar CNPJ" variant="ghost" onPress={() => setSalonCnpj(makeCnpj14())} />

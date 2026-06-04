@@ -24,7 +24,6 @@ export type RegisterSalonPayload = {
     icmsTaxpayerType?: "CONTRIBUTOR" | "EXEMPT" | "NON_CONTRIBUTOR";
     hasStateRegistration?: boolean;
     stateRegistration?: string | null;
-    email: string;
     cep: string;
     street: string;
     number: string;

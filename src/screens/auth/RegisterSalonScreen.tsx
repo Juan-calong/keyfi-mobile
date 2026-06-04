@@ -363,7 +363,6 @@ export function RegisterSalonScreen() {
   const salonNameRef = useRef<TextInput>(null);
   const legalNameRef = useRef<TextInput>(null);
   const tradeNameRef = useRef<TextInput>(null);
-  const salonEmailRef = useRef<TextInput>(null);
   const cnpjRef = useRef<TextInput>(null);
   const stateRegistrationRef = useRef<TextInput>(null);
   const cepRef = useRef<TextInput>(null);
@@ -382,7 +381,6 @@ export function RegisterSalonScreen() {
     salonName: false,
     legalName: false,
     tradeName: false,
-    salonEmail: false,
     cnpj: false,
     icmsTaxpayerType: false,
     stateRegistration: false,
@@ -404,7 +402,6 @@ export function RegisterSalonScreen() {
   const [salonName, setSalonName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [tradeName, setTradeName] = useState("");
-  const [salonEmail, setSalonEmail] = useState("");
   const [cnpjMasked, setCnpjMasked] = useState("");
   const [icmsTaxpayerType, setIcmsTaxpayerType] = useState<IcmsTaxpayerType | "">("");
   const [stateRegistration, setStateRegistration] = useState("");
@@ -569,7 +566,6 @@ export function RegisterSalonScreen() {
     salonName: false,
     legalName: false,
     tradeName: false,
-    salonEmail: false,
     cnpj: false,
     icmsTaxpayerType: false,
     stateRegistration: false,
@@ -593,7 +589,6 @@ export function RegisterSalonScreen() {
   const salonNameOk = salonName.trim().length >= 2;
   const legalNameOk = legalName.trim().length >= 2;
   const tradeNameOk = true;
-  const salonEmailOk = isEmail(salonEmail);
   const selectedTaxpayerType = icmsTaxpayerType || null;
   const taxpayerTypeOk = !!selectedTaxpayerType;
   const stateRegistrationOk = selectedTaxpayerType !== "CONTRIBUTOR" || stateRegistration.trim().length >= 1;
@@ -617,7 +612,6 @@ export function RegisterSalonScreen() {
     salonNameOk &&
     legalNameOk &&
     tradeNameOk &&
-    salonEmailOk &&
     cnpjOk &&
     taxpayerTypeOk &&
     stateRegistrationOk &&
@@ -650,7 +644,6 @@ export function RegisterSalonScreen() {
       salonName: true,
       legalName: true,
       tradeName: true,
-      salonEmail: true,
       cnpj: true,
       icmsTaxpayerType: true,
       stateRegistration: true,
@@ -708,7 +701,6 @@ export function RegisterSalonScreen() {
             selectedTaxpayerType === "CONTRIBUTOR"
               ? normalizeStateRegistration(stateRegistration)
               : null,
-          email: salonEmail.trim().toLowerCase(),
           cep: cepDigits,
           street: street.trim(),
           number: number.trim(),
@@ -770,7 +762,6 @@ export function RegisterSalonScreen() {
   const showSalonNameErr = touched.salonName && !salonNameOk;
   const showLegalNameErr = touched.legalName && !legalNameOk;
   const showTradeNameErr = touched.tradeName && !tradeNameOk;
-  const showSalonEmailErr = touched.salonEmail && !salonEmailOk;
   const showCnpjErr = touched.cnpj && !cnpjOk;
   const showTaxpayerTypeErr = !taxpayerTypeOk;
   const showStateRegistrationErr =
@@ -1090,32 +1081,10 @@ export function RegisterSalonScreen() {
                       error={showSalonNameErr}
                       focused={focused.salonName}
                       returnKeyType="next"
-                      onSubmitEditing={() => salonEmailRef.current?.focus()}
+                      onSubmitEditing={() => cepRef.current?.focus()}
                     />
                     <ErrorText show={showSalonNameErr} text="Nome muito curto." />
 
-                    <View style={styles.gap} />
-
-                    <FieldLabel icon="mail-outline" label="Email de contato (Salão)" />
-                    <InputRow
-                      inputRef={salonEmailRef}
-                      value={salonEmail}
-                      onChangeText={setSalonEmail}
-                      onFocus={() => setFocused((s) => ({ ...s, salonEmail: true }))}
-                      onBlur={() => {
-                        setFocused((s) => ({ ...s, salonEmail: false }));
-                        setTouched((s) => ({ ...s, salonEmail: true }));
-                      }}
-                      placeholder="contato@salao.com"
-                      error={showSalonEmailErr}
-                      focused={focused.salonEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                      onSubmitEditing={() => cepRef.current?.focus()}
-                    />
-                    <ErrorText show={showSalonEmailErr} text="Email inválido." />
 
                     <View style={styles.divider} />
 
