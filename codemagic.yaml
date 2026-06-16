@@ -1,0 +1,87 @@
+workflows:
+  keyfi-ios-testflight:
+    name: KeyFi iOS - App Store Connect
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: "Codemagic KeyFi"
+
+    environment:
+      groups:
+        - keyfi_app_env
+
+      xcode: 26.4
+      node: 20
+      cocoapods: default
+
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: br.com.keyfi.app
+
+      vars:
+        XCODE_WORKSPACE: "KeyFi.xcworkspace"
+        XCODE_SCHEME: "KeyFi"
+        APP_STORE_APPLE_ID: "6780121311"
+
+    scripts:
+      - name: Create .env for React Native Config
+        script: |
+          printf 'API_BASE_URL=%s\nGOOGLE_WEB_CLIENT_ID=%s\nAPI_DEBUG=%s\n' \
+            "$API_BASE_URL" \
+            "$GOOGLE_WEB_CLIENT_ID" \
+            "$API_DEBUG" > "$CM_BUILD_DIR/.env"
+
+          test -s "$CM_BUILD_DIR/.env"
+
+          echo ".env created successfully"
+          echo "Environment keys:"
+          cut -d '=' -f 1 "$CM_BUILD_DIR/.env"
+
+      - name: Install npm dependencies
+        script: |
+          npm ci
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+
+      - name: Apply iOS signing
+        script: |
+          xcode-project use-profiles \
+            --project "$CM_BUILD_DIR/ios/KeyFi.xcodeproj"
+
+      - name: Increment iOS build number
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")
+
+          if [ -z "$LATEST_BUILD_NUMBER" ]; then
+            LATEST_BUILD_NUMBER=0
+          fi
+
+          NEXT_BUILD_NUMBER=$((LATEST_BUILD_NUMBER + 1))
+
+          echo "Latest TestFlight build: $LATEST_BUILD_NUMBER"
+          echo "Next build number: $NEXT_BUILD_NUMBER"
+
+          agvtool new-version -all "$NEXT_BUILD_NUMBER"
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
