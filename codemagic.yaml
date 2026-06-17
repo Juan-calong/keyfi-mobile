@@ -11,7 +11,7 @@ workflows:
       groups:
         - keyfi_app_env
 
-      xcode: 26.4
+      xcode: 26.3
       node: 20
       cocoapods: default
 
