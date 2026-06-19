@@ -1,7 +1,12 @@
-// core/api/services/payments.service.ts
 import { api } from "../client";
 import { endpoints } from "../endpoints";
-import type { ActivePaymentEnvelope, PaymentIntentDTO, BoletoPayer } from "./payments.types";
+import type {
+  ActivePaymentEnvelope,
+  BoletoPayer,
+  CreateSavedPaymentCardPayload,
+  PaymentIntentDTO,
+  SavedPaymentCard,
+} from "./payments.types";
 
 function onlyDigits(v?: string) {
   return String(v || "").replace(/\D/g, "");
@@ -28,6 +33,20 @@ function normalizeBoletoPayer(payer: BoletoPayer): BoletoPayer {
   };
 }
 
+function normalizeSavedCard(card: any): SavedPaymentCard {
+  return {
+    id: String(card?.id || ""),
+    brand: String(card?.brand || ""),
+    last4: String(card?.last4 || ""),
+    expirationMonth: Number(card?.expirationMonth || 0),
+    expirationYear: Number(card?.expirationYear || 0),
+    paymentMethodId: String(card?.paymentMethodId || ""),
+    issuerId: card?.issuerId != null ? String(card.issuerId) : null,
+    isDefault: Boolean(card?.isDefault),
+    tokenizationCardId: String(card?.tokenizationCardId || ""),
+  };
+}
+
 export type CreateIntentBody =
   | { method: "PIX"; cpf?: string }
   | { method: "BOLETO"; payer: BoletoPayer }
@@ -42,7 +61,7 @@ export type CreateIntentBody =
       };
     };
 
-    export type PaymentMethodsResponse = {
+export type PaymentMethodsResponse = {
   pix?: unknown;
   boleto?: unknown;
   card: {
@@ -54,7 +73,7 @@ export type CreateIntentBody =
 };
 
 export const PaymentsService = {
-    getPaymentMethods: async (): Promise<PaymentMethodsResponse> => {
+  getPaymentMethods: async (): Promise<PaymentMethodsResponse> => {
     try {
       const res = await api.get(endpoints.payments.methods);
       const data = res?.data ?? {};
@@ -79,22 +98,22 @@ export const PaymentsService = {
       };
     }
   },
-active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
-  const res = await api.get(endpoints.payments.active(orderId));
-  return res.data;
-},
 
-  // ✅ AGORA não exige payment_method_id
+  active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
+    const res = await api.get(endpoints.payments.active(orderId));
+    return res.data;
+  },
+
   cardToken: async (body: {
     cardNumber: string;
-    exp: string; // "MM/AA" ou "MM/YY"
+    exp: string;
     cvv: string;
     name: string;
-    docNumber: string; // CPF/CNPJ
+    docNumber: string;
   }): Promise<{ token: string; issuerId: string | null; firstSixDigits?: string }> => {
     const digits = (v?: any) => String(v ?? "").replace(/\D/g, "");
 
-    const expDigits = digits(body.exp); // MMYY
+    const expDigits = digits(body.exp);
     if (expDigits.length !== 4) {
       throw new Error("Validade inválida (use MM/AA).");
     }
@@ -106,7 +125,6 @@ active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
       throw new Error("Mês de validade inválido.");
     }
 
-    // ✅ strings (como seu backend pediu antes)
     const expiration_month = String(mmNum).padStart(2, "0");
     const expiration_year = String(2000 + yyNum);
 
@@ -130,13 +148,53 @@ active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
     const iss = r.data?.issuer_id ?? null;
     const firstSix = r.data?.first_six_digits;
 
-    if (!tk) throw new Error("Backend retornou 200, mas não trouxe token.");
+    if (!tk) {
+      throw new Error("Backend retornou 200, mas não trouxe token.");
+    }
 
     return {
       token: String(tk),
       issuerId: iss != null ? String(iss) : null,
       firstSixDigits: firstSix ? String(firstSix) : undefined,
     };
+  },
+
+  listSavedCards: async (): Promise<SavedPaymentCard[]> => {
+    const res = await api.get(endpoints.payments.savedCards);
+    const rawCards = Array.isArray(res?.data)
+      ? res.data
+      : Array.isArray(res?.data?.items)
+      ? res.data.items
+      : Array.isArray(res?.data?.cards)
+      ? res.data.cards
+      : [];
+
+    if (!Array.isArray(rawCards)) {
+      return [];
+    }
+
+    return rawCards
+      .map(normalizeSavedCard)
+      .filter((card) => card.id && card.paymentMethodId && card.tokenizationCardId);
+  },
+
+  createSavedCard: async (payload: CreateSavedPaymentCardPayload): Promise<SavedPaymentCard> => {
+    const res = await api.post(endpoints.payments.savedCards, {
+      cardToken: payload.cardToken,
+      paymentMethodId: payload.paymentMethodId,
+      issuerId: payload.issuerId ?? undefined,
+      isDefault: payload.isDefault,
+    });
+
+    return normalizeSavedCard(res?.data?.card ?? res?.data);
+  },
+
+  deleteSavedCard: async (id: string): Promise<void> => {
+    await api.delete(endpoints.payments.savedCardById(id));
+  },
+
+  setDefaultSavedCard: async (id: string): Promise<void> => {
+    await api.patch(endpoints.payments.savedCardDefault(id));
   },
 
   intentPIX: async (orderId: string, cpf?: string) => {
@@ -166,11 +224,9 @@ active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
       },
     };
 
-    const res = await api.post(
-      endpoints.payments.intent(orderId),
-      payload,
-      { headers: { "Idempotency-Key": `intent-${orderId}-${Date.now()}` } }
-    );
+    const res = await api.post(endpoints.payments.intent(orderId), payload, {
+      headers: { "Idempotency-Key": `intent-${orderId}-${Date.now()}` },
+    });
     return res.data;
   },
 
@@ -188,30 +244,51 @@ active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
         issuerId?: string;
         securityCode?: string;
         deviceSessionId?: string;
+        savedCardId?: string;
       };
     }
   ): Promise<PaymentIntentDTO> => {
-        const rawCard = body.card || {};
+    const rawCard = body.card || {};
     const normalizedCard: any = {
       cardToken: rawCard.cardToken || rawCard.token,
-      paymentMethodId: rawCard.paymentMethodId || rawCard.payment_method_id,
-      issuerId: rawCard.issuerId || rawCard.issuer_id,
     };
-    if (rawCard.securityCode) normalizedCard.securityCode = rawCard.securityCode;
-    if (rawCard.deviceSessionId) normalizedCard.deviceSessionId = rawCard.deviceSessionId;
+
+    const paymentMethodId = rawCard.paymentMethodId || rawCard.payment_method_id;
+    const issuerId = rawCard.issuerId || rawCard.issuer_id;
+
+    if (paymentMethodId) {
+      normalizedCard.paymentMethodId = paymentMethodId;
+    }
+
+    if (issuerId) {
+      normalizedCard.issuerId = issuerId;
+    }
+
+    if (rawCard.securityCode) {
+      normalizedCard.securityCode = rawCard.securityCode;
+    }
+
+    if (rawCard.deviceSessionId) {
+      normalizedCard.deviceSessionId = rawCard.deviceSessionId;
+    }
+
+    if (rawCard.savedCardId) {
+      normalizedCard.savedCardId = rawCard.savedCardId;
+    }
+
     const payload: any = {
       method: "CARD",
       installments: Number(body.installments || 1),
       card: normalizedCard,
     };
 
-    if (body.payer) payload.payer = normalizeBoletoPayer(body.payer);
+    if (body.payer) {
+      payload.payer = normalizeBoletoPayer(body.payer);
+    }
 
-    const res = await api.post(
-      endpoints.payments.intent(orderId),
-      payload,
-      { headers: { "Idempotency-Key": buildIdempotencyKey(orderId, "CARD") } }
-    );
+    const res = await api.post(endpoints.payments.intent(orderId), payload, {
+      headers: { "Idempotency-Key": buildIdempotencyKey(orderId, "CARD") },
+    });
 
     return res.data;
   },
@@ -229,11 +306,9 @@ active: async (orderId: string): Promise<ActivePaymentEnvelope> => {
       if ((body as any)?.payer) payload.payer = normalizeBoletoPayer((body as any).payer);
     }
 
-    const res = await api.post(
-      endpoints.payments.intent(orderId),
-      payload,
-      { headers: { "Idempotency-Key": buildIdempotencyKey(orderId, method) } }
-    );
+    const res = await api.post(endpoints.payments.intent(orderId), payload, {
+      headers: { "Idempotency-Key": buildIdempotencyKey(orderId, method) },
+    });
 
     return res.data;
   },

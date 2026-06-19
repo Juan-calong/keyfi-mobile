@@ -112,6 +112,9 @@ sellerCartRequests: {
     options: "/payments/options",
     methods: "/payments/methods",
     installments: "/payments/installments",
+    savedCards: "/payments/cards",
+    savedCardById: (id: string) => `/payments/cards/${id}`,
+    savedCardDefault: (id: string) => `/payments/cards/${id}/default`,
   },
 
   cielo: {

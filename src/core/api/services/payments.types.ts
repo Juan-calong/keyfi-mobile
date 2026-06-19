@@ -24,13 +24,12 @@ export type ActivePaymentEnvelope = {
       }
     | {
         type: "CARD";
-        statusDetail?: string; // ✅ agora existe no type
+        statusDetail?: string;
       }
     | {
-        type: string; // fallback caso backend mande algo novo
+        type: string;
         [key: string]: any;
       };
-
   ui: { code: string; message: string };
   flags: { shouldPoll: boolean; canRetry: boolean };
 };
@@ -71,13 +70,32 @@ export type BoletoPayerAddress = {
   streetNumber: string;
   neighborhood: string;
   city: string;
-  federalUnit: string; // "SP"
+  federalUnit: string;
 };
 
 export type BoletoPayer = {
-  cpf: string; // CPF ou CNPJ (somente dígitos)
+  cpf: string;
   firstName: string;
   lastName: string;
   email?: string;
   address: BoletoPayerAddress;
+};
+
+export type SavedPaymentCard = {
+  id: string;
+  brand: string;
+  last4: string;
+  expirationMonth: number;
+  expirationYear: number;
+  paymentMethodId: string;
+  issuerId?: string | null;
+  isDefault: boolean;
+  tokenizationCardId: string;
+};
+
+export type CreateSavedPaymentCardPayload = {
+  cardToken: string;
+  paymentMethodId: string;
+  issuerId?: string | null;
+  isDefault?: boolean;
 };
