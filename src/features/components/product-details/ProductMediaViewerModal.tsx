@@ -5,6 +5,7 @@ import {
   Text,
   Pressable,
   FlatList,
+  Image,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -12,6 +13,11 @@ import {
 import { WebView } from "react-native-webview";
 
 import type { ProductMedia } from "./productDetails.types";
+import {
+  getProductMediaModalUrl,
+  getProductMediaPrefetchUrl,
+  getProductMediaThumbnailUrl,
+} from "./productDetails.utils";
 import { s } from "./productDetails.styles";
 import Animated, {
   runOnJS,
@@ -35,6 +41,7 @@ type Props = {
 
 type ZoomableImageProps = {
   uri: string;
+  placeholderUri?: string | null;
   width: number;
   height: number;
   enabled: boolean;
@@ -46,6 +53,7 @@ type ZoomableImageProps = {
 
 function ZoomableImage({
   uri,
+  placeholderUri,
   width,
   height,
   enabled,
@@ -65,7 +73,7 @@ function ZoomableImage({
   const translateY = useSharedValue(0);
   const savedX = useSharedValue(0);
   const savedY = useSharedValue(0);
-  const [loadState, setLoadState] = useState<"loaded" | "error">("loaded");
+  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
   const onZoomStateChangeRef = useRef(onZoomStateChange);
 
   useEffect(() => {
@@ -87,7 +95,7 @@ function ZoomableImage({
   }, [zoomResetKey]);
 
   useEffect(() => {
-    setLoadState("loaded");
+    setLoadState("loading");
   }, [imageLoadKey]);
 
   useAnimatedReaction(
@@ -208,11 +216,23 @@ function ZoomableImage({
   return (
     <GestureDetector gesture={composed}>
       <Animated.View style={[s.viewerImageWrap, { width, height }]}>
+        {placeholderUri && placeholderUri !== uri ? (
+          <Animated.Image
+            source={{ uri: placeholderUri }}
+            style={[
+              s.viewerImage,
+              { width, height },
+            ]}
+            resizeMode="contain"
+          />
+        ) : null}
+
         <Animated.Image
           source={{ uri }}
           style={[
             s.viewerImage,
             { width, height },
+            loadState === "loaded" ? null : { opacity: 0 },
             imageStyle,
           ]}
           resizeMode="contain"
@@ -241,6 +261,7 @@ export function ProductMediaViewerModal({
 }: Props) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const listRef = useRef<FlatList<ProductMedia> | null>(null);
+  const prefetchedImageUrls = useRef(new Set<string>());
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isCurrentImageZoomed, setIsCurrentImageZoomed] = useState(false);
 
@@ -265,6 +286,7 @@ const viewerWidth = Math.max(
 
     setCurrentIndex(safeIndex);
     setIsCurrentImageZoomed(false);
+    prefetchedImageUrls.current.clear();
   }, [visible, initialIndex, media.length]);
 
   useEffect(() => {
@@ -275,6 +297,31 @@ const viewerWidth = Math.max(
   
 
   const validMedia = useMemo(() => media ?? [], [media]);
+
+  useEffect(() => {
+    if (!visible || validMedia.length === 0) return;
+
+    const safeIndex = Math.min(Math.max(currentIndex, 0), validMedia.length - 1);
+    const targets = new Set<string>();
+    const candidates = [
+      validMedia[safeIndex - 1],
+      validMedia[safeIndex],
+      validMedia[safeIndex + 1],
+    ].filter(Boolean);
+
+    for (const item of candidates) {
+      if (item?.type !== "image") continue;
+
+      const url = getProductMediaPrefetchUrl(item);
+      if (url) targets.add(url);
+    }
+
+    targets.forEach((url) => {
+      if (prefetchedImageUrls.current.has(url)) return;
+      prefetchedImageUrls.current.add(url);
+      Image.prefetch(url).catch(() => {});
+    });
+  }, [currentIndex, validMedia, visible]);
 
   useEffect(() => {
     if (!visible || viewerWidth <= 0 || validMedia.length === 0) return;
@@ -308,7 +355,8 @@ const viewerWidth = Math.max(
 
   function renderItem({ item, index }: { item: ProductMedia; index: number }) {
     const isVideo = item?.type === "video";
-    const imageUri = item?.thumbnailUrl || item?.url;
+    const imageUri = getProductMediaModalUrl(item);
+    const placeholderUri = getProductMediaThumbnailUrl(item);
 
     return (
       <View style={[s.viewerPage, pageStyle]}>
@@ -344,6 +392,7 @@ const viewerWidth = Math.max(
         ) : imageUri ? (
           <ZoomableImage
             uri={imageUri}
+            placeholderUri={placeholderUri}
             width={viewerWidth}
             height={viewerHeight}
             enabled={currentIndex === index}

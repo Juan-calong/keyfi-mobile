@@ -13,6 +13,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 
 type AppImageProps = {
   uri?: string | null;
+  placeholderUri?: string | null;
   style?: StyleProp<ViewStyle>;
   resizeMode?: ImageResizeMode;
   backgroundColor?: string;
@@ -26,6 +27,7 @@ const GOLD = "#B8943C";
 
 export function AppImage({
   uri,
+  placeholderUri,
   style,
   resizeMode = "cover",
   backgroundColor = DEFAULT_BG,
@@ -79,13 +81,23 @@ export function AppImage({
   return (
     <View style={[styles.container, { backgroundColor }, style]}>
       {showImage ? (
-        <Image
-          source={{ uri: uri as string }}
-          style={[styles.image, status === "loaded" ? styles.imageVisible : styles.imageHidden]}
-          resizeMode={resizeMode}
-          onLoad={() => setStatus("loaded")}
-          onError={() => setStatus("error")}
-        />
+        <>
+          {placeholderUri && placeholderUri !== uri ? (
+            <Image
+              source={{ uri: placeholderUri }}
+              style={styles.image}
+              resizeMode={resizeMode}
+            />
+          ) : null}
+
+          <Image
+            source={{ uri: uri as string }}
+            style={[styles.image, status === "loaded" ? styles.imageVisible : styles.imageHidden]}
+            resizeMode={resizeMode}
+            onLoad={() => setStatus("loaded")}
+            onError={() => setStatus("error")}
+          />
+        </>
       ) : null}
 
       {status === "loading" ? (

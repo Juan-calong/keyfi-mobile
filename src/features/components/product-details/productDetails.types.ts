@@ -3,6 +3,7 @@ export type ProductMedia = {
   type: "image" | "video";
   url: string;
   thumbnailUrl?: string | null;
+  mediumUrl?: string | null;
   sort?: number | null;
   isPrimary?: boolean | null;
   title?: string | null;

@@ -44,6 +44,9 @@ import {
   COLORS,
   formatBRL,
   getPrimaryProductImage,
+  getProductMediaDisplayUrl,
+  getProductMediaPrefetchUrl,
+  getProductMediaThumbnailUrl,
   isOutOfStock,
   normalizeGalleryMedia,
 } from "./productDetails.utils";
@@ -848,25 +851,22 @@ export function SharedProductDetails({
   useEffect(() => {
     if (!product?.id || galleryMedia.length === 0) return;
 
-    const targets = new Set<string>();
-
     const currentIndex = Math.min(
       Math.max(galleryIndex, 0),
       galleryMedia.length - 1
     );
 
+    const targets = new Set<string>();
     const candidates = [
-      galleryMedia[0],
       galleryMedia[currentIndex - 1],
       galleryMedia[currentIndex],
       galleryMedia[currentIndex + 1],
-      galleryMedia[currentIndex + 2],
     ].filter(Boolean);
 
     for (const item of candidates) {
       if (item?.type !== "image") continue;
 
-      const url = item.thumbnailUrl || item.url;
+      const url = getProductMediaPrefetchUrl(item);
       if (url) targets.add(url);
     }
 
@@ -1331,7 +1331,8 @@ const quantityTierBadges = useMemo(() => {
   }}
                     renderItem={({ item, index }) => {
                       const isVideo = item.type === "video";
-                      const imageSource = item.thumbnailUrl || item.url;
+                      const imageSource = getProductMediaDisplayUrl(item);
+                      const placeholderSource = getProductMediaThumbnailUrl(item);
 
                     return (
 <Pressable
@@ -1351,6 +1352,7 @@ const quantityTierBadges = useMemo(() => {
   {imageSource ? (
     <AppImage
       uri={imageSource}
+      placeholderUri={placeholderSource}
       style={{
         width: "100%",
         height: "100%",

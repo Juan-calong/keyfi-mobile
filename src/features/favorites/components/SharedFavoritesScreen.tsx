@@ -24,7 +24,12 @@ const BORDER = "rgba(200,164,93,0.18)";
 type FavoriteFilter = "all" | "promos" | "available";
 
 export type FavoriteItemBase = {
-  id: string;
+  id?: string | number | null;
+  productId?: string | number | null;
+  product?: {
+    id?: string | number | null;
+    productId?: string | number | null;
+  } | null;
   name: string;
   description?: string | null;
   price?: number | null;
@@ -45,6 +50,12 @@ export type FavoriteItemBase = {
   }>;
 };
 
+type NormalizedFavoriteItem = FavoriteItemBase & {
+  id: string;
+  resolvedProductId: string;
+  listKey: string;
+};
+
 type SharedFavoritesScreenProps = {
   title: string;
   subtitle: string;
@@ -53,7 +64,7 @@ type SharedFavoritesScreenProps = {
   isError: boolean;
   onRetry: () => void;
   onExploreProducts: () => void;
-  onOpenProduct: (item: FavoriteItemBase) => void;
+  onOpenProduct: (item: NormalizedFavoriteItem) => void;
 };
 
 function formatBRL(value?: number | null) {
@@ -66,6 +77,16 @@ function formatBRL(value?: number | null) {
 
 function getFavoriteImage(item: FavoriteItemBase) {
   return item.images?.[0]?.url || null;
+}
+
+function resolveFavoriteId(item: FavoriteItemBase): string {
+  const value =
+    item.id ??
+    item.productId ??
+    item.product?.id ??
+    item.product?.productId;
+
+  return value == null ? "" : String(value).trim();
 }
 
 function toFiniteNumber(value: unknown): number | null {
@@ -126,40 +147,63 @@ export function SharedFavoritesScreen({
   const isTabletLandscape = isTablet && width > height;
   const numColumns = isTablet ? (isTabletLandscape ? (width >= 1400 ? 4 : 3) : 3) : 2;
   const horizontalPadding = isTablet ? 12 : 16;
-  const columnGap = isTablet ? 12 : 12;
-  const cardWidth = isTablet
-    ? Math.floor((width - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns)
-    : undefined;
+  const columnGap = 12;
+  const cardWidth = Math.floor(
+    (width - horizontalPadding * 2 - columnGap * (numColumns - 1)) / numColumns
+  );
   const imageBackgroundColor = isTablet ? CARD : "#F4EFE3";
   const imageResizeMode = "cover";
   const [selectedFilter, setSelectedFilter] =
     React.useState<FavoriteFilter>("all");
-  const imageHeight = cardWidth ? Math.max(160, Math.round(cardWidth * 0.90)) : 150;
+  const imageHeight = Math.max(150, Math.round(cardWidth * 0.9));
+
+  const normalizedItems = React.useMemo<NormalizedFavoriteItem[]>(
+    () =>
+      items.map((item, index) => {
+        const resolvedProductId = resolveFavoriteId(item);
+        const fallbackKey = `favorite-${index}`;
+
+        return {
+          ...item,
+          id: resolvedProductId || fallbackKey,
+          resolvedProductId,
+          listKey: resolvedProductId || fallbackKey,
+        };
+      }),
+    [items]
+  );
 
   const filteredItems = React.useMemo(() => {
     if (selectedFilter === "promos") {
-      return items.filter(hasActivePromotion);
+      return normalizedItems.filter(hasActivePromotion);
     }
 
     if (selectedFilter === "available") {
-      return items.filter(isAvailable);
+      return normalizedItems.filter(isAvailable);
     }
 
-    return items;
-  }, [items, selectedFilter]);
+    return normalizedItems;
+  }, [normalizedItems, selectedFilter]);
 
   const filteredEmptyMessage =
     selectedFilter === "promos"
       ? "Nenhum favorito em promoção no momento."
       : "Nenhum favorito disponível no momento.";
 
-  const renderItem = ({ item }: { item: FavoriteItemBase }) => {
+  const renderItem = ({ item }: { item: NormalizedFavoriteItem }) => {
     const image = getFavoriteImage(item);
     const price = getFavoritePrice(item);
+    const canOpenProduct = Boolean(item.resolvedProductId);
 
     return (
-      <View style={[s.cardWrap, cardWidth ? { width: cardWidth } : null]}>
-        <Pressable onPress={() => onOpenProduct(item)} style={s.card}>
+      <View style={[s.cardWrap, { width: cardWidth }]}>
+        <Pressable
+          disabled={!canOpenProduct}
+          onPress={() => {
+            if (canOpenProduct) onOpenProduct(item);
+          }}
+          style={s.card}
+        >
           <View
             style={[
               s.imageWrap,
@@ -174,14 +218,16 @@ export function SharedFavoritesScreen({
               resizeMode={imageResizeMode}
             />
 
-            <ProductFavoriteButton
-              productId={item.id}
-              initialFavorited={true}
-              containerStyle={s.heartBadge}
-              size={16}
-              activeColor="#E11D48"
-              inactiveColor="#2E2A29"
-            />
+            {canOpenProduct ? (
+              <ProductFavoriteButton
+                productId={item.resolvedProductId}
+                initialFavorited={true}
+                containerStyle={s.heartBadge}
+                size={16}
+                activeColor="#E11D48"
+                inactiveColor="#2E2A29"
+              />
+            ) : null}
           </View>
 
           <View style={s.cardBody}>
@@ -230,7 +276,7 @@ export function SharedFavoritesScreen({
 <View style={s.errorWrap}>
   <ErrorState onRetry={onRetry} />
 </View>
-      ) : items.length === 0 ? (
+      ) : normalizedItems.length === 0 ? (
         <View style={s.emptyWrap}>
           <LinearGradient
             colors={["rgba(255,255,255,0.96)", "rgba(255,250,241,0.96)"]}
@@ -286,9 +332,9 @@ export function SharedFavoritesScreen({
 
           <FlatList
             data={filteredItems}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.listKey || `favorite-${index}`}
             numColumns={numColumns}
-            columnWrapperStyle={[s.row, isTablet && { gap: columnGap, justifyContent: "flex-start" }]}
+            columnWrapperStyle={numColumns > 1 ? [s.row, { gap: columnGap, justifyContent: "flex-start" }] : undefined}
             contentContainerStyle={[s.listContent, { paddingHorizontal: horizontalPadding }]}
             showsVerticalScrollIndicator={false}
             renderItem={renderItem}
@@ -339,9 +385,7 @@ const s = StyleSheet.create({
   filterChipText: { fontSize: 13.5, fontWeight: "700", color: "#111111" },
   filterChipTextActive: { color: "#FFFDF8" },
   row: { justifyContent: "space-between", marginBottom: 12 },
-  cardWrap: {
-    width: "48.6%",
-  },
+  cardWrap: { marginBottom: 12 },
   card: {
     width: "100%",
     backgroundColor: CARD,

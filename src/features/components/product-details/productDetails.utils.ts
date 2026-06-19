@@ -83,7 +83,8 @@ function normalizeImageMediaFromProduct(product?: Product | null): ProductMedia[
       id: String(item.id ?? `media-image-${index}`),
       type: "image",
       url: item.url,
-      thumbnailUrl: item.thumbnailUrl ?? item.url,
+      thumbnailUrl: item.thumbnailUrl ?? null,
+      mediumUrl: item.mediumUrl ?? null,
       sort: getNumericOrder(item.sort, index),
       isPrimary: Boolean(item.isPrimary),
       title: item.title ?? null,
@@ -99,6 +100,7 @@ function normalizeImageMediaFromProduct(product?: Product | null): ProductMedia[
     type: "image",
     url: img.url,
     thumbnailUrl: img.url,
+    mediumUrl: img.url,
     sort: getNumericOrder(img.sort, index),
     isPrimary: Boolean(img.isPrimary),
   }));
@@ -155,6 +157,7 @@ export function normalizeGalleryMedia(
         type: "video",
         url: item.url,
         thumbnailUrl: item.thumbnailUrl ?? null,
+        mediumUrl: item.mediumUrl ?? null,
         sort: getNumericOrder(item.sort, index),
         isPrimary: Boolean(item.isPrimary),
         title: item.title ?? null,
@@ -171,6 +174,7 @@ export function normalizeGalleryMedia(
           type: "video",
           url: video.videoUrl,
           thumbnailUrl: video.thumbnailUrl ?? null,
+          mediumUrl: null,
           sort: getNumericOrder(video.sortOrder, index),
           title: video.title ?? null,
           description: video.description ?? null,
@@ -193,10 +197,36 @@ export function normalizeGalleryMedia(
       type: "image",
       url: fallbackSingle,
       thumbnailUrl: fallbackSingle,
+      mediumUrl: fallbackSingle,
       sort: 0,
       isPrimary: true,
     },
   ];
+}
+
+export function getProductMediaThumbnailUrl(media?: ProductMedia | null) {
+  if (!media) return null;
+  return media.thumbnailUrl || media.mediumUrl || media.url || null;
+}
+
+export function getProductMediaDisplayUrl(media?: ProductMedia | null) {
+  if (!media) return null;
+  return media.mediumUrl || media.url || media.thumbnailUrl || null;
+}
+
+export function getProductMediaModalUrl(media?: ProductMedia | null) {
+  if (!media) return null;
+  return media.mediumUrl || media.url || media.thumbnailUrl || null;
+}
+
+export function getProductMediaZoomUrl(media?: ProductMedia | null) {
+  if (!media) return null;
+  return media.url || media.mediumUrl || media.thumbnailUrl || null;
+}
+
+export function getProductMediaPrefetchUrl(media?: ProductMedia | null) {
+  if (!media) return null;
+  return media.mediumUrl || media.url || media.thumbnailUrl || null;
 }
 
 export function buildVideoHtml(url: string) {
