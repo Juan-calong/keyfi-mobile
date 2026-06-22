@@ -280,7 +280,7 @@ export function SharedFavoritesScreen({
 </View>
       ) : normalizedItems.length === 0 ? (
         <ScrollView
-          style={{ flex: 1 }}
+          style={s.emptyScroll}
           contentContainerStyle={[
             s.emptyScrollContent,
             {
@@ -291,43 +291,47 @@ export function SharedFavoritesScreen({
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <LinearGradient
-            colors={["rgba(255,255,255,0.96)", "rgba(255,250,241,0.96)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          <View
             style={[
-              s.emptyCardPremium,
+              s.emptyCardOuter,
               emptyCardMaxWidth ? { maxWidth: emptyCardMaxWidth } : null,
             ]}
           >
-            <View style={s.emptyContent}>
-              <View style={s.emptyIconCircle}>
-                <Icon name="heart-outline" size={30} color={GOLD} />
-              </View>
+            <LinearGradient
+              colors={["rgba(255,255,255,0.96)", "rgba(255,250,241,0.96)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={s.emptyCardPremium}
+            >
+              <View style={s.emptyContent}>
+                <View style={s.emptyIconCircle}>
+                  <Icon name="heart-outline" size={28} color={GOLD} />
+                </View>
 
-              <Text maxFontSizeMultiplier={1.15} style={s.emptyTitle}>
-                Nenhum favorito ainda
-              </Text>
-              <Text
-                maxFontSizeMultiplier={1.15}
-                numberOfLines={3}
-                style={s.emptyText}
-              >
-                Toque no coração de um produto para salvá-lo aqui.
-              </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                style={s.emptyCtaButton}
-                onPress={onExploreProducts}
-              >
-                <Text maxFontSizeMultiplier={1.15} style={s.emptyCtaText}>
-                  Explorar produtos
+                <Text maxFontSizeMultiplier={1.15} style={s.emptyTitle}>
+                  Nenhum favorito ainda
                 </Text>
-                <Icon name="arrow-forward" size={16} color="#FFFDF8" />
-              </Pressable>
-            </View>
-          </LinearGradient>
+                <Text
+                  maxFontSizeMultiplier={1.15}
+                  numberOfLines={3}
+                  style={s.emptyText}
+                >
+                  Toque no coração de um produto para salvá-lo aqui.
+                </Text>
+
+                <Pressable
+                  accessibilityRole="button"
+                  style={s.emptyCtaButton}
+                  onPress={onExploreProducts}
+                >
+                  <Text maxFontSizeMultiplier={1.15} style={s.emptyCtaText}>
+                    Explorar produtos
+                  </Text>
+                  <Icon name="arrow-forward" size={16} color="#FFFDF8" />
+                </Pressable>
+              </View>
+            </LinearGradient>
+          </View>
         </ScrollView>
       ) : (
         <>
@@ -390,6 +394,7 @@ const s = StyleSheet.create({
   },
   errorWrap: { paddingHorizontal: 16, marginTop: 12 },
   listContent: { paddingTop: 8, paddingBottom: 110 },
+  emptyScroll: { flex: 1 },
   filtersRow: {
     flexDirection: "row",
     gap: 10,
@@ -477,24 +482,30 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyCardPremium: {
+  emptyCardOuter: {
     width: "100%",
     alignSelf: "center",
-    minHeight: 264,
     borderRadius: 24,
-    paddingHorizontal: 22,
-    paddingTop: 30,
-    paddingBottom: 36,
-    alignItems: "center",
-    justifyContent: "center",
     borderWidth: 1,
     borderColor: BORDER,
-    overflow: "visible",
+    backgroundColor: CARD,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
+    overflow: "visible",
+  },
+  emptyCardPremium: {
+    width: "100%",
+    minHeight: 332,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingTop: 30,
+    paddingBottom: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   emptyContent: {
     width: "100%",
@@ -502,8 +513,8 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   emptyIconCircle: {
-    width: 62,
-    height: 62,
+    width: 58,
+    height: 58,
     borderRadius: 999,
     backgroundColor: "rgba(200,164,93,0.12)",
     alignItems: "center",
@@ -516,7 +527,7 @@ const s = StyleSheet.create({
     alignSelf: "center",
     textAlign: "center",
     flexShrink: 1,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: "900",
     color: "#111",
   },
@@ -527,15 +538,15 @@ const s = StyleSheet.create({
     alignSelf: "center",
     textAlign: "center",
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: 12.5,
     lineHeight: 20,
     color: MUTED,
     fontWeight: "600",
   },
   emptyCtaButton: {
     alignSelf: "center",
-    marginTop: 18,
-    marginBottom: 4,
+    marginTop: 14,
+    marginBottom: 0,
     minHeight: 46,
     borderRadius: 999,
     backgroundColor: GOLD,
