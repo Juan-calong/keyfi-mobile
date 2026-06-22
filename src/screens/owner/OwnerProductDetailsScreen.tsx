@@ -53,6 +53,8 @@ export function OwnerProductDetailsScreen() {
 
   const product = q.data;
   const qtyInCart = product ? (cart.items.find((item) => item.productId === product.id)?.qty ?? 0) : 0;
+  const isProductInCart = (candidateProductId: string) =>
+    cart.items.some((item) => item.productId === candidateProductId && item.qty > 0);
 
   return (
     <SharedProductDetails
@@ -68,6 +70,7 @@ export function OwnerProductDetailsScreen() {
       }}
       relatedItems={relatedQ.data ?? []}
       qtyInCart={qtyInCart}
+      isProductInCart={isProductInCart}
       allowVideos={true}
       onBack={() => nav.goBack()}
       onAddToCart={(id) => addItemMutation.mutate({ productId: id, qty: 1 }, { onError: (e: any) => Alert.alert("Erro", friendlyError(e).message) })}

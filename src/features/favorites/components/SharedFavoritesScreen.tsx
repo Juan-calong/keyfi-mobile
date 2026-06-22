@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   Pressable,
   useWindowDimensions,
 } from "react-native";
@@ -156,6 +157,7 @@ export function SharedFavoritesScreen({
   const [selectedFilter, setSelectedFilter] =
     React.useState<FavoriteFilter>("all");
   const imageHeight = Math.max(150, Math.round(cardWidth * 0.9));
+  const emptyCardMaxWidth = isTablet ? 540 : undefined;
 
   const normalizedItems = React.useMemo<NormalizedFavoriteItem[]>(
     () =>
@@ -277,12 +279,25 @@ export function SharedFavoritesScreen({
   <ErrorState onRetry={onRetry} />
 </View>
       ) : normalizedItems.length === 0 ? (
-        <View style={s.emptyWrap}>
+        <ScrollView
+          contentContainerStyle={[
+            s.emptyScrollContent,
+            {
+              paddingHorizontal: horizontalPadding,
+              paddingBottom: Math.max(insets.bottom + 130, 150),
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <LinearGradient
             colors={["rgba(255,255,255,0.96)", "rgba(255,250,241,0.96)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={s.emptyCardPremium}
+            style={[
+              s.emptyCardPremium,
+              emptyCardMaxWidth ? { maxWidth: emptyCardMaxWidth } : null,
+            ]}
           >
             <View style={s.emptyIconCircle}>
               <Icon name="heart-outline" size={34} color={GOLD} />
@@ -302,7 +317,7 @@ export function SharedFavoritesScreen({
               <Icon name="arrow-forward" size={16} color="#FFFDF8" />
             </Pressable>
           </LinearGradient>
-        </View>
+        </ScrollView>
       ) : (
         <>
           <View style={s.filtersRow}>
@@ -445,18 +460,18 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyWrap: {
-    flex: 1,
-    paddingHorizontal: 18,
+  emptyScrollContent: {
+    flexGrow: 1,
+    paddingTop: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 70,
   },
   emptyCardPremium: {
     width: "100%",
+    alignSelf: "center",
     borderRadius: 24,
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 28,
     alignItems: "center",
     borderWidth: 1,
     borderColor: BORDER,
@@ -486,7 +501,7 @@ const s = StyleSheet.create({
   },
   emptyCtaButton: {
     marginTop: 18,
-    minHeight: 44,
+    minHeight: 46,
     borderRadius: 999,
     backgroundColor: GOLD,
     paddingHorizontal: 18,

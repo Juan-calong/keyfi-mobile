@@ -68,6 +68,7 @@ type Props = {
   onRemoveFromCart: (productId: string) => void;
   onGoToCart: () => void;
   qtyInCart: number;
+  isProductInCart?: (productId: string) => boolean;
   allowVideos?: boolean;
   viewerMode?: ViewerMode;
 };
@@ -789,6 +790,7 @@ export function SharedProductDetails({
   onRemoveFromCart,
   onGoToCart,
   qtyInCart,
+  isProductInCart,
   allowVideos = false,
   viewerMode = "OWNER",
 }: Props) {
@@ -810,6 +812,9 @@ export function SharedProductDetails({
   >(null);
   const [commentSuccessMode, setCommentSuccessMode] =
     useState<ReviewSubmitMode>(null);
+  const [optimisticRelatedCartIds, setOptimisticRelatedCartIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const galleryListRef = useRef<FlatList<ProductMedia> | null>(null);
   const prefetchedImageUrls = useRef(new Set<string>());
@@ -823,6 +828,7 @@ export function SharedProductDetails({
     setCommentSuccessMode(null);
     setDraftComment("");
     setDraftRating(0);
+    setOptimisticRelatedCartIds(new Set());
     galleryListRef.current?.scrollToOffset?.({ offset: 0, animated: false });
     prefetchedImageUrls.current.clear();
   }, [product?.id]);
@@ -1172,8 +1178,18 @@ const quantityTierBadges = useMemo(() => {
     if (relatedOut) return;
 
     try {
+      setOptimisticRelatedCartIds((prev) => {
+        const next = new Set(prev);
+        next.add(item.id);
+        return next;
+      });
       onAddToCart(item.id);
     } catch (err: any) {
+      setOptimisticRelatedCartIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
       const fe: any = friendlyError(err);
       setModal({
         title: String(fe?.title || "Erro"),
@@ -1863,6 +1879,9 @@ const quantityTierBadges = useMemo(() => {
                     const relatedPrice = getPriceModel(item as any, viewerMode);
                     const ratingValue = getProductCardRating(item);
                     const reviewsCount = getProductCardReviewsCount(item);
+                    const relatedAlreadyInCart =
+                      isProductInCart?.(item.id) === true ||
+                      optimisticRelatedCartIds.has(item.id);
 
                     return (
                       <Pressable
@@ -1956,7 +1975,15 @@ const quantityTierBadges = useMemo(() => {
                             />
 
                             <Pressable
-                              onPress={(e) => handleAddRelated(item, e)}
+                              onPress={(e) => {
+                                stop(e);
+                                if (relatedOut) return;
+                                if (relatedAlreadyInCart) {
+                                  onGoToCart();
+                                  return;
+                                }
+                                handleAddRelated(item, e);
+                              }}
                               hitSlop={10}
                               disabled={relatedOut}
                               style={({ pressed }) => [
@@ -1967,20 +1994,20 @@ const quantityTierBadges = useMemo(() => {
                                   width: 34,
                                   height: 34,
                                   borderRadius: 999,
-                                  backgroundColor: "#FFFFFF",
+                                  backgroundColor: relatedAlreadyInCart ? "#000000" : "#FFFFFF",
                                   alignItems: "center",
                                   justifyContent: "center",
                                   borderWidth: 1,
-                                  borderColor: "rgba(0,0,0,0.10)",
+                                  borderColor: relatedAlreadyInCart ? "#000000" : "rgba(0,0,0,0.10)",
                                 },
                                 pressed && !relatedOut && { opacity: 0.7 },
                                 relatedOut && { opacity: 0.45 },
                               ]}
                             >
                               <Icon
-                                name="bag-outline"
+                                name={relatedAlreadyInCart ? "bag-handle" : "bag-outline"}
                                 size={18}
-                                color="#000000"
+                                color={relatedAlreadyInCart ? "#FFFFFF" : "#000000"}
                               />
                             </Pressable>
                           </View>

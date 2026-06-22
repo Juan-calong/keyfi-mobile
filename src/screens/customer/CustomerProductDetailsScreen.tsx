@@ -58,6 +58,8 @@ export function CustomerProductDetailsScreen() {
     Alert.alert("Avalie este produto", "Role até a seção de avaliações e comentários para enviar sua avaliação.");
   }, [intent, product?.id]);
   const qtyInCart = product ? (cart.items.find((item) => item.productId === product.id)?.qty ?? 0) : 0;
+  const isProductInCart = (candidateProductId: string) =>
+    cart.items.some((item) => item.productId === candidateProductId && item.qty > 0);
 
   return (
     <SharedProductDetails
@@ -73,6 +75,7 @@ export function CustomerProductDetailsScreen() {
       }}
       relatedItems={relatedQ.data ?? []}
       qtyInCart={qtyInCart}
+      isProductInCart={isProductInCart}
       allowVideos={false}
       viewerMode="CUSTOMER"
       onBack={() => nav.goBack()}
