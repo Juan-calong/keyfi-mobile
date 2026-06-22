@@ -250,26 +250,7 @@ export function OwnerBuyScreen() {
   const token = useAuthStore((s) => s.token);
   const activeRole = useAuthStore((s) => s.activeRole);
   const { cart, addItemMutation, setItemQtyMutation, removeItemMutation } = usePersistentCart({ token, activeRole });
-  const cartCount = cart.totals.itemsCount;
   const qtyById = useMemo(() => Object.fromEntries(cart.items.map((i) => [i.productId, i.qty])), [cart.items]);
-  const cartInc = (productId: string, amount = 1) => {
-    const currentQty = qtyById?.[productId] ?? 0;
-    if (currentQty > 0) {
-      setItemQtyMutation.mutate(
-        { productId, payload: { qty: currentQty + amount } },
-        { onError: (e: any) => showBanner("Erro ao atualizar carrinho", friendlyError(e).message) }
-      );
-      return;
-    }
-    addItemMutation.mutate(
-      { productId, qty: amount },
-      { onError: (e: any) => showBanner("Erro ao adicionar item", friendlyError(e).message) }
-    );
-  };
-  const cartRemove = (productId: string) =>
-    removeItemMutation.mutate(productId, {
-      onError: (e: any) => showBanner("Erro ao remover item", friendlyError(e).message),
-    });
 
   const addProductId = route.params?.addProductId as string | undefined;
   const highlightProductId = route.params?.highlightProductId as string | undefined;
@@ -287,6 +268,7 @@ export function OwnerBuyScreen() {
   const [q, setQ] = useState("");
   const [selectedCat, setSelectedCat] = useState<string>(ALL);
   const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const [banner, setBanner] = useState<null | { title: string; message: string }>(null);
   const [bannerKey, setBannerKey] = useState(0);
@@ -295,6 +277,27 @@ export function OwnerBuyScreen() {
     setBannerKey((k) => k + 1);
     setBanner({ title, message });
   }
+
+  const cartInc = useCallback((productId: string, amount = 1) => {
+    const currentQty = qtyById?.[productId] ?? 0;
+    if (currentQty > 0) {
+      setItemQtyMutation.mutate(
+        { productId, payload: { qty: currentQty + amount } },
+        { onError: (e: any) => showBanner("Erro ao atualizar carrinho", friendlyError(e).message) }
+      );
+      return;
+    }
+    addItemMutation.mutate(
+      { productId, qty: amount },
+      { onError: (e: any) => showBanner("Erro ao adicionar item", friendlyError(e).message) }
+    );
+  }, [addItemMutation, qtyById, setItemQtyMutation]);
+
+  const cartRemove = useCallback((productId: string) => {
+    removeItemMutation.mutate(productId, {
+      onError: (e: any) => showBanner("Erro ao remover item", friendlyError(e).message),
+    });
+  }, [removeItemMutation]);
 
   React.useEffect(() => {
     if (!banner) return;
@@ -362,6 +365,16 @@ const refetchAll = useCallback(async () => {
   lastAutoRefreshAtRef.current = Date.now();
 }, [categoriesQ, productsQ, promosQ, favoritesQ]);
 
+const handleManualRefresh = useCallback(async () => {
+  setManualRefreshing(true);
+
+  try {
+    await refetchAll();
+  } finally {
+    setManualRefreshing(false);
+  }
+}, [refetchAll]);
+
 useEffect(() => {
   const allLoaded =
     !categoriesQ.isLoading &&
@@ -395,7 +408,7 @@ useFocusEffect(
 
     if (elapsed < AUTO_REFRESH_MS) return;
 
-    void refetchAll();
+    refetchAll().catch(() => undefined);
   }, [
     categoriesQ.isLoading,
     productsQ.isLoading,
@@ -590,17 +603,21 @@ useFocusEffect(
     return () => clearTimeout(t1);
   }, [highlightProductId, productsAll, indexById, showPromos, initialCategoryId]);
 
-  const isLoading =
-    productsQ.isLoading ||
-    categoriesQ.isLoading ||
-    promosQ.isLoading ||
-    favoritesQ.isLoading;
+  const hasInitialData =
+    productsQ.data != null &&
+    categoriesQ.data != null &&
+    promosQ.data != null &&
+    favoritesQ.data != null;
+  const isInitialLoading =
+    !hasInitialData &&
+    (productsQ.isLoading ||
+      categoriesQ.isLoading ||
+      promosQ.isLoading ||
+      favoritesQ.isLoading);
   const isError = productsQ.isError || categoriesQ.isError || promosQ.isError;
 
   const openDetails = (productId: string) =>
     nav.navigate(OWNER_SCREENS.ProductDetails, { productId });
-
-  const goCart = () => nav.navigate(OWNER_SCREENS.Cart);
 
   return (
     <Screen style={styles.safe}>
@@ -612,13 +629,13 @@ useFocusEffect(
             <Text style={styles.chev}>‹</Text>
             <Text style={styles.backText}>Back</Text>
           </Pressable>
-          <View style={{ width: 28 }} />
+          <View style={styles.headerSpacer} />
         </View>
 
         {banner ? (
           <View style={styles.bannerWrap}>
             <View style={styles.bannerCard}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.bannerContent}>
                 <Text style={styles.bannerTitle}>{banner.title}</Text>
                 <Text style={styles.bannerMsg}>{banner.message}</Text>
               </View>
@@ -689,12 +706,12 @@ useFocusEffect(
         </View>
 
         <View style={styles.productsContainer}>
-          {isLoading ? (
+          {isInitialLoading ? (
             <Loading />
-          ) : isError ? (
+          ) : isError && !hasInitialData ? (
             <ErrorState
               onRetry={() => {
-                void refetchAll();
+                refetchAll().catch(() => undefined);
               }}
             />
           ) : (
@@ -729,21 +746,16 @@ useFocusEffect(
               }
               refreshControl={
                 <RefreshControl
-                  refreshing={
-                    productsQ.isRefetching ||
-                    categoriesQ.isRefetching ||
-                    promosQ.isRefetching ||
-                    favoritesQ.isRefetching
-                  }
+                  refreshing={manualRefreshing}
                   onRefresh={() => {
-                    void refetchAll();
+                    handleManualRefresh().catch(() => undefined);
                   }}
                   colors={["#C9A227"]}
                   tintColor="#C9A227"
                   progressBackgroundColor="#FFFFFF"
                 />
               }
-              renderItem={({ item, index }) => {
+              renderItem={({ item }) => {
                 const inCartQty = qtyById?.[item.id] ?? 0;
                 const inCart = inCartQty > 0;
 
@@ -853,6 +865,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  headerSpacer: {
+    width: 28,
   },
   chev: {
     fontSize: 28,
@@ -1012,6 +1027,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: -0.2,
+  },
+  bannerContent: {
+    flex: 1,
   },
 });
 

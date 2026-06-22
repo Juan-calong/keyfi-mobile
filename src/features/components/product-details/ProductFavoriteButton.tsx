@@ -157,6 +157,18 @@ function patchFavoriteData(
   return data;
 }
 
+function invalidateInactiveQuery(
+  queryClient: ReturnType<typeof useQueryClient>,
+  queryKey: QueryKey
+) {
+  queryClient
+    .invalidateQueries({
+      queryKey,
+      refetchType: "inactive",
+    })
+    .catch(() => undefined);
+}
+
 export function ProductFavoriteButton({
   productId,
   initialFavorited = false,
@@ -228,17 +240,15 @@ export function ProductFavoriteButton({
         );
       });
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["customer-favorites"] }),
-        queryClient.invalidateQueries({ queryKey: ["owner-favorites"] }),
-        queryClient.invalidateQueries({ queryKey: ["customer-home-products"] }),
-        queryClient.invalidateQueries({ queryKey: ["owner-home-products"] }),
-        queryClient.invalidateQueries({ queryKey: ["customer-home-promos-preview"] }),
-        queryClient.invalidateQueries({ queryKey: ["owner-home-promos-preview"] }),
-        queryClient.invalidateQueries({ queryKey: ["customer-products"] }),
-        queryClient.invalidateQueries({ queryKey: ["owner-products"] }),
-        queryClient.invalidateQueries({ queryKey: ["product"] }),
-      ]);
+      invalidateInactiveQuery(queryClient, ["customer-favorites"]);
+      invalidateInactiveQuery(queryClient, ["owner-favorites"]);
+      invalidateInactiveQuery(queryClient, ["customer-home-products"]);
+      invalidateInactiveQuery(queryClient, ["owner-home-products"]);
+      invalidateInactiveQuery(queryClient, ["customer-home-promos-preview"]);
+      invalidateInactiveQuery(queryClient, ["owner-home-promos-preview"]);
+      invalidateInactiveQuery(queryClient, ["customer-promos-active"]);
+      invalidateInactiveQuery(queryClient, ["owner-promos-active"]);
+      invalidateInactiveQuery(queryClient, ["product"]);
     },
 
     onError: (_error, _vars, context) => {
