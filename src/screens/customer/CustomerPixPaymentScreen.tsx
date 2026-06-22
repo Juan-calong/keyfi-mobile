@@ -292,7 +292,6 @@ React.useEffect(() => {
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: Platform.OS === "ios" ? Math.max(insets.top, 10) : 6 }}>
-        {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
 <View style={m.header}>
   <Pressable
@@ -304,7 +303,7 @@ React.useEffect(() => {
   </Pressable>
 
   <View pointerEvents="none" style={m.headerTitleWrap}>
-    <Text style={m.h1}>Pagamentos</Text>
+    <Text style={m.h1}>Pagar com PIX</Text>
   </View>
 
   <Pressable
@@ -394,10 +393,9 @@ React.useEffect(() => {
   contentContainerStyle={{ gap: 12, paddingBottom: 28 }}
   showsVerticalScrollIndicator={false}
 >
-  <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
 
   {method === "PIX" ? (
-    <PixPaymentSheet envelope={env} onViewOrders={() => navigation.navigate(CUSTOMER_SCREENS.Orders)} viewOrdersLabel="Ver meus pedidos" />
+    <PixPaymentSheet envelope={env} />
   ) : method === "BOLETO" ? (
     <BoletoPaymentSheet envelope={env} />
   ) : method === "CARD" ? (
@@ -453,11 +451,11 @@ React.useEffect(() => {
 
 const m = StyleSheet.create({
 
-  header: {
+header: {
   position: "relative",
   paddingHorizontal: 2,
-  paddingTop: 8,
-  paddingBottom: 12,
+  paddingTop: 0,
+  paddingBottom: 6,
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
@@ -467,8 +465,8 @@ headerTitleWrap: {
   position: "absolute",
   left: 56,
   right: 56,
-  top: 8,
-  bottom: 12,
+  top: 0,
+  bottom: 6,
   alignItems: "center",
   justifyContent: "center",
 },

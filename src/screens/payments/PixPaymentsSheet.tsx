@@ -11,12 +11,29 @@ import {
 import Clipboard from "@react-native-clipboard/clipboard";
 import QRCode from "react-native-qrcode-svg";
 
+const UI = {
+  background: "#F7F8FA",
+  card: "#FFFFFF",
+  primary: "#0067E6",
+  primaryPressed: "#0058C9",
+  primarySoft: "#EEF5FF",
+  text: "#111827",
+  text2: "#667085",
+  text3: "#8A94A6",
+  border: "#E6EAF0",
+  divider: "#EEF0F3",
+  warningBg: "#FFF7ED",
+  warningBorder: "#FDBA74",
+  warningText: "#9A3412",
+};
+
 function firstNonEmptyString(...values: any[]) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
       return value.trim();
     }
   }
+
   return null;
 }
 
@@ -33,6 +50,50 @@ function normalizeUrl(value: any) {
   }
 
   return null;
+}
+
+function toPositiveNumber(value: any) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().replace(",", ".");
+    const parsed = Number(normalized);
+
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function formatMoney(value: any) {
+  const amount = toPositiveNumber(value);
+  if (!amount) return null;
+
+  try {
+    return amount.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  } catch {
+    return `R$ ${amount.toFixed(2).replace(".", ",")}`;
+  }
+}
+
+function formatDateTime(value: any) {
+  if (!value) return null;
+
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return date.toLocaleString("pt-BR");
+  } catch {
+    return null;
+  }
 }
 
 export function PixPaymentSheet({
@@ -55,7 +116,32 @@ export function PixPaymentSheet({
     envelope?.paymentIntentId ||
     null;
 
-  const message = String(envelope?.ui?.message || "Aguardando pagamento…");
+  const method = firstNonEmptyString(
+    payment?.method,
+    envelope?.method,
+    raw?.payment?.method
+  );
+
+  const status = firstNonEmptyString(
+    payment?.status,
+    envelope?.status,
+    raw?.payment?.status
+  );
+
+  const amount = formatMoney(
+    payment?.amount ||
+      payment?.amountPaid ||
+      envelope?.order?.amountDue ||
+      envelope?.order?.totalAmount ||
+      envelope?.amount
+  );
+
+  const expiresAt = formatDateTime(
+    payment?.expiresAt ||
+      envelope?.expiresAt ||
+      raw?.payment?.expiresAt ||
+      raw?.payload?.expiresAt
+  );
 
   const pixCode = useMemo(() => {
     return firstNonEmptyString(
@@ -87,6 +173,7 @@ export function PixPaymentSheet({
 
     try {
       const supported = await Linking.canOpenURL(ticketUrl);
+
       if (!supported) {
         Alert.alert("Pagamento", "Não foi possível abrir este link no aparelho.");
         return;
@@ -118,195 +205,321 @@ export function PixPaymentSheet({
       showsVerticalScrollIndicator={false}
       bounces={false}
     >
-      <Text style={s.title}>Pagamento PIX</Text>
-
-      {paymentId ? <Text style={s.meta}>ID do pagamento: {paymentId}</Text> : null}
-
-      <Text style={s.message}>{message}</Text>
-
-      <View style={s.hairline} />
-
-      <View style={s.actions}>
-        <OutlineButton title="Copiar PIX (copia e cola)" onPress={onCopyPix} />
-
-        {hasTicketUrl ? (
-          <OutlineButton title="Abrir link do PIX" onPress={onOpen} />
-        ) : null}
-
-      {onViewOrders ? <OutlineButton title={viewOrdersLabel} onPress={onViewOrders} /> : null}
+      <View style={s.header}>
+        <Text style={s.subtitle}>
+          Escaneie o QR Code ou copie o código PIX.
+        </Text>
       </View>
 
       {hasPixCode ? (
-        <View style={s.qrWrap}>
-          <Text style={s.qrLabel}>QR para pagar com outro aparelho</Text>
-
-          <View style={s.qrBox}>
-            <QRCode value={pixCode} size={210} />
+        <>
+          <View style={[s.card, s.qrCard]}>
+            <View style={s.qrBox}>
+              <QRCode value={pixCode} size={210} />
+            </View>
           </View>
 
-          <View style={s.qrBottomSpacer} />
-        </View>
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Código PIX</Text>
+
+            <Text style={s.pixCode} selectable>
+              {pixCode}
+            </Text>
+
+            <ActionButton title="Copiar Código" onPress={onCopyPix} variant="primary" />
+          </View>
+        </>
       ) : (
-        <View style={s.warnBox}>
-          <Text style={s.warnTitle}>PIX criado, mas sem código visual</Text>
-          <Text style={s.warnText}>
+        <View style={[s.card, s.warningCard]}>
+          <Text style={s.warningTitle}>PIX criado, mas sem código visual</Text>
+          <Text style={s.warningText}>
             O pagamento existe, mas não chegou código suficiente para montar o QR no app.
           </Text>
+
+          {hasTicketUrl ? (
+            <View style={s.warningAction}>
+              <ActionButton title="Abrir link do PIX" onPress={onOpen} variant="primary" />
+            </View>
+          ) : null}
         </View>
       )}
+
+<View style={s.card}>
+  <Text style={s.cardTitle}>Detalhes do pagamento</Text>
+
+  <View style={s.details}>
+    <DetailRow label="Método" value={String(method || "PIX").toUpperCase()} />
+
+    {amount ? <DetailRow label="Valor" value={amount} accent /> : null}
+
+    {paymentId ? (
+      <DetailRow
+        label="ID do pagamento"
+        value={String(paymentId)}
+        selectable
+      />
+    ) : null}
+
+    {expiresAt ? <DetailRow label="Expira em" value={expiresAt} /> : null}
+  </View>
+</View>
+
+      {hasTicketUrl || onViewOrders ? (
+        <View style={s.actions}>
+          {hasTicketUrl && hasPixCode ? (
+            <ActionButton title="Abrir link do PIX" onPress={onOpen} variant="secondary" />
+          ) : null}
+
+          {onViewOrders ? (
+            <ActionButton
+              title={viewOrdersLabel}
+              onPress={onViewOrders}
+              variant="secondary"
+            />
+          ) : null}
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
 
-function OutlineButton({ title, onPress }: { title: string; onPress: () => void }) {
+function DetailRow({
+  label,
+  value,
+  accent = false,
+  selectable = false,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  selectable?: boolean;
+}) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.btn, pressed && { opacity: 0.85 }]}>
-      <Text style={s.btnText}>{title}</Text>
+    <View style={s.detailRow}>
+      <Text style={s.detailLabel}>{label}</Text>
+      <Text
+        style={[s.detailValue, accent && s.detailValueAccent]}
+        selectable={selectable}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ActionButton({
+  title,
+  onPress,
+  variant,
+}: {
+  title: string;
+  onPress: () => void;
+  variant: "primary" | "secondary";
+}) {
+  const isPrimary = variant === "primary";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        s.actionBtn,
+        isPrimary ? s.actionBtnPrimary : s.actionBtnSecondary,
+        pressed && {
+          opacity: 0.9,
+          transform: [{ scale: 0.995 }],
+        },
+      ]}
+    >
+      <Text style={isPrimary ? s.actionTextPrimary : s.actionTextSecondary}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
   wrap: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.20)",
+    backgroundColor: UI.background,
     borderRadius: 18,
   },
 
   content: {
-    padding: 14,
-    paddingBottom: 24,
+    padding: 16,
+    paddingBottom: 22,
+    gap: 12,
+  },
+
+  header: {
+    paddingTop: 2,
+    paddingBottom: 2,
+    alignItems: "center",
   },
 
   title: {
-    color: "#000000",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: -0.2,
+    color: UI.text,
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    textAlign: "center",
   },
 
-  meta: {
-    marginTop: 6,
-    color: "#000000",
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 310,
+    color: UI.text2,
     fontSize: 12,
-    fontWeight: "700",
-    opacity: 0.75,
+    fontWeight: "500",
+    lineHeight: 17,
+    textAlign: "center",
   },
 
-  message: {
-    marginTop: 10,
-    color: "#000000",
-    fontSize: 13,
-    fontWeight: "600",
-    opacity: 0.82,
-    lineHeight: 18,
-  },
-
-  hairline: {
-    marginTop: 14,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(0,0,0,0.18)",
-    width: "100%",
-  },
-
-  actions: {
-    marginTop: 14,
-    gap: 10,
-  },
-
-  btn: {
-    height: 52,
+  card: {
+    backgroundColor: UI.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#000000",
-    backgroundColor: "#FFFFFF",
+    borderColor: UI.border,
+    padding: 16,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+
+  qrCard: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 18,
   },
 
-  btnText: {
-    color: "#000000",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: -0.2,
-    textAlign: "center",
-  },
-
-  qrWrap: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-
-  qrLabel: {
-    color: "#000000",
+  cardHint: {
+    color: UI.text2,
     fontSize: 12,
-    fontWeight: "700",
-    opacity: 0.75,
-    marginBottom: 10,
+    fontWeight: "500",
+    lineHeight: 16,
     textAlign: "center",
+    marginBottom: 14,
   },
 
   qrBox: {
-    width: 240,
-    height: 240,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.20)",
-    backgroundColor: "#FFFFFF",
+    width: 238,
+    height: 238,
     alignItems: "center",
     justifyContent: "center",
-    padding: 10,
+    backgroundColor: "#FFFFFF",
   },
 
-  qrBottomSpacer: {
-    height: 18,
-  },
-
-  warnBox: {
-    marginTop: 16,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(245,158,11,0.30)",
-    backgroundColor: "rgba(245,158,11,0.10)",
-  },
-
-  warnTitle: {
-    color: "#92400E",
+  cardTitle: {
+    color: UI.text,
     fontSize: 13,
-    fontWeight: "900",
+    fontWeight: "800",
+    letterSpacing: -0.1,
   },
 
-  warnText: {
-    marginTop: 6,
-    color: "#92400E",
-    fontSize: 12,
-    fontWeight: "700",
+  pixCode: {
+    marginTop: 10,
+    marginBottom: 14,
+    color: UI.text,
+    fontSize: 11,
+    fontWeight: "500",
     lineHeight: 17,
   },
 
-  tipBox: {
+  actionBtn: {
+    height: 48,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+
+  actionBtnPrimary: {
+    backgroundColor: UI.primary,
+  },
+
+  actionBtnSecondary: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CFE0FF",
+  },
+
+  actionTextPrimary: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.1,
+  },
+
+  actionTextSecondary: {
+    color: UI.primary,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: -0.1,
+  },
+
+  details: {
+    marginTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: UI.divider,
+  },
+
+  detailRow: {
+    minHeight: 38,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: UI.divider,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 14,
+  },
+
+  detailLabel: {
+    color: UI.text2,
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
+
+  detailValue: {
+    flex: 1,
+    color: UI.text,
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    textAlign: "right",
+  },
+
+  detailValueAccent: {
+    color: UI.primary,
+    fontWeight: "800",
+  },
+
+  actions: {
+    gap: 10,
+  },
+
+  warningCard: {
+    borderColor: UI.warningBorder,
+    backgroundColor: UI.warningBg,
+  },
+
+  warningTitle: {
+    color: UI.warningText,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  warningText: {
+    marginTop: 8,
+    color: UI.warningText,
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 17,
+  },
+
+  warningAction: {
     marginTop: 14,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.18)",
-    backgroundColor: "rgba(37,99,235,0.06)",
-  },
-
-  tipTitle: {
-    color: "#1D4ED8",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-
-  tipText: {
-    marginTop: 6,
-    color: "#1E3A8A",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 17,
   },
 });

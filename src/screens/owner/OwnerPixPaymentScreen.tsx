@@ -290,7 +290,6 @@ export function OwnerPixPaymentScreen({ route }: any) {
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: Platform.OS === "ios" ? Math.max(insets.top, 10) : 6 }}>
-        {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
 
 <View style={m.header}>
   <Pressable
@@ -302,7 +301,7 @@ export function OwnerPixPaymentScreen({ route }: any) {
   </Pressable>
 
   <View pointerEvents="none" style={m.headerTitleWrap}>
-    <Text style={m.h1}>Pagamentos</Text>
+    <Text style={m.h1}>Pagar com PIX</Text>
   </View>
 
   <Pressable
@@ -376,10 +375,8 @@ export function OwnerPixPaymentScreen({ route }: any) {
   contentContainerStyle={{ gap: 12, paddingBottom: 28 }}
   showsVerticalScrollIndicator={false}
 >
-                <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
-
                 {method === "PIX" ? (
-                  <PixPaymentSheet envelope={env} onViewOrders={() => navigation.navigate(OWNER_SCREENS.Orders)} viewOrdersLabel="Ver pedidos" />
+                  <PixPaymentSheet envelope={env} />
                 ) : method === "BOLETO" ? (
                   <>
                     <BoletoPaymentSheet envelope={env} />
@@ -400,18 +397,6 @@ export function OwnerPixPaymentScreen({ route }: any) {
                 ) : (
                   <StatusCard env={env} onRefresh={() => activeQ.refetch()} />
                 )}
-
-                <Card style={{ padding: 14, borderRadius: 18 }}>
-                  <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>Pagamento ativo</Text>
-                  <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 8 }}>
-                    Método: {String(payment?.method ?? "—")} • Status: {String(payment?.status ?? "—")}
-                  </Text>
-                  {payment?.expiresAt ? (
-                    <Text style={{ color: t.colors.text2, fontWeight: "800", marginTop: 6 }}>
-                      Expira em: {new Date(payment.expiresAt).toLocaleString("pt-BR")}
-                    </Text>
-                  ) : null}
-                </Card>
               </ScrollView>
             )}
           </>
@@ -428,8 +413,8 @@ const m = StyleSheet.create({
 header: {
   position: "relative",
   paddingHorizontal: 2,
-  paddingTop: 8,
-  paddingBottom: 12,
+  paddingTop: 0,
+  paddingBottom: 6,
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
@@ -439,8 +424,8 @@ headerTitleWrap: {
   position: "absolute",
   left: 56,
   right: 56,
-  top: 8,
-  bottom: 12,
+  top: 0,
+  bottom: 6,
   alignItems: "center",
   justifyContent: "center",
 },
