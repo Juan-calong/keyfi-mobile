@@ -280,11 +280,12 @@ export function SharedFavoritesScreen({
 </View>
       ) : normalizedItems.length === 0 ? (
         <ScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={[
             s.emptyScrollContent,
             {
               paddingHorizontal: horizontalPadding,
-              paddingBottom: Math.max(insets.bottom + 130, 150),
+              paddingBottom: Math.max(insets.bottom + 24, 32),
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -299,23 +300,33 @@ export function SharedFavoritesScreen({
               emptyCardMaxWidth ? { maxWidth: emptyCardMaxWidth } : null,
             ]}
           >
-            <View style={s.emptyIconCircle}>
-              <Icon name="heart-outline" size={34} color={GOLD} />
+            <View style={s.emptyContent}>
+              <View style={s.emptyIconCircle}>
+                <Icon name="heart-outline" size={30} color={GOLD} />
+              </View>
+
+              <Text maxFontSizeMultiplier={1.15} style={s.emptyTitle}>
+                Nenhum favorito ainda
+              </Text>
+              <Text
+                maxFontSizeMultiplier={1.15}
+                numberOfLines={3}
+                style={s.emptyText}
+              >
+                Toque no coração de um produto para salvá-lo aqui.
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                style={s.emptyCtaButton}
+                onPress={onExploreProducts}
+              >
+                <Text maxFontSizeMultiplier={1.15} style={s.emptyCtaText}>
+                  Explorar produtos
+                </Text>
+                <Icon name="arrow-forward" size={16} color="#FFFDF8" />
+              </Pressable>
             </View>
-
-            <Text style={s.emptyTitle}>Nenhum favorito ainda</Text>
-            <Text style={s.emptyText}>
-              Toque no coração de um produto para salvá-lo aqui.
-            </Text>
-
-            <Pressable
-              accessibilityRole="button"
-              style={s.emptyCtaButton}
-              onPress={onExploreProducts}
-            >
-              <Text style={s.emptyCtaText}>Explorar produtos</Text>
-              <Icon name="arrow-forward" size={16} color="#FFFDF8" />
-            </Pressable>
           </LinearGradient>
         </ScrollView>
       ) : (
@@ -469,42 +480,66 @@ const s = StyleSheet.create({
   emptyCardPremium: {
     width: "100%",
     alignSelf: "center",
+    minHeight: 264,
     borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
+    paddingHorizontal: 22,
+    paddingTop: 30,
+    paddingBottom: 36,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: BORDER,
+    overflow: "visible",
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
+  emptyContent: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyIconCircle: {
-    width: 70,
-    height: 70,
+    width: 62,
+    height: 62,
     borderRadius: 999,
     backgroundColor: "rgba(200,164,93,0.12)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
   },
-  emptyTitle: { fontSize: 20, fontWeight: "900", color: "#111" },
+  emptyTitle: {
+    width: "100%",
+    maxWidth: 320,
+    alignSelf: "center",
+    textAlign: "center",
+    flexShrink: 1,
+    fontSize: 19,
+    fontWeight: "900",
+    color: "#111",
+  },
   emptyText: {
     marginTop: 8,
+    width: "100%",
+    maxWidth: 320,
+    alignSelf: "center",
     textAlign: "center",
-    fontSize: 13.5,
-    lineHeight: 21,
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 20,
     color: MUTED,
     fontWeight: "600",
   },
   emptyCtaButton: {
+    alignSelf: "center",
     marginTop: 18,
+    marginBottom: 4,
     minHeight: 46,
     borderRadius: 999,
     backgroundColor: GOLD,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
