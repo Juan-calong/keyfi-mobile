@@ -27,6 +27,8 @@ import { useAuthStore } from "../../stores/auth.store";
 
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
+import { LegalDocumentModal } from "../../legal/LegalDocumentModal";
+import { TERMS_OF_USE_V2 } from "../../legal/termsOfUse.v2";
 
 const COLORS = {
   bg: "#FAFAFA",
@@ -94,6 +96,7 @@ export function RegisterSellerScreen() {
   const setNeedsOnboarding = useAuthStore((s) => s.setNeedsOnboarding);
 
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
+  const [termsVisible, setTermsVisible] = useState(false);
   function showModal(title: string, message: string) {
     setAlert({ title, message });
   }
@@ -213,6 +216,7 @@ export function RegisterSellerScreen() {
         email: email.trim().toLowerCase(),
         password,
         cnpj: cnpjDigits,
+        termsAccepted: true,
       });
 
       const normalizedEmail = email.trim().toLowerCase();
@@ -446,7 +450,6 @@ export function RegisterSellerScreen() {
                   />
                 </View>
                 <ErrorText show={showCnpjErr} text="CNPJ inválido." />
-
                 <View style={styles.termsGap} />
                 <View style={styles.termsRow}>
                   <Pressable
@@ -465,26 +468,18 @@ export function RegisterSellerScreen() {
                   </Pressable>
 
                   <Text style={styles.termsText}>
-                    Eu li e aceito os{" "}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => showModal("Termos", "Abrir link/rota aqui.")}
-                    >
+                    Li e concordo com os{" "}
+                    <Text style={styles.termsLink} onPress={() => setTermsVisible(true)}>
                       Termos de Uso
-                    </Text>{" "}
-                    e a{" "}
-                    <Text
-                      style={styles.termsLink}
-                      onPress={() => showModal("Privacidade", "Abrir link/rota aqui.")}
-                    >
-                      Política de Privacidade
                     </Text>
-                    .
+                    {", Pol\u00edtica de Privacidade, Compras, Devolu\u00e7\u00f5es e Regulamento de Comiss\u00f5es da KeyFi."}
+                    {"\n"}
+                    Declaro ser maior de 18 anos.
                   </Text>
                 </View>
                 <ErrorText
                   show={showAgreeErr}
-                  text="Você precisa aceitar os termos para continuar."
+                  text={"Voc\u00ea precisa aceitar os termos para continuar."}
                 />
               </View>
             </Container>
@@ -527,6 +522,14 @@ export function RegisterSellerScreen() {
             title={alert?.title}
             message={alert?.message}
             onClose={() => setAlert(null)}
+          />
+
+          <LegalDocumentModal
+            visible={termsVisible}
+            title={TERMS_OF_USE_V2.title}
+            subtitle={`Vers\u00e3o ${TERMS_OF_USE_V2.version} \u2022 vig\u00eancia em ${TERMS_OF_USE_V2.publishedAt}`}
+            content={TERMS_OF_USE_V2.content}
+            onClose={() => setTermsVisible(false)}
           />
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>

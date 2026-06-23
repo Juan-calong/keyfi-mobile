@@ -32,6 +32,7 @@ import type { AuthStackParamList } from "../../navigation/AuthStack";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
 import { getPendingInvite } from "../../core/airbridge/invite-link.service";
+import { TermsAcceptanceField } from "../../legal/TermsAcceptanceField";
 
 const POST_SIGNUP_REFERRAL_PROMPT_KEY = "@keyfi/post_signup_referral_prompt";
 
@@ -289,6 +290,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [secure, setSecure] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Step 2
   const [cep, setCep] = useState("");
@@ -346,6 +348,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
     state: false,
     cpf: false,
     phone: false,
+    agree: false,
   });
 
   const nameOk = name.trim().length >= 2;
@@ -377,7 +380,8 @@ export function RegisterCustomerScreen({ navigation }: Props) {
     cityOk &&
     stateOk &&
     cpfOk &&
-    phoneOk;
+    phoneOk &&
+    termsAccepted;
 
   function goLogin() {
     Keyboard.dismiss();
@@ -422,6 +426,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
       state: true,
       cpf: true,
       phone: true,
+      agree: true,
     }));
 
     if (!canStep2 || loading || inCooldown) return;
@@ -448,6 +453,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
 
         cpf: cpfDigits,
         phone: phoneDigits,
+        termsAccepted: true,
       });
 
       const normalizedEmail = email.trim().toLowerCase();
@@ -504,6 +510,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
 
   const showCpfErr = touched.cpf && !cpfOk;
   const showPhoneErr = touched.phone && !phoneOk;
+  const showAgreeErr = touched.agree && !termsAccepted;
 
   const left = secondsLeft();
   const ctaDisabled =
@@ -836,6 +843,16 @@ export function RegisterCustomerScreen({ navigation }: Props) {
                       returnKeyType="done"
                       onSubmitEditing={submit}
                     />
+
+                    <View style={styles.termsGap} />
+                    <TermsAcceptanceField
+                      checked={termsAccepted}
+                      error={showAgreeErr}
+                      onChange={(checked) => {
+                        setTermsAccepted(checked);
+                        setTouched((s) => ({ ...s, agree: true }));
+                      }}
+                    />
                   </>
                 )}
               </View>
@@ -1009,6 +1026,10 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 24,
+  },
+
+  termsGap: {
+    height: 18,
   },
 
   fieldLabelRow: {

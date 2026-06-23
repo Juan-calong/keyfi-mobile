@@ -31,6 +31,7 @@ import { endpoints } from "../../core/api/endpoints";
 import { useAuthStore } from "../../stores/auth.store";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { IosAlert } from "../../ui/components/IosAlert";
+import { TermsAcceptanceField } from "../../legal/TermsAcceptanceField";
 import {
   clearPendingInvite,
   getPendingInvite,
@@ -416,6 +417,7 @@ export function RegisterSalonScreen() {
 
   const [referralToken, setReferralToken] = useState("");
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const lastCepFetchedRef = useRef("");
   const lastCnpjFetchedRef = useRef("");
@@ -579,6 +581,7 @@ export function RegisterSalonScreen() {
     complement: false,
 
     referralToken: false,
+    agree: false,
   });
 
   const ownerNameOk = ownerName.trim().length >= 2;
@@ -621,7 +624,8 @@ export function RegisterSalonScreen() {
     districtOk &&
     cityOk &&
     stateOk &&
-    tokenOk;
+    tokenOk &&
+    termsAccepted;
 
   function goLogin() {
     Keyboard.dismiss();
@@ -655,6 +659,7 @@ export function RegisterSalonScreen() {
       state: true,
       complement: true,
       referralToken: true,
+      agree: true,
     }));
   }
 
@@ -710,6 +715,7 @@ export function RegisterSalonScreen() {
           complement: complement.trim() || "",
         },
         referralToken: tokenNorm ? tokenNorm : undefined,
+        termsAccepted: true,
       }, {
         headers: {
           "Idempotency-Key": idempotencyKey,
@@ -773,6 +779,7 @@ export function RegisterSalonScreen() {
   const showCityErr = touched.city && !cityOk;
   const showStateErr = touched.state && !stateOk;
   const showTokenErr = touched.referralToken && !tokenOk;
+  const showAgreeErr = touched.agree && !termsAccepted;
 
   const topPad = Math.max(insets.top, 10);
 
@@ -1267,6 +1274,16 @@ export function RegisterSalonScreen() {
                       returnKeyType="done"
                       onSubmitEditing={submit}
                     />
+
+                    <View style={styles.termsGap} />
+                    <TermsAcceptanceField
+                      checked={termsAccepted}
+                      error={showAgreeErr}
+                      onChange={(checked) => {
+                        setTermsAccepted(checked);
+                        setTouched((s) => ({ ...s, agree: true }));
+                      }}
+                    />
                   </>
                 )}
               </View>
@@ -1434,6 +1451,10 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 24,
+  },
+
+  termsGap: {
+    height: 18,
   },
 
   row: {

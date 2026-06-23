@@ -79,6 +79,17 @@ function getCardLabel(card: SavedPaymentCard) {
   return `${brand} final ${card.last4} • ${month}/${year.slice(-2)}`;
 }
 
+function getSafeSavedCardLabel(card: SavedPaymentCard) {
+  const brand = String(card.brand || "").trim() || "Cartao";
+  const last4 = String(card.last4 || "").trim();
+  const month = String(card.expirationMonth || "").padStart(2, "0");
+  const year = String(card.expirationYear || "");
+  const suffix = last4 ? ` final ${last4}` : "";
+  return `${brand}${suffix} | ${month}/${year.slice(-2)}`;
+}
+
+void getCardLabel;
+
 function buildHtml(args: {
   publicKey: string;
   amount: number;
@@ -119,14 +130,17 @@ function buildHtml(args: {
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
   <style>
-    html,body{margin:0;padding:0;background:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-    body{padding:8px}
-    .field-wrap{margin-bottom:12px}
-    .row{display:flex;gap:12px}
-    .col{flex:1}
-    .label{font-size:14px;color:#111;margin-bottom:6px;font-weight:700}
-    .f{border:1px solid #ddd;border-radius:10px;min-height:52px;height:52px;width:100%;background:#fff;box-sizing:border-box;overflow:hidden;position:relative}
-    .f iframe{width:100% !important;height:100% !important;border:0 !important;display:block !important;padding:0 8px !important;box-sizing:border-box}
+    html,body{margin:0;padding:0;background:transparent;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0f172a}
+    body{padding:0}
+    form{display:block;width:100%}
+    .field-wrap{margin-bottom:10px}
+    .field-wrap:last-child{margin-bottom:0}
+    .row{display:flex;gap:10px}
+    .col{flex:1;min-width:0}
+    .label{font-size:12px;color:#334155;margin-bottom:6px;font-weight:700;letter-spacing:.01em}
+    .f{border:1px solid #dbe3ee;border-radius:10px;min-height:44px;height:44px;width:100%;background:#ffffff;box-sizing:border-box;overflow:hidden;position:relative}
+    .f:focus-within{border-color:#0b5cff;box-shadow:0 0 0 2px rgba(11,92,255,.08)}
+    .f iframe{width:100% !important;height:100% !important;border:0 !important;display:block !important;padding:0 10px !important;box-sizing:border-box}
   </style></head>
   <body><form id="form-checkout" onsubmit="return false;">${fieldsMarkup}</form>
   <script>(function(){
@@ -932,16 +946,44 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
       ? "Processando..."
       : `Pagar ${formattedAmount ? `R$ ${formattedAmount}` : ""}`;
 
-  const webviewHeight = entryMode === "saved_card_payment" ? 110 : 220;
+  const webviewHeight = entryMode === "saved_card_payment" ? 78 : 154;
+
+  const screenTitle =
+    entryMode === "add_saved_card" ? "Salvar cartao" : "Pagar com Cartao";
+
+
+
+
+  const cardVisualNumber =
+    entryMode === "saved_card_payment" && selectedSavedCard?.last4
+      ? `•••• •••• •••• ${selectedSavedCard.last4}`
+      : "•••• •••• •••• ••••";
+
+  const cardVisualHint =
+    entryMode === "saved_card_payment"
+      ? "Informe somente o CVV no campo seguro"
+      : entryMode === "add_saved_card"
+      ? "Dados protegidos para salvar"
+      : "Preencha os dados para concluir";
+
+  const genericHeroTitle = "Cartao de credito";
+  const genericCardVisualName =
+    entryMode === "saved_card_payment" && selectedSavedCard
+      ? getSafeSavedCardLabel(selectedSavedCard).toUpperCase()
+      : "CARTAO DE CREDITO";
+  const genericCardVisualNumber = ".... .... .... ....";
+
+  void cardVisualNumber;
+  void cardVisualHint;
 
   return (
     <Screen>
       <SafeAreaView style={s.safeArea}>
         <View style={s.header}>
           <Pressable onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Text style={s.backIcon}>{"<"}</Text>
+            <Text style={s.backIcon}>{"‹"}</Text>
           </Pressable>
-          <Text style={s.headerTitle}>Pagamento</Text>
+          <Text style={s.headerTitle}>{screenTitle}</Text>
           <View style={s.spacer} />
         </View>
 
@@ -953,82 +995,160 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             contentContainerStyle={s.content}
+            showsVerticalScrollIndicator={false}
           >
-            {!!error && <Text style={s.error}>{error}</Text>}
-            {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
-            {!!status && <Text style={s.status}>{status}</Text>}
+            <View style={s.heroCard}>
+              <Text style={s.heroTitle}>{genericHeroTitle}</Text>
+
+              <View style={s.cardArt}>
+                <View style={s.cardArtTopRow}>
+                  <View style={s.cardChip} />
+                  <View style={s.cardBadge}>
+                    <Text style={s.cardBadgeText}>CARD</Text>
+                  </View>
+                </View>
+
+                <View style={s.cardArtTitleBlock}>
+                  <Text style={s.cardArtTitle}>Cartao de credito</Text>
+                </View>
+
+                <Text style={s.cardNumberPreview}>{genericCardVisualNumber}</Text>
+
+                <View style={s.cardArtBottomRow}>
+                  <View style={s.cardOwnerBlock}>
+                    <Text style={s.cardTinyLabel}>REFERENCIA</Text>
+                    <Text style={s.cardOwner} numberOfLines={1}>
+                      {genericCardVisualName}
+                    </Text>
+                  </View>
+
+                </View>
+              </View>
+            </View>
+
+            {(!!error || !!statusTitle || !!status) && (
+              <View style={[s.feedbackCard, error ? s.feedbackCardError : s.feedbackCardInfo]}>
+                {!!statusTitle && <Text style={s.statusTitle}>{statusTitle}</Text>}
+                {!!error && <Text style={s.error}>{error}</Text>}
+                {!!status && <Text style={s.status}>{status}</Text>}
+              </View>
+            )}
 
             {savedCardsLoading ? (
-              <View style={s.savedCardsLoading}>
-                <ActivityIndicator color="#111" />
-                <Text style={s.savedCardsLoadingText}>Carregando cartoes salvos...</Text>
+              <View style={s.card}>
+                <View style={s.inlineLoadingRow}>
+                  <ActivityIndicator color="#0B5CFF" />
+                  <Text style={s.inlineLoadingText}>Carregando cartoes salvos...</Text>
+                </View>
               </View>
             ) : null}
 
             {savedCardsFeatureEnabled ? (
-              <View style={s.savedCardsSection}>
-                <Text style={s.sectionTitle}>Cartoes salvos</Text>
+              <View style={s.card}>
+                <View style={s.sectionHeader}>
+                  <View>
+                    <Text style={s.sectionTitle}>Cartoes salvos</Text>
+                    <Text style={s.sectionSubtitle}>
+                      Escolha um cartao salvo ou use outro cartao.
+                    </Text>
+                  </View>
+                </View>
 
-                {savedCards.length ? (
-                  savedCards.map((card) => {
-                    const selected = selectedSavedCardId === card.id;
-                    return (
-                      <View
-                        key={card.id}
-                        style={[s.savedCardItem, selected && s.savedCardItemSelected]}
-                      >
-                        <View style={s.savedCardInfo}>
-                          <Text style={s.savedCardTitle}>{getCardLabel(card)}</Text>
-                          <Text style={s.savedCardMeta}>
-                            {card.isDefault ? "Padrao" : "Salvo"}
-                          </Text>
-                        </View>
-
-                        <Pressable
-                          onPress={() => onUseSavedCard(card)}
-                          style={[s.savedCardButton, selected && s.savedCardButtonActive]}
+                <View style={s.savedCardsList}>
+                  {savedCards.length ? (
+                    savedCards.map((card) => {
+                      const selected = selectedSavedCardId === card.id;
+                      return (
+                        <View
+                          key={card.id}
+                          style={[
+                            s.savedCardItem,
+                            selected && s.savedCardItemSelected,
+                          ]}
                         >
-                          <Text
+                          <View style={s.savedCardLeft}>
+                            <View
+                              style={[
+                                s.savedCardIcon,
+                                selected && s.savedCardIconSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  s.savedCardIconText,
+                                  selected && s.savedCardIconTextSelected,
+                                ]}
+                              >
+                                {selected ? "✓" : "•"}
+                              </Text>
+                            </View>
+
+                            <View style={s.savedCardInfo}>
+                              <Text style={s.savedCardTitle}>
+                                {getSafeSavedCardLabel(card)}
+                              </Text>
+                              <Text style={s.savedCardMeta}>
+                                {card.isDefault ? "Padrao" : "Salvo"} • tokenizado
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Pressable
+                            onPress={() => onUseSavedCard(card)}
                             style={[
-                              s.savedCardButtonText,
-                              selected && s.savedCardButtonTextActive,
+                              s.savedCardButton,
+                              selected && s.savedCardButtonActive,
                             ]}
                           >
-                            {selected && entryMode === "saved_card_payment"
-                              ? "Selecionado"
-                              : "Usar este cartao"}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    );
-                  })
-                ) : (
-                  <Text style={s.emptySavedCardsText}>
-                    Nenhum cartao salvo disponivel.
-                  </Text>
-                )}
+                            <Text
+                              style={[
+                                s.savedCardButtonText,
+                                selected && s.savedCardButtonTextActive,
+                              ]}
+                            >
+                              {selected && entryMode === "saved_card_payment"
+                                ? "Selecionado"
+                                : "Usar"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })
+                  ) : (
+                    <Text style={s.emptySavedCardsText}>
+                      Nenhum cartao salvo disponivel.
+                    </Text>
+                  )}
+                </View>
 
                 <View style={s.savedCardActions}>
-                  <Pressable onPress={onUseAnotherCard} style={s.secondaryInlineBtn}>
-                    <Text style={s.secondaryInlineBtnText}>Usar outro cartao</Text>
+                  <Pressable onPress={onUseAnotherCard} style={s.ghostPillBtn}>
+                    <Text style={s.ghostPillBtnText}>Usar outro cartao</Text>
                   </Pressable>
 
-                  <Pressable onPress={onAddSavedCard} style={s.secondaryInlineBtn}>
-                    <Text style={s.secondaryInlineBtnText}>Adicionar cartao salvo</Text>
+                  <Pressable onPress={onAddSavedCard} style={s.ghostPillBtn}>
+                    <Text style={s.ghostPillBtnText}>Adicionar cartao</Text>
                   </Pressable>
                 </View>
               </View>
             ) : null}
 
             {entryMode !== "saved_card_payment" ? (
-              <>
-                <Text style={s.sectionTitle}>Dados do Titular</Text>
+              <View style={s.card}>
+                <View style={s.sectionHeader}>
+                  <View>
+                    <Text style={s.sectionTitle}>Dados do titular</Text>
+                    <Text style={s.sectionSubtitle}>
+                      Necessario para identificar o pagador.
+                    </Text>
+                  </View>
+                </View>
 
                 <View style={s.fieldGroup}>
                   <Text style={s.label}>Nome do titular</Text>
                   <TextInput
-                    placeholder="Ex: Joao Silva"
-                    placeholderTextColor="#6B7280"
+                    placeholder="Como aparece no cartao"
+                    placeholderTextColor="#94A3B8"
                     value={name}
                     onChangeText={setName}
                     style={s.input}
@@ -1040,26 +1160,28 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
                   />
                 </View>
 
-                <View style={s.fieldGroup}>
-                  <Text style={s.label}>CPF ou CNPJ</Text>
-                  <TextInput
-                    placeholder="Somente numeros"
-                    placeholderTextColor="#6B7280"
-                    keyboardType="number-pad"
-                    value={doc}
-                    onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
-                    style={s.input}
-                    maxLength={14}
-                    underlineColorAndroid="transparent"
-                    returnKeyType="next"
-                  />
+                <View style={s.rowFields}>
+                  <View style={s.fieldColumn}>
+                    <Text style={s.label}>CPF ou CNPJ</Text>
+                    <TextInput
+                      placeholder="Somente numeros"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="number-pad"
+                      value={doc}
+                      onChangeText={(v) => setDoc(onlyDigits(v).slice(0, 14))}
+                      style={s.input}
+                      maxLength={14}
+                      underlineColorAndroid="transparent"
+                      returnKeyType="next"
+                    />
+                  </View>
                 </View>
 
                 <View style={s.fieldGroup}>
                   <Text style={s.label}>Email</Text>
                   <TextInput
                     placeholder="email@exemplo.com"
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor="#94A3B8"
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
@@ -1071,31 +1193,128 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
                     autoComplete="email"
                   />
                 </View>
-              </>
+              </View>
             ) : selectedSavedCard ? (
-              <View style={s.selectedCardSummary}>
-                <Text style={s.sectionTitle}>Cartao selecionado</Text>
-                <Text style={s.selectedCardSummaryText}>{getCardLabel(selectedSavedCard)}</Text>
-                <Text style={s.selectedCardHint}>
-                  Informe apenas o CVV no campo seguro abaixo.
-                </Text>
+              <View style={s.card}>
+                <View style={s.sectionHeader}>
+                  <View>
+                    <Text style={s.sectionTitle}>Cartao selecionado</Text>
+                    <Text style={s.sectionSubtitle}>
+                      O numero do cartao nao fica salvo no app.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={s.selectedCardSummary}>
+                  <Text style={s.selectedCardSummaryText}>
+                    {getSafeSavedCardLabel(selectedSavedCard)}
+                  </Text>
+                  <Text style={s.selectedCardHint}>
+                    Informe apenas o CVV no campo seguro abaixo.
+                  </Text>
+                </View>
               </View>
             ) : null}
 
-            <View style={s.divider} />
+            <View style={s.card}>
+              <View style={s.sectionHeader}>
+                <View>
+                  <Text style={s.sectionTitle}>
+                    {entryMode === "add_saved_card"
+                      ? "Adicionar cartao salvo"
+                      : "Dados do cartao"}
+                  </Text>
+                </View>
+              </View>
 
-            <Text style={s.sectionTitle}>
-              {entryMode === "add_saved_card" ? "Adicionar cartao salvo" : "Dados do Cartao"}
-            </Text>
+              {!!html && (
+                <View style={s.secureFieldsBox}>
+                  {!fieldsMounted ? (
+                    <View style={s.webLoadingRow}>
+                      <ActivityIndicator color="#0B5CFF" size="small" />
+                      <Text style={s.webLoadingText}>
+                        Carregando formulario seguro...
+                      </Text>
+                    </View>
+                  ) : null}
 
-            <View style={s.fieldGroup}>
-              <Text style={s.label}>Parcelamento</Text>
+                  <WebView
+                    ref={webRef}
+                    source={{
+                      html,
+                      baseUrl: "https://www.mercadopago.com.br/",
+                    }}
+                    originWhitelist={["*"]}
+                    onMessage={onMessage}
+                    javaScriptEnabled
+                    domStorageEnabled
+                    incognito={false}
+                    setSupportMultipleWindows={false}
+                    javaScriptCanOpenWindowsAutomatically={false}
+                    mixedContentMode="never"
+                    allowFileAccess={false}
+                    style={[
+                      s.webview,
+                      { height: webviewHeight, minHeight: webviewHeight },
+                    ]}
+                    onLoadEnd={() => setWebLoaded(true)}
+                    onShouldStartLoadWithRequest={(req) => {
+                      try {
+                        const url = String(req.url || "");
+
+                        if (url.startsWith("about:blank")) return true;
+                        if (url.startsWith("data:text")) return true;
+                        if (url.startsWith("blob:")) return true;
+
+                        if (url === "https://mercadopago.com.br/") return true;
+                        if (url === "https://www.mercadopago.com.br/") return true;
+
+                        const host = url
+                          .replace(/^https?:\/\//i, "")
+                          .split("/")[0]
+                          .toLowerCase();
+
+                        if (host === "sdk.mercadopago.com") return true;
+                        if (host === "mercadopago.com") return true;
+                        if (host.endsWith(".mercadopago.com")) return true;
+                        if (host === "mercadopago.com.br") return true;
+                        if (host.endsWith(".mercadopago.com.br")) return true;
+                        if (host === "mercadolibre.com") return true;
+                        if (host.endsWith(".mercadolibre.com")) return true;
+                        if (host === "mercadolibrestatic.com") return true;
+                        if (host.endsWith(".mercadolibrestatic.com")) return true;
+                        if (host === "mlstatic.com") return true;
+                        if (host.endsWith(".mlstatic.com")) return true;
+
+                        return false;
+                      } catch {
+                        return String(req.url || "").startsWith("about:blank");
+                      }
+                    }}
+                  />
+                </View>
+              )}
+
+            </View>
+
+            <View style={s.card}>
+              <View style={s.sectionHeader}>
+                <View>
+                  <Text style={s.sectionTitle}>Parcelamento</Text>
+                  <Text style={s.sectionSubtitle}>
+                    Escolha a quantidade de parcelas disponivel.
+                  </Text>
+                </View>
+              </View>
+
               <Pressable
                 style={s.dropdownBtn}
                 onPress={() => setInstallmentsExpanded((current) => !current)}
               >
                 <Text style={s.dropdownText}>{installments}x</Text>
-                <Text style={s.dropdownIcon}>{installmentsExpanded ? "^" : "v"}</Text>
+                <Text style={s.dropdownIcon}>
+                  {installmentsExpanded ? "⌃" : "⌄"}
+                </Text>
               </Pressable>
 
               {installmentsExpanded ? (
@@ -1107,8 +1326,19 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
                         setInstallments(n);
                         setInstallmentsExpanded(false);
                       }}
-                      style={[s.dropdownItem, installments === n && s.dropdownItemActive]}
+                      style={[
+                        s.dropdownItem,
+                        installments === n && s.dropdownItemActive,
+                      ]}
                     >
+                      <View
+                        style={[
+                          s.radioOuter,
+                          installments === n && s.radioOuterActive,
+                        ]}
+                      >
+                        {installments === n ? <View style={s.radioInner} /> : null}
+                      </View>
                       <Text
                         style={[
                           s.dropdownItemText,
@@ -1123,64 +1353,20 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
               ) : null}
             </View>
 
-            {!!html && (
-              <WebView
-                ref={webRef}
-                source={{
-                  html,
-                  baseUrl: "https://www.mercadopago.com.br/",
-                }}
-                originWhitelist={["*"]}
-                onMessage={onMessage}
-                javaScriptEnabled
-                domStorageEnabled
-                incognito={false}
-                setSupportMultipleWindows={false}
-                javaScriptCanOpenWindowsAutomatically={false}
-                mixedContentMode="never"
-                allowFileAccess={false}
-                style={[s.webview, { height: webviewHeight, minHeight: webviewHeight }]}
-                onLoadEnd={() => setWebLoaded(true)}
-                onShouldStartLoadWithRequest={(req) => {
-                  try {
-                    const url = String(req.url || "");
+            <View style={s.summaryCard}>
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>Metodo</Text>
+                <Text style={s.summaryValue}>Cartao de credito</Text>
+              </View>
 
-                    if (url.startsWith("about:blank")) return true;
-                    if (url.startsWith("data:text")) return true;
-                    if (url.startsWith("blob:")) return true;
+              <View style={s.summaryDivider} />
 
-                    if (url === "https://mercadopago.com.br/") return true;
-                    if (url === "https://www.mercadopago.com.br/") return true;
-
-                    const host = url
-                      .replace(/^https?:\/\//i, "")
-                      .split("/")[0]
-                      .toLowerCase();
-
-                    if (host === "sdk.mercadopago.com") return true;
-                    if (host === "mercadopago.com") return true;
-                    if (host.endsWith(".mercadopago.com")) return true;
-                    if (host === "mercadopago.com.br") return true;
-                    if (host.endsWith(".mercadopago.com.br")) return true;
-                    if (host === "mercadolibre.com") return true;
-                    if (host.endsWith(".mercadolibre.com")) return true;
-                    if (host === "mercadolibrestatic.com") return true;
-                    if (host.endsWith(".mercadolibrestatic.com")) return true;
-                    if (host === "mlstatic.com") return true;
-                    if (host.endsWith(".mlstatic.com")) return true;
-
-                    return false;
-                  } catch {
-                    return String(req.url || "").startsWith("about:blank");
-                  }
-                }}
-              />
-            )}
-
-            <View style={s.securityNoticeContainer}>
-              <Text style={s.securityNoticeText}>
-                Pagamento 100% seguro via Mercado Pago
-              </Text>
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>Valor total</Text>
+                <Text style={s.summaryTotal}>
+                  {formattedAmount ? `R$ ${formattedAmount}` : "--"}
+                </Text>
+              </View>
             </View>
 
             <Pressable
@@ -1213,254 +1399,544 @@ export function MercadoPagoCardEntryScreen({ navigation, route }: any) {
   );
 }
 
+
 const s = StyleSheet.create({
   flex: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F6F8FB",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: "#F6F8FB",
   },
   backBtn: {
-    padding: 8,
-    width: 50,
+    width: 44,
+    height: 40,
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
   backIcon: {
-    fontSize: 28,
-    color: "#111",
-    lineHeight: 28,
+    fontSize: 34,
+    color: "#0B5CFF",
+    lineHeight: 36,
+    fontWeight: "400",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "800",
+    color: "#0F172A",
   },
   spacer: {
-    width: 50,
+    width: 44,
   },
   content: {
     flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 34,
+    gap: 12,
+  },
+
+  heroCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6ECF4",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 3,
+    gap: 10,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#0F172A",
+  },
+  cardArt: {
+    minHeight: 142,
+    borderRadius: 16,
     padding: 16,
-    gap: 16,
-    paddingBottom: 40,
+    backgroundColor: "#073B66",
+    overflow: "hidden",
+    justifyContent: "space-between",
+  },
+  cardArtTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cardChip: {
+    width: 34,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: "#F5D78E",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.55)",
+  },
+  cardBadge: {
+    minWidth: 48,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  cardBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  cardArtTitleBlock: {
+    marginTop: 16,
+    gap: 2,
+  },
+  cardArtTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  cardNumberPreview: {
+    marginTop: 14,
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+  },
+  cardArtBottomRow: {
+    marginTop: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: 14,
+  },
+  cardOwnerBlock: {
+    flex: 1,
+  },
+  cardTinyLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "rgba(255,255,255,0.58)",
+    letterSpacing: 0.5,
+  },
+  cardOwner: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  cardBrandPlaceholder: {
+    width: 48,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardBrandCircle: {
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  cardBrandCircleBack: {
+    left: 7,
+    backgroundColor: "rgba(255,255,255,0.62)",
+  },
+  cardBrandCircleFront: {
+    right: 7,
+    backgroundColor: "rgba(59,130,246,0.82)",
+  },
+  card: {
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6ECF4",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111",
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#0F172A",
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#f0f0f0",
+  sectionSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 17,
+    fontWeight: "500",
+  },
+
+  feedbackCard: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    gap: 5,
+  },
+  feedbackCardError: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
+  feedbackCardInfo: {
+    backgroundColor: "#EFF6FF",
+    borderColor: "#BFDBFE",
   },
   statusTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#0F172A",
   },
   status: {
-    color: "#333",
+    fontSize: 13,
+    color: "#334155",
+    lineHeight: 18,
+    fontWeight: "500",
   },
   error: {
-    color: "#b00020",
-    fontWeight: "600",
+    fontSize: 13,
+    color: "#B91C1C",
+    lineHeight: 18,
+    fontWeight: "700",
   },
+
+  inlineLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  inlineLoadingText: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
   fieldGroup: {
     gap: 6,
   },
+  rowFields: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  fieldColumn: {
+    flex: 1,
+    gap: 6,
+  },
   label: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#334155",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#DBE3EE",
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === "ios" ? 11 : 8,
     width: "100%",
-    minHeight: 52,
-    backgroundColor: "#fff",
-    color: "#111",
-    fontSize: 16,
+    minHeight: 44,
+    backgroundColor: "#FFFFFF",
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  secureFieldsBox: {
+    overflow: "hidden",
+  },
+  webLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: 10,
+  },
+  webLoadingText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#64748B",
+  },
+  webview: {
+    backgroundColor: "transparent",
   },
   dropdownBtn: {
+    minHeight: 46,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#DBE3EE",
     borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    backgroundColor: "#FFFFFF",
   },
   dropdownText: {
-    fontSize: 16,
-    color: "#111",
+    fontSize: 14,
+    color: "#0F172A",
+    fontWeight: "800",
   },
   dropdownIcon: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 18,
+    color: "#64748B",
+    fontWeight: "700",
   },
   dropdownList: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    marginTop: 4,
-    backgroundColor: "#fff",
+    borderColor: "#E6ECF4",
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
     overflow: "hidden",
   },
   dropdownItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  dropdownItemActive: {
-    backgroundColor: "#f9f9f9",
-  },
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#444",
-  },
-  dropdownItemTextActive: {
-    color: "#111",
-    fontWeight: "700",
-  },
-  webview: {
-    backgroundColor: "#fff",
-    marginTop: 8,
-  },
-  securityNoticeContainer: {
-    alignItems: "center",
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  securityNoticeText: {
-    fontSize: 12,
-    color: "#15803d",
-    fontWeight: "600",
-  },
-  btn: {
-    backgroundColor: "#111",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-  btnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: "#111",
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  secondaryBtnText: {
-    color: "#111",
-    fontWeight: "700",
-  },
-  savedCardsSection: {
-    gap: 12,
-  },
-  savedCardsLoading: {
+    borderBottomColor: "#F1F5F9",
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-  savedCardsLoadingText: {
-    color: "#444",
+  dropdownItemActive: {
+    backgroundColor: "#EFF6FF",
+  },
+  dropdownItemText: {
     fontSize: 14,
+    color: "#334155",
+    fontWeight: "700",
+  },
+  dropdownItemTextActive: {
+    color: "#0B5CFF",
+    fontWeight: "900",
+  },
+  radioOuter: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOuterActive: {
+    borderColor: "#0B5CFF",
+  },
+  radioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#0B5CFF",
+  },
+
+  summaryCard: {
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6ECF4",
+    gap: 10,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "700",
+  },
+  summaryValue: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 13,
+    color: "#0F172A",
+    fontWeight: "800",
+  },
+  summaryTotal: {
+    fontSize: 18,
+    color: "#0B5CFF",
+    fontWeight: "900",
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: "#EEF2F7",
+  },
+
+  btn: {
+    minHeight: 50,
+    backgroundColor: "#0B5CFF",
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#0B5CFF",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  btnDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  btnText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+  secondaryBtn: {
+    borderWidth: 1,
+    borderColor: "#DBE3EE",
+    backgroundColor: "#FFFFFF",
+    padding: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  secondaryBtnText: {
+    color: "#0F172A",
+    fontWeight: "900",
+  },
+
+  savedCardsList: {
+    gap: 10,
   },
   savedCardItem: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
     padding: 12,
     gap: 10,
+    backgroundColor: "#FFFFFF",
   },
   savedCardItemSelected: {
-    borderColor: "#111",
-    backgroundColor: "#f8fafc",
+    borderColor: "#0B5CFF",
+    backgroundColor: "#EFF6FF",
+  },
+  savedCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  savedCardIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  savedCardIconSelected: {
+    backgroundColor: "#0B5CFF",
+    borderColor: "#0B5CFF",
+  },
+  savedCardIconText: {
+    color: "#64748B",
+    fontWeight: "900",
+  },
+  savedCardIconTextSelected: {
+    color: "#FFFFFF",
   },
   savedCardInfo: {
-    gap: 4,
+    flex: 1,
+    gap: 2,
   },
   savedCardTitle: {
-    color: "#111",
-    fontSize: 15,
-    fontWeight: "700",
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "900",
   },
   savedCardMeta: {
-    color: "#666",
-    fontSize: 13,
+    color: "#64748B",
+    fontSize: 12,
+    fontWeight: "600",
   },
   savedCardButton: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#111",
+    borderColor: "#0B5CFF",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    backgroundColor: "#FFFFFF",
   },
   savedCardButtonActive: {
-    backgroundColor: "#111",
+    backgroundColor: "#0B5CFF",
   },
   savedCardButtonText: {
-    color: "#111",
-    fontWeight: "700",
+    color: "#0B5CFF",
+    fontWeight: "900",
+    fontSize: 12,
   },
   savedCardButtonTextActive: {
-    color: "#fff",
+    color: "#FFFFFF",
   },
   savedCardActions: {
     flexDirection: "row",
     gap: 10,
     flexWrap: "wrap",
   },
-  secondaryInlineBtn: {
+  ghostPillBtn: {
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
+    borderColor: "#DBE3EE",
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 9,
+    backgroundColor: "#FFFFFF",
   },
-  secondaryInlineBtnText: {
-    color: "#111",
-    fontWeight: "600",
+  ghostPillBtnText: {
+    color: "#0F172A",
+    fontWeight: "800",
+    fontSize: 12,
   },
   emptySavedCardsText: {
-    color: "#555",
-    fontSize: 14,
+    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "600",
   },
   selectedCardSummary: {
-    gap: 6,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 5,
   },
   selectedCardSummaryText: {
-    color: "#111",
-    fontSize: 15,
-    fontWeight: "700",
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "900",
   },
   selectedCardHint: {
-    color: "#555",
-    fontSize: 13,
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "600",
   },
 });
