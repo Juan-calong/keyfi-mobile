@@ -31,13 +31,24 @@ export function PaymentSuccessScreen() {
 
   const isOwnerFlow = String(route?.name || "").includes("Owner");
 
-  const buyRoute = isOwnerFlow
-    ? OWNER_SCREENS.Buy
-    : CUSTOMER_SCREENS.Buy;
-
   const orderDetailsRoute = isOwnerFlow
     ? OWNER_SCREENS.OrderDetails
     : CUSTOMER_SCREENS.OrderDetails;
+
+  const goToShop = () => {
+    if (isOwnerFlow) {
+      navigation.navigate(OWNER_SCREENS.Root, {
+        screen: OWNER_SCREENS.Tabs,
+        params: { screen: OWNER_SCREENS.Buy },
+      });
+      return;
+    }
+
+    navigation.navigate(CUSTOMER_SCREENS.Root, {
+      screen: CUSTOMER_SCREENS.Tabs,
+      params: { screen: CUSTOMER_SCREENS.Buy },
+    });
+  };
 
   const brandGreen = (t.colors as any).success || "#10B981";
 
@@ -84,7 +95,7 @@ export function PaymentSuccessScreen() {
           ) : null}
 
           <Pressable
-            onPress={() => navigation.navigate(buyRoute)}
+            onPress={goToShop}
             style={({ pressed }) => [
               styles.secondaryButton,
               { borderColor: brandGreen },
