@@ -84,7 +84,7 @@ export const PaymentsService = {
         boleto: data?.boleto,
         card: {
           enabled: Boolean(card?.enabled),
-          provider: String(card?.provider || "CIELO").toUpperCase(),
+          provider: String(card?.provider || "MERCADOPAGO").toUpperCase(),
           publicKey: card?.publicKey ?? null,
           maxInstallments:
             typeof card?.maxInstallments === "number" ? card.maxInstallments : undefined,
@@ -94,7 +94,7 @@ export const PaymentsService = {
       return {
         pix: undefined,
         boleto: undefined,
-        card: { enabled: true, provider: "CIELO", publicKey: null },
+        card: { enabled: false, provider: "MERCADOPAGO", publicKey: null },
       };
     }
   },

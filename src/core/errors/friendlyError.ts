@@ -42,6 +42,11 @@ export function friendlyError(e: any): Friendly {
   switch (code) {
     case "INVALID_CREDENTIALS":
       return { title: "Login inválido", message: "Email ou senha incorretos." };
+    case "BOLETO_DISABLED":
+      return {
+        title: "Boleto indisponível",
+        message: "Boleto não está disponível no momento. Use PIX ou cartão.",
+      };
   }
 
   // 429 do seu backend (vem sem code)

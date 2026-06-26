@@ -1,6 +1,6 @@
 // screens/customer/CustomerPixPaymentScreen.tsx (SEM MP, BB + CIELO)
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Platform, StatusBar, ScrollView, Image } from "react-native";
+import React, { useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView, Image } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,7 +26,10 @@ import { PixPaymentSheet } from "../payments/PixPaymentsSheet";
 import { BoletoPaymentSheet } from "../payments/BoletoPaymentSheet";
 import { CardPaymentSheet } from "../payments/CardPaymentSheet";
 
-type Method = "PIX" | "BOLETO" | "CARD";
+type Method = "PIX" | "CARD";
+
+const LEGACY_BOLETO_MESSAGE = "Boleto não está disponível no momento. Use PIX ou cartão.";
+const CARD_UNAVAILABLE_MESSAGE = "Cartão não está disponível no momento. Use PIX.";
 
 type ActivePaymentEnvelope = any; // se você tiver o tipo certo no backend, eu tipamos depois
 
@@ -85,6 +88,8 @@ function StatusCard({ env, onRefresh }: { env: ActivePaymentEnvelope; onRefresh:
     </Card>
   );
 }
+
+void StatusCard;
 
 function PaymentRow({
   title,
@@ -152,39 +157,25 @@ export function CustomerPixPaymentScreen({ route }: any) {
 
     navigation.navigate(CUSTOMER_SCREENS.Orders);
   }, [navigation]);
-  const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
+  const orderId = String(route?.params?.orderId || route?.params?.id || "");
   const routeAmount = Number(route?.params?.amount || 0);
 
   const [selected, setSelected] = useState<Method>("PIX");
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
 
   const [banner, setBanner] = useState<null | { title: string; message: string }>(null);
-  const [bannerKey, setBannerKey] = useState(0);
-  function showBanner(title: string, message: string) {
-    setBannerKey((k) => k + 1);
-    setBanner({ title, message });
-  }
   React.useEffect(() => {
     if (!banner) return;
     const tmr = setTimeout(() => setBanner(null), 3500);
     return () => clearTimeout(tmr);
-  }, [bannerKey]);
+  }, [banner]);
 
   const continueLock = useRef(false);
   const didNavigateToOrderDetailsRef = useRef(false);
 
-  if (!orderId) {
-    return (
-      <Screen>
-        <Container>
-          <Text style={{ color: t.colors.danger, fontWeight: "900" }}>orderId ausente.</Text>
-        </Container>
-      </Screen>
-    );
-  }
-
 const activeQ = useQuery({
   queryKey: ["customer-pay-active", orderId],
+  enabled: !!orderId,
   queryFn: async () => (await api.get(endpoints.payments.active(orderId))).data,
   retry: false,
   staleTime: 0,
@@ -244,11 +235,6 @@ React.useEffect(() => {
         return;
       }
 
-      if (selected === "BOLETO") {
-        navigation.navigate(CUSTOMER_SCREENS.BoletoPayerForm, { orderId });
-        return;
-      }
-
       const methods = await PaymentsService.getPaymentMethods();
       const resolvedAmount = Number(
         routeAmount ||
@@ -258,7 +244,11 @@ React.useEffect(() => {
           0
       );
       
-      if (methods?.card?.provider === "MERCADOPAGO") {
+      if (
+        methods?.card?.provider === "MERCADOPAGO" &&
+        methods?.card?.enabled !== false &&
+        methods?.card?.publicKey
+      ) {
         if (!(resolvedAmount > 0)) {
           setModal({
             title: "Valor indisponível",
@@ -269,16 +259,13 @@ React.useEffect(() => {
         navigation.navigate(CUSTOMER_SCREENS.MercadoPagoCardEntry, {
           orderId,
           amount: resolvedAmount,
-          publicKey: methods?.card?.publicKey ?? null,
+          publicKey: methods.card.publicKey,
         });
         return;
       }
-      navigation.navigate(CUSTOMER_SCREENS.CardTokenize, {
-        orderId,
-
-        successRouteName: CUSTOMER_SCREENS.CardEntry,
-        cancelRouteName: CUSTOMER_SCREENS.PixPayment,
-        cancelParams: { orderId },
+      setModal({
+        title: "Cartão indisponível",
+        message: CARD_UNAVAILABLE_MESSAGE,
       });
     } finally {
       setTimeout(() => {
@@ -287,7 +274,15 @@ React.useEffect(() => {
     }
   };
 
-  const headerSubtitle = useMemo(() => (env?.ui?.message ? String(env.ui.message) : ""), [env?.ui?.message]);
+  if (!orderId) {
+    return (
+      <Screen>
+        <Container>
+          <Text style={{ color: t.colors.danger, fontWeight: "900" }}>orderId ausente.</Text>
+        </Container>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -397,7 +392,17 @@ React.useEffect(() => {
   {method === "PIX" ? (
     <PixPaymentSheet envelope={env} />
   ) : method === "BOLETO" ? (
-    <BoletoPaymentSheet envelope={env} />
+    <>
+      <Card style={{ padding: 14, borderRadius: 18, gap: 8 }}>
+        <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
+          Boleto legado
+        </Text>
+        <Text style={{ color: t.colors.text2, fontWeight: "800", lineHeight: 20 }}>
+          {LEGACY_BOLETO_MESSAGE}
+        </Text>
+      </Card>
+      <BoletoPaymentSheet envelope={env} />
+    </>
   ) : method === "CARD" ? (
     <CardPaymentSheet
       env={env}

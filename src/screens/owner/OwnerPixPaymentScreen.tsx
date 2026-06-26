@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Platform, StatusBar, ScrollView, Image } from "react-native";
+import React, { useRef, useState } from "react";
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView, Image } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,15 +24,10 @@ import { IosAlert } from "../../ui/components/IosAlert";
 import { friendlyError } from "../../core/errors/friendlyError";
 import { PaymentsService } from "../../core/api/services/payments.service";
 
-type Method = "PIX" | "BOLETO" | "CARD";
+type Method = "PIX" | "CARD";
 
-function normalizeUrl(value?: string | null) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(raw)) return `https://${raw}`;
-  return null;
-}
+const LEGACY_BOLETO_MESSAGE = "Boleto não está disponível no momento. Use PIX ou cartão.";
+const CARD_UNAVAILABLE_MESSAGE = "Cartão não está disponível no momento. Use PIX.";
 
 function StatusCard({ env, onRefresh }: { env: any; onRefresh: () => void }) {
   const payment = env?.payment ?? null;
@@ -164,7 +159,7 @@ export function OwnerPixPaymentScreen({ route }: any) {
 
     navigation.navigate(OWNER_SCREENS.Orders);
   }, [navigation]);
-  const orderId: string | undefined = route?.params?.orderId || route?.params?.id;
+  const orderId = String(route?.params?.orderId || route?.params?.id || "");
   const routeAmount = Number(route?.params?.amount || 0);
 
   const [selected, setSelected] = useState<Method>("PIX");
@@ -173,19 +168,9 @@ export function OwnerPixPaymentScreen({ route }: any) {
 
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
 
-  if (!orderId) {
-    return (
-      <Screen>
-        <Container>
-          <Text style={{ color: t.colors.danger, fontWeight: "900" }}>orderId ausente.</Text>
-        </Container>
-        <IosAlert visible={true} title="Erro" message="orderId ausente." onClose={() => navigation.goBack?.()} />
-      </Screen>
-    );
-  }
-
   const activeQ = useQuery({
     queryKey: ["owner-pay-active", orderId],
+    enabled: !!orderId,
     queryFn: async () => (await api.get(endpoints.payments.active(orderId))).data,
     retry: false,
     staleTime: 0,
@@ -243,11 +228,6 @@ export function OwnerPixPaymentScreen({ route }: any) {
         return;
       }
 
-      if (selected === "BOLETO") {
-        navigation.navigate(OWNER_SCREENS.BoletoPayerForm, { orderId });
-        return;
-      }
-
       const methods = await PaymentsService.getPaymentMethods();
       const resolvedAmount = Number(
         routeAmount ||
@@ -256,7 +236,11 @@ export function OwnerPixPaymentScreen({ route }: any) {
           payment?.amount ||
           0
       );
-      if (methods?.card?.provider === "MERCADOPAGO") {
+      if (
+        methods?.card?.provider === "MERCADOPAGO" &&
+        methods?.card?.enabled !== false &&
+        methods?.card?.publicKey
+      ) {
           if (!(resolvedAmount > 0)) {
           setModal({
             title: "Valor indisponível",
@@ -267,25 +251,29 @@ export function OwnerPixPaymentScreen({ route }: any) {
         navigation.navigate(OWNER_SCREENS.MercadoPagoCardEntry, {
           orderId,
           amount: resolvedAmount,
-          publicKey: methods?.card?.publicKey ?? null,
+          publicKey: methods.card.publicKey,
         });
         return;
       }
-      navigation.navigate(OWNER_SCREENS.CardTokenize, {
-        orderId,
-        successRouteName: OWNER_SCREENS.CardEntry,
-        cancelRouteName: OWNER_SCREENS.PixPayment,
-        cancelParams: { orderId },
+      setModal({
+        title: "Cartão indisponível",
+        message: CARD_UNAVAILABLE_MESSAGE,
       });
     } finally {
       setTimeout(() => (continueLock.current = false), 350);
     }
   };
 
-  const boletoUrl = useMemo(() => {
-    const na = env?.nextAction;
-    return normalizeUrl(na?.ticketUrl || na?.url || na?.ticket_url || null);
-  }, [env?.nextAction]);
+  if (!orderId) {
+    return (
+      <Screen>
+        <Container>
+          <Text style={{ color: t.colors.danger, fontWeight: "900" }}>orderId ausente.</Text>
+        </Container>
+        <IosAlert visible={true} title="Erro" message="orderId ausente." onClose={() => navigation.goBack?.()} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -379,18 +367,15 @@ export function OwnerPixPaymentScreen({ route }: any) {
                   <PixPaymentSheet envelope={env} />
                 ) : method === "BOLETO" ? (
                   <>
-                    <BoletoPaymentSheet envelope={env} />
-                    {boletoUrl ? (
-                      <Pressable
-                        onPress={() => navigation.navigate(OWNER_SCREENS.BoletoWebView, { url: boletoUrl })}
-                        style={({ pressed }) => [
-                          { marginTop: 12, height: 52, borderRadius: 14, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
-                          pressed && { opacity: 0.85 },
-                        ]}
-                      >
-                        <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>Abrir boleto</Text>
-                      </Pressable>
-                    ) : null}
+                    <Card style={{ padding: 14, borderRadius: 18, gap: 8 }}>
+                      <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 15 }}>
+                        Boleto legado
+                      </Text>
+                      <Text style={{ color: t.colors.text2, fontWeight: "800", lineHeight: 20 }}>
+                        {LEGACY_BOLETO_MESSAGE}
+                      </Text>
+                    </Card>
+                    <BoletoPaymentSheet envelope={env} webViewRouteName={OWNER_SCREENS.BoletoWebView} />
                   </>
                 ) : method === "CARD" ? (
                   <CardPaymentSheet env={env} onRefresh={() => activeQ.refetch()} />
