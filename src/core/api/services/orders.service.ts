@@ -3,8 +3,10 @@ import { api } from "../client";
 import { endpoints } from "../endpoints";
 
 export type CreateOrderPayload = {
-    buyerType: "SALON_OWNER";
+    buyerType: "CUSTOMER" | "SALON_OWNER";
     items: { productId: string; qty: number }[];
+    shippingQuoteId: string;
+    [key: string]: unknown;
 };
 
 export type OrderListItem = {

@@ -830,20 +830,24 @@ const createOrderMut = useMutation({
 
       if (couponCode) payload.couponCode = couponCode;
 
-const selectedShipping = buildSelectedShippingPayload(
-  selectedOption,
-  cleanZipcode
-);
+      const selectedShipping = buildSelectedShippingPayload(
+        selectedOption,
+        cleanZipcode
+      );
 
-if (selectedShipping.quoteId) {
-  payload.shippingQuoteId = selectedShipping.quoteId;
-} else {
-  payload.shippingOption = selectedShipping;
-}
+      const shippingQuoteId = resolveOptionQuoteId(selectedShipping);
+
+      if (!shippingQuoteId) {
+        throw new Error(
+          "Não foi possível validar este frete. Recalcule o frete e tente novamente."
+        );
+      }
+
+      payload.shippingQuoteId = shippingQuoteId;
 
       const { data } = await api.post(endpoints.orders.create, payload, {
-  headers: { "Idempotency-Key": idempotencyKey },
-});
+        headers: { "Idempotency-Key": idempotencyKey },
+      });
 
       return data;
     },
@@ -989,13 +993,27 @@ const freshSelected =
 
     setSelected(freshSelected);
 
-const idempotencyKey = `order-${Date.now()}-${Math.random()
-  .toString(36)
-  .slice(2, 10)}`;
+    const selectedShipping = buildSelectedShippingPayload(
+      freshSelected,
+      cleanZipcode
+    );
+
+    if (!selectedShipping.quoteId) {
+      setModal({
+        title: "Frete inválido",
+        message:
+          "Não foi possível validar este frete. Recalcule o frete e tente novamente.",
+      });
+      return;
+    }
+
+    const idempotencyKey = `order-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
     const order = await createOrderMut.mutateAsync({
-  selectedOption: freshSelected,
-  idempotencyKey,
-});
+      selectedOption: freshSelected,
+      idempotencyKey,
+    });
     const orderId = order?.orderId;
 
     if (!orderId) {
