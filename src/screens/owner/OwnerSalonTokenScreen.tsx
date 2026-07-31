@@ -1,76 +1,90 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, Share, ScrollView } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import Clipboard from "@react-native-clipboard/clipboard";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable, Share, ScrollView } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { useQuery } from '@tanstack/react-query';
 
-import { Screen } from "../../ui/components/Screen";
-import { Container } from "../../ui/components/Container";
-import { t } from "../../ui/tokens";
-import { IosAlert } from "../../ui/components/IosAlert";
+import { Screen } from '../../ui/components/Screen';
+import { Container } from '../../ui/components/Container';
+import { t } from '../../ui/tokens';
+import { IosAlert } from '../../ui/components/IosAlert';
 
-import { api } from "../../core/api/client";
-import { endpoints } from "../../core/api/endpoints";
-import { AppBackButton } from "../../ui/components/AppBackButton";
+import { api } from '../../core/api/client';
+import { endpoints } from '../../core/api/endpoints';
+import { friendlyError } from '../../core/errors/friendlyError';
+import { AppBackButton } from '../../ui/components/AppBackButton';
 
 export function OwnerSalonTokenScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
-  const token: string = route?.params?.token ?? "";
+  const token: string = route?.params?.token ?? '';
 
   const [copied, setCopied] = useState(false);
-  const [modal, setModal] = useState<null | { title: string; message: string }>(null);
+  const [modal, setModal] = useState<null | { title: string; message: string }>(
+    null,
+  );
 
-  const tokenLabel = useMemo(() => (token?.trim() ? token : "—"), [token]);
+  const tokenLabel = useMemo(() => (token?.trim() ? token : '—'), [token]);
 
   const inviteQ = useQuery({
-    queryKey: ["salon", "invite-link"],
+    queryKey: ['salon', 'invite-link'],
     queryFn: async () => (await api.get(endpoints.salon.inviteLink)).data,
     retry: false,
   });
 
-  const inviteUrl = String(inviteQ.data?.url ?? "").trim();
+  const inviteUrl = String(inviteQ.data?.url ?? '').trim();
 
   useEffect(() => {
     if (inviteQ.isError) {
+      const fe = friendlyError(inviteQ.error);
       setModal({
-        title: "Erro",
-        message:
-          (inviteQ.error as any)?.response?.data?.error ||
-          "Não foi possível carregar o link do salão.",
+        title: fe.title || 'Erro',
+        message: fe.message || 'Falha ao carregar o link do salão.',
       });
     }
   }, [inviteQ.isError, inviteQ.error]);
 
   function handleCopyToken() {
     try {
-      Clipboard.setString(tokenLabel === "—" ? "" : tokenLabel);
+      Clipboard.setString(tokenLabel === '—' ? '' : tokenLabel);
       setCopied(true);
-      setModal({ title: "Copiado!", message: "Token copiado para a área de transferência." });
+      setModal({
+        title: 'Copiado!',
+        message: 'Token copiado para a área de transferência.',
+      });
       setTimeout(() => setCopied(false), 1200);
     } catch {
-      setModal({ title: "Erro", message: "Não foi possível copiar o token." });
+      setModal({ title: 'Erro', message: 'Não foi possível copiar o token.' });
     }
   }
 
   function handleCopyLink() {
     try {
       if (!inviteUrl) {
-        setModal({ title: "Sem link", message: "O link do salão ainda não foi carregado." });
+        setModal({
+          title: 'Sem link',
+          message: 'O link do salão ainda não foi carregado.',
+        });
         return;
       }
 
       Clipboard.setString(inviteUrl);
-      setModal({ title: "Copiado!", message: "Link copiado para a área de transferência." });
+      setModal({
+        title: 'Copiado!',
+        message: 'Link copiado para a área de transferência.',
+      });
     } catch {
-      setModal({ title: "Erro", message: "Não foi possível copiar o link." });
+      setModal({ title: 'Erro', message: 'Não foi possível copiar o link.' });
     }
   }
 
   async function handleShareLink() {
     try {
       if (!inviteUrl) {
-        setModal({ title: "Sem link", message: "O link do salão ainda não foi carregado." });
+        setModal({
+          title: 'Sem link',
+          message: 'O link do salão ainda não foi carregado.',
+        });
         return;
       }
 
@@ -78,51 +92,58 @@ export function OwnerSalonTokenScreen() {
         message: inviteUrl,
       });
     } catch {
-      setModal({ title: "Erro", message: "Não foi possível compartilhar o link." });
+      setModal({
+        title: 'Erro',
+        message: 'Não foi possível compartilhar o link.',
+      });
     }
   }
 
   return (
     <Screen>
-<Container style={{ flex: 1 }}>
-  <View
-    style={{
-      height: 52,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    }}
-  >
-    <AppBackButton
-      onPress={() => nav.goBack()}
-      showLabel={false}
-      color={t.colors.text}
-      iconSize={24}
-      style={{
-        minWidth: 44,
-        minHeight: 44,
-        paddingRight: 0,
-      }}
-    />
+      <Container style={{ flex: 1 }}>
+        <View
+          style={{
+            height: 52,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <AppBackButton
+            onPress={() => nav.goBack()}
+            showLabel={false}
+            color={t.colors.text}
+            iconSize={24}
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              paddingRight: 0,
+            }}
+          />
 
-    <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 17 }}>
-      Token do salão
-    </Text>
+          <Text
+            style={{ color: t.colors.text, fontWeight: '900', fontSize: 17 }}
+          >
+            Token do salão
+          </Text>
 
-    <View style={{ width: 44 }} />
-  </View>
+          <View style={{ width: 44 }} />
+        </View>
 
-  <ScrollView
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={{
-      flexGrow: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      paddingBottom: 40,
-    }}
-  >
-          <Text style={{ color: t.colors.text, fontWeight: "900", fontSize: 22 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            paddingBottom: 40,
+          }}
+        >
+          <Text
+            style={{ color: t.colors.text, fontWeight: '900', fontSize: 22 }}
+          >
             Token e link do salão
           </Text>
 
@@ -130,7 +151,7 @@ export function OwnerSalonTokenScreen() {
 
           <View
             style={{
-              width: "100%",
+              width: '100%',
               maxWidth: 420,
               borderWidth: 1,
               borderColor: t.colors.border,
@@ -138,10 +159,12 @@ export function OwnerSalonTokenScreen() {
               borderRadius: 14,
               paddingVertical: 18,
               paddingHorizontal: 16,
-              alignItems: "center",
+              alignItems: 'center',
             }}
           >
-            <Text style={{ color: t.colors.text2, fontWeight: "800", fontSize: 12 }}>
+            <Text
+              style={{ color: t.colors.text2, fontWeight: '800', fontSize: 12 }}
+            >
               SEU TOKEN
             </Text>
 
@@ -149,10 +172,10 @@ export function OwnerSalonTokenScreen() {
               style={{
                 marginTop: 10,
                 color: t.colors.text,
-                fontWeight: "900",
+                fontWeight: '900',
                 fontSize: 18,
                 letterSpacing: 0.6,
-                textAlign: "center",
+                textAlign: 'center',
               }}
             >
               {tokenLabel}
@@ -170,22 +193,24 @@ export function OwnerSalonTokenScreen() {
                   borderWidth: 1,
                   borderColor: t.colors.border,
                   backgroundColor: t.colors.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
                 },
                 pressed && { opacity: 0.85 },
               ]}
               hitSlop={10}
             >
-              <Text style={{ color: t.colors.text, fontWeight: "900" }}>
-                {copied ? "Copiado ✓" : "Copiar token"}
+              <Text style={{ color: t.colors.text, fontWeight: '900' }}>
+                {copied ? 'Copiado ✓' : 'Copiar token'}
               </Text>
             </Pressable>
 
             <View style={{ height: 18 }} />
 
-            <Text style={{ color: t.colors.text2, fontWeight: "800", fontSize: 12 }}>
+            <Text
+              style={{ color: t.colors.text2, fontWeight: '800', fontSize: 12 }}
+            >
               LINK DO CONVITE
             </Text>
 
@@ -194,12 +219,14 @@ export function OwnerSalonTokenScreen() {
               style={{
                 marginTop: 10,
                 color: t.colors.text,
-                fontWeight: "700",
+                fontWeight: '700',
                 fontSize: 14,
-                textAlign: "center",
+                textAlign: 'center',
               }}
             >
-              {inviteQ.isLoading ? "Carregando link..." : inviteUrl || "Link não disponível."}
+              {inviteQ.isLoading
+                ? 'Carregando link...'
+                : inviteUrl || 'Link não disponível.'}
             </Text>
 
             <View style={{ height: 14 }} />
@@ -214,15 +241,17 @@ export function OwnerSalonTokenScreen() {
                   borderWidth: 1,
                   borderColor: t.colors.border,
                   backgroundColor: t.colors.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
                 },
                 pressed && { opacity: 0.85 },
               ]}
               hitSlop={10}
             >
-              <Text style={{ color: t.colors.text, fontWeight: "900" }}>Copiar link</Text>
+              <Text style={{ color: t.colors.text, fontWeight: '900' }}>
+                Copiar link
+              </Text>
             </Pressable>
 
             <View style={{ height: 10 }} />
@@ -237,15 +266,17 @@ export function OwnerSalonTokenScreen() {
                   borderWidth: 1,
                   borderColor: t.colors.border,
                   backgroundColor: t.colors.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
                 },
                 pressed && { opacity: 0.85 },
               ]}
               hitSlop={10}
             >
-              <Text style={{ color: t.colors.text, fontWeight: "900" }}>Compartilhar link</Text>
+              <Text style={{ color: t.colors.text, fontWeight: '900' }}>
+                Compartilhar link
+              </Text>
             </Pressable>
 
             <View style={{ height: 10 }} />
@@ -260,19 +291,21 @@ export function OwnerSalonTokenScreen() {
                   borderWidth: 1,
                   borderColor: t.colors.border,
                   backgroundColor: t.colors.bg,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "100%",
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
                 },
                 pressed && { opacity: 0.85 },
               ]}
               hitSlop={10}
             >
-              <Text style={{ color: t.colors.text, fontWeight: "900" }}>Atualizar</Text>
+              <Text style={{ color: t.colors.text, fontWeight: '900' }}>
+                Atualizar
+              </Text>
             </Pressable>
           </View>
-      </ScrollView>
-    </Container>
+        </ScrollView>
+      </Container>
 
       <IosAlert
         visible={!!modal}

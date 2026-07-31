@@ -1,5 +1,5 @@
 // src/screens/owner/OwnerPixKeyScreen.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,22 @@ import {
   StatusBar,
   StyleSheet,
   KeyboardAvoidingView,
-} from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigation } from "@react-navigation/native";
+} from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 
-import { Screen } from "../../ui/components/Screen";
-import { Container } from "../../ui/components/Container";
-import { Loading, ErrorState } from "../../ui/components/State";
+import { Screen } from '../../ui/components/Screen';
+import { Container } from '../../ui/components/Container';
+import { Loading, ErrorState } from '../../ui/components/State';
 
-import { api } from "../../core/api/client";
-import { endpoints } from "../../core/api/endpoints";
+import { api } from '../../core/api/client';
+import { endpoints } from '../../core/api/endpoints';
 
-import { IosAlert } from "../../ui/components/IosAlert";
-import { friendlyError } from "../../core/errors/friendlyError";
-import { t } from "../../ui/tokens";
-import { AppBackButton } from "../../ui/components/AppBackButton";
+import { IosAlert } from '../../ui/components/IosAlert';
+import { friendlyError } from '../../core/errors/friendlyError';
+import { AppBackButton } from '../../ui/components/AppBackButton';
 
-type PixKeyType = "CPF" | "CNPJ";
+type PixKeyType = 'CPF' | 'CNPJ';
 
 type DestinationDTO = {
   id: string;
@@ -42,7 +41,7 @@ type DestinationDTO = {
 };
 
 function onlyDigits(v: string) {
-  return String(v ?? "").replace(/\D+/g, "");
+  return String(v ?? '').replace(/\D+/g, '');
 }
 
 function maskCpf(value: string) {
@@ -58,25 +57,29 @@ function maskCnpj(value: string) {
   if (d.length <= 2) return d;
   if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
   if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+  if (d.length <= 12)
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(
+    8,
+    12,
+  )}-${d.slice(12)}`;
 }
 
 function normalizePixKey(type: PixKeyType, key: string) {
-  const raw = String(key ?? "").trim();
-  if (type === "CPF") return onlyDigits(raw);
+  const raw = String(key ?? '').trim();
+  if (type === 'CPF') return onlyDigits(raw);
   return onlyDigits(raw);
 }
 
 function validatePixKey(type: PixKeyType, key: string) {
   const k = normalizePixKey(type, key);
-  if (!k) return "Informe a chave PIX.";
+  if (!k) return 'Informe a chave PIX.';
 
-  if (type === "CPF") {
-    if (k.length !== 11) return "CPF inválido (11 dígitos).";
+  if (type === 'CPF') {
+    if (k.length !== 11) return 'CPF inválido (11 dígitos).';
   }
-  if (type === "CNPJ") {
-    if (k.length !== 14) return "CNPJ inválido (14 dígitos).";
+  if (type === 'CNPJ') {
+    if (k.length !== 14) return 'CNPJ inválido (14 dígitos).';
   }
   return null;
 }
@@ -108,7 +111,7 @@ function Chip({
       ]}
     >
       <Text style={[m.chipText, active && m.chipTextActive]}>
-        {active ? "✓ " : ""}
+        {active ? '✓ ' : ''}
         {label}
       </Text>
     </Pressable>
@@ -119,35 +122,54 @@ export function OwnerPixKeyScreen() {
   const nav = useNavigation<any>();
   const qc = useQueryClient();
 
-  const [modal, setModal] = useState<null | { title: string; message: string; onClose?: () => void }>(null);
+  const [modal, setModal] = useState<null | {
+    title: string;
+    message: string;
+    onClose?: () => void;
+  }>(null);
 
   const walletQ = useQuery<any>({
-    queryKey: ["wallet-owner"],
-    queryFn: async () => (await api.get(endpoints.wallet.me, { params: { txLimit: 1, payoutLimit: 1 } })).data,
+    queryKey: ['wallet-owner'],
+    queryFn: async () =>
+      (
+        await api.get(endpoints.wallet.me, {
+          params: { txLimit: 1, payoutLimit: 1 },
+        })
+      ).data,
     retry: false,
     staleTime: 0,
   });
 
-  const destination = useMemo(() => pickDestinationFromWalletRoot(walletQ.data), [walletQ.data]);
+  const destination = useMemo(
+    () => pickDestinationFromWalletRoot(walletQ.data),
+    [walletQ.data],
+  );
 
-  const [pixKeyType, setPixKeyType] = useState<PixKeyType>("CPF");
-  const [pixKey, setPixKey] = useState("");
-  const [holderName, setHolderName] = useState("");
-  const [holderDoc, setHolderDoc] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [notes, setNotes] = useState("");
+  const [pixKeyType, setPixKeyType] = useState<PixKeyType>('CPF');
+  const [pixKey, setPixKey] = useState('');
+  const [holderName, setHolderName] = useState('');
+  const [holderDoc, setHolderDoc] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (!destination) return;
-     setPixKeyType(destination.pixKeyType === "CPF" || destination.pixKeyType === "CNPJ" ? destination.pixKeyType : "CPF");
-    setPixKey(destination.pixKey ?? "");
-    setHolderName(destination.holderName ?? "");
-    setHolderDoc(destination.holderDoc ?? "");
-    setBankName(destination.bankName ?? "");
-    setNotes(destination.notes ?? "");
+    setPixKeyType(
+      destination.pixKeyType === 'CPF' || destination.pixKeyType === 'CNPJ'
+        ? destination.pixKeyType
+        : 'CPF',
+    );
+    setPixKey(destination.pixKey ?? '');
+    setHolderName(destination.holderName ?? '');
+    setHolderDoc(destination.holderDoc ?? '');
+    setBankName(destination.bankName ?? '');
+    setNotes(destination.notes ?? '');
   }, [destination]);
 
-  const normalizedPixKey = useMemo(() => normalizePixKey(pixKeyType, pixKey), [pixKeyType, pixKey]);
+  const normalizedPixKey = useMemo(
+    () => normalizePixKey(pixKeyType, pixKey),
+    [pixKeyType, pixKey],
+  );
 
   const savePixMut = useMutation({
     mutationFn: async () => {
@@ -157,64 +179,80 @@ export function OwnerPixKeyScreen() {
       const payload = {
         pixKeyType,
         pixKey: normalizedPixKey,
-        holderName: String(holderName ?? "").trim(),
-        holderDoc: onlyDigits(holderDoc ?? ""),
-        bankName: String(bankName ?? "").trim(),
-        notes: String(notes ?? "").trim() || null,
+        holderName: String(holderName ?? '').trim(),
+        holderDoc: onlyDigits(holderDoc ?? ''),
+        bankName: String(bankName ?? '').trim(),
+        notes: String(notes ?? '').trim() || null,
       };
 
-      if (!payload.holderName) throw new Error("Informe o nome do titular.");
-      if (!payload.holderDoc) throw new Error("Informe o CPF/CNPJ do titular (somente números).");
-      if (!payload.bankName) throw new Error("Informe o banco.");
+      if (!payload.holderName) throw new Error('Informe o nome do titular.');
+      if (!payload.holderDoc)
+        throw new Error('Informe o CPF/CNPJ do titular (somente números).');
+      if (!payload.bankName) throw new Error('Informe o banco.');
 
       const idem = `wallet_dest_owner_${pixKeyType}_${normalizedPixKey}`;
       const res = await api.post(endpoints.wallet.destination, payload, {
-        headers: { "Idempotency-Key": idem, "X-Idempotency-Key": idem },
+        headers: { 'Idempotency-Key': idem, 'X-Idempotency-Key': idem },
       });
 
       return res.data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["wallet-owner"] });
-      qc.invalidateQueries({ queryKey: ["wallet", "me"] });
+      qc.invalidateQueries({ queryKey: ['wallet-owner'] });
+      qc.invalidateQueries({ queryKey: ['wallet', 'me'] });
       setModal({
-        title: "Salvo",
-        message: "Seu PIX foi atualizado.",
+        title: 'Salvo',
+        message: 'Seu PIX foi atualizado.',
         onClose: () => nav.goBack(),
       });
     },
     onError: (e: any) => {
-      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message;
+      const msg =
+        e?.response?.data?.error || e?.response?.data?.message || e?.message;
       if (msg) {
-        setModal({ title: "Erro", message: String(msg) });
+        setModal({ title: 'Erro', message: String(msg) });
         return;
       }
       const fe = friendlyError(e);
-      setModal({ title: fe.title || "Erro", message: fe.message || "Falha ao salvar PIX." });
+      setModal({
+        title: fe.title || 'Erro',
+        message: fe.message || 'Falha ao salvar PIX.',
+      });
     },
   });
 
   return (
     <Screen>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Container style={{ flex: 1, paddingTop: 6 }}>
-          {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
+          {Platform.OS === 'android' ? (
+            <View style={{ height: StatusBar.currentHeight ?? 0 }} />
+          ) : null}
 
           <View style={m.nav}>
-<View style={m.navSide}>
-  <AppBackButton
-    onPress={() => nav.goBack()}
-    showLabel={false}
-    color="#000000"
-    iconSize={24}
-    style={m.backBtn}
-  />
-</View>
+            <View style={m.navSide}>
+              <AppBackButton
+                onPress={() => nav.goBack()}
+                showLabel={false}
+                color="#000000"
+                iconSize={24}
+                style={m.backBtn}
+              />
+            </View>
 
             <Text style={m.navTitle}>PIX</Text>
 
-            <Pressable hitSlop={12} onPress={() => walletQ.refetch()} style={m.rightBtn}>
-              <Text style={m.rightText}>{walletQ.isRefetching ? "…" : "⟳"}</Text>
+            <Pressable
+              hitSlop={12}
+              onPress={() => walletQ.refetch()}
+              style={m.rightBtn}
+            >
+              <Text style={m.rightText}>
+                {walletQ.isRefetching ? '…' : '⟳'}
+              </Text>
             </Pressable>
           </View>
 
@@ -230,20 +268,32 @@ export function OwnerPixKeyScreen() {
             </View>
           ) : (
             <>
-<ScrollView
-  style={{ flex: 1 }}
-  keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
-  contentContainerStyle={m.scroll}
->                <Text style={m.sectionTitle}>Recebimento (PIX)</Text>
-                <Text style={m.sub}>Atual: {destination?.pixKey ? String(destination.pixKey) : "não cadastrado"}</Text>
+              <ScrollView
+                style={{ flex: 1 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={m.scroll}
+              >
+                <Text style={m.sectionTitle}>Recebimento (PIX)</Text>
+                <Text style={m.sub}>
+                  Atual:{' '}
+                  {destination?.pixKey
+                    ? String(destination.pixKey)
+                    : 'não cadastrado'}
+                </Text>
 
                 <View style={[m.hairline, { marginVertical: 18 }]} />
 
                 <Text style={m.label}>Tipo de chave</Text>
                 <View style={m.chipsRow}>
-                  {(["CPF", "CNPJ"] as PixKeyType[]).map((tp) => (
-                    <Chip key={tp} label={tp} active={pixKeyType === tp} onPress={() => setPixKeyType(tp)} disabled={savePixMut.isPending} />
+                  {(['CPF', 'CNPJ'] as PixKeyType[]).map(tp => (
+                    <Chip
+                      key={tp}
+                      label={tp}
+                      active={pixKeyType === tp}
+                      onPress={() => setPixKeyType(tp)}
+                      disabled={savePixMut.isPending}
+                    />
                   ))}
                 </View>
 
@@ -252,31 +302,39 @@ export function OwnerPixKeyScreen() {
                 <Text style={m.label}>Chave PIX</Text>
                 <TextInput
                   value={pixKey}
-                  onChangeText={(value) => setPixKey(pixKeyType === "CPF" ? maskCpf(value) : maskCnpj(value))}
+                  onChangeText={value =>
+                    setPixKey(
+                      pixKeyType === 'CPF' ? maskCpf(value) : maskCnpj(value),
+                    )
+                  }
                   placeholder="Digite CPF ou CNPJ"
-                  placeholderTextColor={"rgba(0,0,0,0.35)"}
+                  placeholderTextColor={'rgba(0,0,0,0.35)'}
                   keyboardType="numeric"
                   autoCapitalize="none"
                   autoCorrect={false}
                   style={m.input}
                 />
 
-                <Text style={[m.label, { marginTop: 14 }]}>Nome do titular</Text>
+                <Text style={[m.label, { marginTop: 14 }]}>
+                  Nome do titular
+                </Text>
                 <TextInput
                   value={holderName}
                   onChangeText={setHolderName}
                   placeholder="Ex: Nome do titular"
-                  placeholderTextColor={"rgba(0,0,0,0.35)"}
+                  placeholderTextColor={'rgba(0,0,0,0.35)'}
                   autoCorrect={false}
                   style={m.input}
                 />
 
-                <Text style={[m.label, { marginTop: 14 }]}>CPF/CNPJ do titular</Text>
+                <Text style={[m.label, { marginTop: 14 }]}>
+                  CPF/CNPJ do titular
+                </Text>
                 <TextInput
                   value={holderDoc}
                   onChangeText={setHolderDoc}
                   placeholder="Somente números"
-                  placeholderTextColor={"rgba(0,0,0,0.35)"}
+                  placeholderTextColor={'rgba(0,0,0,0.35)'}
                   keyboardType="numeric"
                   autoCorrect={false}
                   style={m.input}
@@ -287,17 +345,19 @@ export function OwnerPixKeyScreen() {
                   value={bankName}
                   onChangeText={setBankName}
                   placeholder="Ex: Inter"
-                  placeholderTextColor={"rgba(0,0,0,0.35)"}
+                  placeholderTextColor={'rgba(0,0,0,0.35)'}
                   autoCorrect={false}
                   style={m.input}
                 />
 
-                <Text style={[m.label, { marginTop: 14 }]}>Observações (opcional)</Text>
+                <Text style={[m.label, { marginTop: 14 }]}>
+                  Observações (opcional)
+                </Text>
                 <TextInput
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Opcional"
-                  placeholderTextColor={"rgba(0,0,0,0.35)"}
+                  placeholderTextColor={'rgba(0,0,0,0.35)'}
                   multiline
                   autoCorrect={false}
                   style={[m.input, { minHeight: 88, paddingVertical: 12 }]}
@@ -313,9 +373,15 @@ export function OwnerPixKeyScreen() {
                 <Pressable
                   onPress={() => savePixMut.mutate()}
                   disabled={savePixMut.isPending}
-                  style={({ pressed }) => [m.btn, pressed && { opacity: 0.85 }, savePixMut.isPending && { opacity: 0.6 }]}
+                  style={({ pressed }) => [
+                    m.btn,
+                    pressed && { opacity: 0.85 },
+                    savePixMut.isPending && { opacity: 0.6 },
+                  ]}
                 >
-                  <Text style={m.btnText}>{savePixMut.isPending ? "..." : "Salvar PIX"}</Text>
+                  <Text style={m.btnText}>
+                    {savePixMut.isPending ? '...' : 'Salvar PIX'}
+                  </Text>
                 </Pressable>
               </View>
             </>
@@ -343,81 +409,118 @@ const m = StyleSheet.create({
   nav: {
     height: 52,
     paddingHorizontal: HPAD,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-navSide: {
-  minWidth: 64,
-  height: 44,
-  justifyContent: "center",
-},
+  navSide: {
+    minWidth: 64,
+    height: 44,
+    justifyContent: 'center',
+  },
 
-backBtn: {
-  minWidth: 44,
-  minHeight: 44,
-  paddingRight: 0,
-},
-  navTitle: { color: "#000000", fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
-  rightBtn: { minWidth: 64, height: 44, alignItems: "flex-end", justifyContent: "center" },
-  rightText: { color: "#000000", fontSize: 16, fontWeight: "900" },
+  backBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingRight: 0,
+  },
+  navTitle: {
+    color: '#000000',
+    fontSize: 17,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+  rightBtn: {
+    minWidth: 64,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  rightText: { color: '#000000', fontSize: 16, fontWeight: '900' },
 
-  hairline: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(0,0,0,0.18)", width: "100%" },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    width: '100%',
+  },
 
   scroll: {
-  flexGrow: 1,
-  paddingTop: 16,
-  paddingHorizontal: HPAD,
-  paddingBottom: 160,
-},
+    flexGrow: 1,
+    paddingTop: 16,
+    paddingHorizontal: HPAD,
+    paddingBottom: 160,
+  },
 
-  sectionTitle: { color: "#000000", fontSize: 18, fontWeight: "900", letterSpacing: -0.2 },
-  sub: { marginTop: 6, color: "#000000", fontSize: 12, fontWeight: "700", opacity: 0.75, lineHeight: 16 },
+  sectionTitle: {
+    color: '#000000',
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+  sub: {
+    marginTop: 6,
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.75,
+    lineHeight: 16,
+  },
 
-  label: { color: "#000000", fontSize: 12, fontWeight: "900", opacity: 0.72, letterSpacing: 0.2 },
+  label: {
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '900',
+    opacity: 0.72,
+    letterSpacing: 0.2,
+  },
 
-  chipsRow: { marginTop: 10, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chipsRow: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
   chip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.25)",
-    backgroundColor: "#FFFFFF",
+    borderColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: '#FFFFFF',
   },
-  chipActive: { borderColor: "#000000", backgroundColor: "#000000" },
-  chipText: { color: "#000000", fontSize: 12, fontWeight: "900", opacity: 0.85 },
-  chipTextActive: { color: "#FFFFFF", opacity: 1 },
+  chipActive: { borderColor: '#000000', backgroundColor: '#000000' },
+  chipText: {
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '900',
+    opacity: 0.85,
+  },
+  chipTextActive: { color: '#FFFFFF', opacity: 1 },
 
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.35)",
+    borderColor: 'rgba(0,0,0,0.35)',
     borderRadius: 14,
     paddingHorizontal: 14,
-    color: "#000000",
-    backgroundColor: "#FFFFFF",
+    color: '#000000',
+    backgroundColor: '#FFFFFF',
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: '600',
     marginTop: 10,
   },
 
   ctaWrap: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: HPAD,
-    paddingBottom: Platform.OS === "ios" ? 18 : 14,
+    paddingBottom: Platform.OS === 'ios' ? 18 : 14,
     paddingTop: 10,
   },
   secure: {
-    textAlign: "center",
-    color: "#000000",
+    textAlign: 'center',
+    color: '#000000',
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     opacity: 0.75,
     marginTop: 10,
     marginBottom: 10,
@@ -427,10 +530,10 @@ backBtn: {
     height: 54,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#000000",
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
   },
-  btnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
+  btnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
 });
