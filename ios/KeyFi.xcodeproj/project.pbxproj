@@ -277,6 +277,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "br.com.keyfi.app";
 				PRODUCT_NAME = KeyFi;
+				TARGETED_DEVICE_FAMILY = 1;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -304,6 +305,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "br.com.keyfi.app";
 				PRODUCT_NAME = KeyFi;
+				TARGETED_DEVICE_FAMILY = 1;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
