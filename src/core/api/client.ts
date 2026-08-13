@@ -5,7 +5,7 @@ import { apiLog, apiWarn } from "./logger";
 import { endpoints } from "./endpoints";
 
 const baseURL = (Config.API_BASE_URL || "").trim();
-
+//nothing
 if (!baseURL) {
   apiWarn("[ENV] API_BASE_URL está vazio. Verifique react-native-config e rebuild.");
 }
