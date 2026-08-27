@@ -632,10 +632,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await AuthService.logout();
     } catch {
-    }
+      // A limpeza local não depende do logout remoto.
+    } finally {
+      try {
+        await removePushTokenFromBackend();
+      } catch {
+        // Uma falha ao remover o token push não pode manter a sessão local ativa.
+      }
 
-    await removePushTokenFromBackend();
-    await disableBiometricLogin();
-    await get().resetSession();
+      try {
+        await disableBiometricLogin();
+      } catch {
+        // A limpeza do token de sessão continua obrigatória.
+      }
+
+      await get().resetSession();
+    }
   },
 }));

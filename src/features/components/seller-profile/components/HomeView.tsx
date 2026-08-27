@@ -27,6 +27,7 @@ type Props = {
   onOpenLinkSalon: () => void;
   onOpenReferrals: () => void;
   onLogout: () => void;
+  onDeleteAccount: () => void;
 };
 
 function getInitials(name: string) {
@@ -83,6 +84,7 @@ export function HomeView({
   onOpenLinkSalon,
   onOpenReferrals,
   onLogout,
+  onDeleteAccount,
 }: Props) {
   const initials = getInitials(profileName);
 
@@ -94,6 +96,21 @@ export function HomeView({
       <View style={s.header}>
         <Text style={s.screenTitle}>Perfil</Text>
       </View>
+
+      <Pressable
+        onPress={onDeleteAccount}
+        accessibilityRole="button"
+        accessibilityLabel="Excluir conta"
+        style={({ pressed }) => [s.deleteButton, pressed && s.pressedRow]}
+      >
+        <View style={s.logoutCopy}>
+          <View style={s.deleteIcon}>
+            <Ionicons name="trash-outline" size={19} color="#DC2626" />
+          </View>
+          <Text style={s.deleteText}>Excluir conta</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#DC2626" />
+      </Pressable>
 
       <Pressable
         onPress={onOpenDetails}
@@ -341,6 +358,19 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     ...cardShadow,
   },
+  deleteButton: {
+    minHeight: 60,
+    marginTop: 22,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...cardShadow,
+  },
   logoutCopy: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -354,8 +384,22 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F1F5F9',
   },
+  deleteIcon: {
+    width: 38,
+    height: 38,
+    marginRight: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+  },
   logoutText: {
     color: t.colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  deleteText: {
+    color: '#DC2626',
     fontSize: 15,
     fontWeight: '700',
   },
