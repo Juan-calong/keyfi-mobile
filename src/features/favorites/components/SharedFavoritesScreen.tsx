@@ -497,7 +497,6 @@ const s = StyleSheet.create({
     overflow: "visible",
   },
   emptyCardPremium: {
-    width: "100%",
     minHeight: 332,
     borderRadius: 24,
     paddingHorizontal: 22,
@@ -508,7 +507,7 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   emptyContent: {
-    width: "100%",
+    alignSelf: "stretch",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -522,9 +521,8 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   emptyTitle: {
-    width: "100%",
     maxWidth: 320,
-    alignSelf: "center",
+    alignSelf: "stretch",
     textAlign: "center",
     flexShrink: 1,
     fontSize: 18,
@@ -533,9 +531,8 @@ const s = StyleSheet.create({
   },
   emptyText: {
     marginTop: 8,
-    width: "100%",
     maxWidth: 320,
-    alignSelf: "center",
+    alignSelf: "stretch",
     textAlign: "center",
     flexShrink: 1,
     fontSize: 12.5,
