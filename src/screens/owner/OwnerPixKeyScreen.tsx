@@ -24,14 +24,15 @@ import { endpoints } from '../../core/api/endpoints';
 import { IosAlert } from '../../ui/components/IosAlert';
 import { friendlyError } from '../../core/errors/friendlyError';
 import { AppBackButton } from '../../ui/components/AppBackButton';
-
-type PixKeyType = 'CPF' | 'CNPJ';
+import { createIdempotencyKey } from '../../core/api/idempotency';
+import { PIX_KEY_TYPES, type LegacyPixKeyType, type PixKeyType } from '../../features/components/seller-profile/sellerProfile.types';
+import { formatPixKeyForDisplay, getPixKeyboardType, getPixPlaceholder, normalizePixKeyForSubmit, onlyDigits, pixKeyTypeFromLegacy, validatePixKeyForUx } from '../../features/components/seller-profile/sellerProfile.utils';
 
 type DestinationDTO = {
   id: string;
   walletId: string;
   pixKey: string;
-  pixKeyType: PixKeyType;
+  pixKeyType: LegacyPixKeyType;
   holderName?: string | null;
   holderDoc?: string | null;
   bankName?: string | null;
@@ -39,50 +40,6 @@ type DestinationDTO = {
   pixKeyChangedAt?: string | null;
   payoutBlockedUntil?: string | null;
 };
-
-function onlyDigits(v: string) {
-  return String(v ?? '').replace(/\D+/g, '');
-}
-
-function maskCpf(value: string) {
-  const d = onlyDigits(value).slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-
-function maskCnpj(value: string) {
-  const d = onlyDigits(value).slice(0, 14);
-  if (d.length <= 2) return d;
-  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
-  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-  if (d.length <= 12)
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(
-    8,
-    12,
-  )}-${d.slice(12)}`;
-}
-
-function normalizePixKey(type: PixKeyType, key: string) {
-  const raw = String(key ?? '').trim();
-  if (type === 'CPF') return onlyDigits(raw);
-  return onlyDigits(raw);
-}
-
-function validatePixKey(type: PixKeyType, key: string) {
-  const k = normalizePixKey(type, key);
-  if (!k) return 'Informe a chave PIX.';
-
-  if (type === 'CPF') {
-    if (k.length !== 11) return 'CPF inválido (11 dígitos).';
-  }
-  if (type === 'CNPJ') {
-    if (k.length !== 14) return 'CNPJ inválido (14 dígitos).';
-  }
-  return null;
-}
 
 function pickDestinationFromWalletRoot(root: any): DestinationDTO | null {
   return (root?.destination || root?.wallet?.destination || null) as any;
@@ -151,14 +108,13 @@ export function OwnerPixKeyScreen() {
   const [holderDoc, setHolderDoc] = useState('');
   const [bankName, setBankName] = useState('');
   const [notes, setNotes] = useState('');
+  const [pixKeyTypeUnsupported, setPixKeyTypeUnsupported] = useState(false);
 
   useEffect(() => {
     if (!destination) return;
-    setPixKeyType(
-      destination.pixKeyType === 'CPF' || destination.pixKeyType === 'CNPJ'
-        ? destination.pixKeyType
-        : 'CPF',
-    );
+    const type = pixKeyTypeFromLegacy(destination.pixKeyType);
+    setPixKeyType(type ?? 'CPF');
+    setPixKeyTypeUnsupported(!type);
     setPixKey(destination.pixKey ?? '');
     setHolderName(destination.holderName ?? '');
     setHolderDoc(destination.holderDoc ?? '');
@@ -167,13 +123,14 @@ export function OwnerPixKeyScreen() {
   }, [destination]);
 
   const normalizedPixKey = useMemo(
-    () => normalizePixKey(pixKeyType, pixKey),
+    () => normalizePixKeyForSubmit(pixKeyType, pixKey),
     [pixKeyType, pixKey],
   );
 
   const savePixMut = useMutation({
     mutationFn: async () => {
-      const err = validatePixKey(pixKeyType, pixKey);
+      if (pixKeyTypeUnsupported) throw new Error('Escolha um tipo de chave PIX suportado.');
+      const err = validatePixKeyForUx(pixKeyType, pixKey);
       if (err) throw new Error(err);
 
       const payload = {
@@ -190,7 +147,7 @@ export function OwnerPixKeyScreen() {
         throw new Error('Informe o CPF/CNPJ do titular (somente números).');
       if (!payload.bankName) throw new Error('Informe o banco.');
 
-      const idem = `wallet_dest_owner_${pixKeyType}_${normalizedPixKey}`;
+      const idem = createIdempotencyKey('wallet-dest-owner');
       const res = await api.post(endpoints.wallet.destination, payload, {
         headers: { 'Idempotency-Key': idem, 'X-Idempotency-Key': idem },
       });
@@ -286,12 +243,12 @@ export function OwnerPixKeyScreen() {
 
                 <Text style={m.label}>Tipo de chave</Text>
                 <View style={m.chipsRow}>
-                  {(['CPF', 'CNPJ'] as PixKeyType[]).map(tp => (
+                  {PIX_KEY_TYPES.map(tp => (
                     <Chip
                       key={tp}
-                      label={tp}
+                      label={{ CPF: 'CPF', CNPJ: 'CNPJ', EMAIL: 'E-mail', PHONE: 'Telefone', RANDOM: 'Chave aleatória' }[tp]}
                       active={pixKeyType === tp}
-                      onPress={() => setPixKeyType(tp)}
+                      onPress={() => { setPixKeyType(tp); setPixKey(''); setPixKeyTypeUnsupported(false); }}
                       disabled={savePixMut.isPending}
                     />
                   ))}
@@ -302,18 +259,17 @@ export function OwnerPixKeyScreen() {
                 <Text style={m.label}>Chave PIX</Text>
                 <TextInput
                   value={pixKey}
-                  onChangeText={value =>
-                    setPixKey(
-                      pixKeyType === 'CPF' ? maskCpf(value) : maskCnpj(value),
-                    )
-                  }
-                  placeholder="Digite CPF ou CNPJ"
+                  onChangeText={value => setPixKey(formatPixKeyForDisplay(pixKeyType, value))}
+                  placeholder={getPixPlaceholder(pixKeyType)}
                   placeholderTextColor={'rgba(0,0,0,0.35)'}
-                  keyboardType="numeric"
+                  keyboardType={getPixKeyboardType(pixKeyType)}
                   autoCapitalize="none"
                   autoCorrect={false}
                   style={m.input}
+                  testID="owner-pix-key-input"
+                  accessibilityLabel="Chave PIX"
                 />
+                {pixKeyTypeUnsupported ? <Text style={m.sub}>O tipo de chave salvo não é suportado. Escolha um tipo para continuar.</Text> : null}
 
                 <Text style={[m.label, { marginTop: 14 }]}>
                   Nome do titular
@@ -372,7 +328,7 @@ export function OwnerPixKeyScreen() {
 
                 <Pressable
                   onPress={() => savePixMut.mutate()}
-                  disabled={savePixMut.isPending}
+                  disabled={savePixMut.isPending || pixKeyTypeUnsupported}
                   style={({ pressed }) => [
                     m.btn,
                     pressed && { opacity: 0.85 },

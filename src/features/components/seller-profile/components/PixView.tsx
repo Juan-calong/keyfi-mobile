@@ -1,8 +1,8 @@
 import React from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
-import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../sellerProfile.types";
-import { formatDateTimeBR, maskPixCpfCnpjByType } from "../sellerProfile.utils";
+import { PIX_KEY_TYPES, type DestinationDTO, type WalletPixFormState } from "../sellerProfile.types";
+import { formatDateTimeBR, formatPixKeyForDisplay, getPixKeyboardType, getPixPlaceholder } from "../sellerProfile.utils";
 import { pix } from "../sellerProfile.styles";
 import { AppBackButton } from "../../../../ui/components/AppBackButton";
 
@@ -75,7 +75,7 @@ export function PixView({
 
         <Text style={pix.label}>Tipo de chave</Text>
         <View style={pix.chipsRow}>
-          {(["CPF", "CNPJ"] as WalletPixKeyType[]).map((tp) => (
+          {PIX_KEY_TYPES.map((tp) => (
             <Pressable
               key={tp}
               onPress={() => form.setPixKeyType(tp)}
@@ -89,7 +89,7 @@ export function PixView({
             >
               <Text style={[pix.chipText, form.pixKeyType === tp && pix.chipTextActive]}>
                 {form.pixKeyType === tp ? "✓ " : ""}
-                {tp}
+                {{ CPF: "CPF", CNPJ: "CNPJ", EMAIL: "E-mail", PHONE: "Telefone", RANDOM: "Chave aleatória" }[tp]}
               </Text>
             </Pressable>
           ))}
@@ -100,14 +100,18 @@ export function PixView({
         <Text style={pix.label}>Chave PIX</Text>
         <TextInput
           value={form.pixKey}
-          onChangeText={(value) => form.setPixKey(maskPixCpfCnpjByType(form.pixKeyType, value))}
-          placeholder="Digite CPF ou CNPJ"
+          onChangeText={(value) => form.setPixKey(formatPixKeyForDisplay(form.pixKeyType, value))}
+          placeholder={getPixPlaceholder(form.pixKeyType)}
           placeholderTextColor={"rgba(0,0,0,0.35)"}
-          keyboardType="numeric"
+          keyboardType={getPixKeyboardType(form.pixKeyType)}
           autoCapitalize="none"
           autoCorrect={false}
           style={pix.input}
+          testID="wallet-pix-key-input"
+          accessibilityLabel="Chave PIX"
         />
+
+        {form.pixKeyTypeUnsupported ? <Text style={pix.sub}>O tipo de chave salvo não é suportado. Escolha um tipo para continuar.</Text> : null}
 
         <Text style={[pix.label, { marginTop: 14 }]}>Nome do titular</Text>
         <TextInput
@@ -161,7 +165,7 @@ export function PixView({
 
         <Pressable
           onPress={onSave}
-          disabled={savePending}
+          disabled={savePending || form.pixKeyTypeUnsupported}
           style={({ pressed }) => [
             pix.btn,
             pressed && { opacity: 0.85 },

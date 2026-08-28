@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../sellerProfile.types";
-import { normalizeWalletPixKey } from "../sellerProfile.utils";
+import { normalizePixKeyForSubmit, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
 
 export function useWalletPixForm(destination: DestinationDTO | null): WalletPixFormState {
   const [pixKeyType, setPixKeyType] = useState<WalletPixKeyType>("CPF");
@@ -10,6 +10,7 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
   const [holderDoc, setHolderDoc] = useState("");
   const [bankName, setBankName] = useState("");
   const [notes, setNotes] = useState("");
+  const [pixKeyTypeUnsupported, setPixKeyTypeUnsupported] = useState(false);
 
   useEffect(() => {
     if (!destination) {
@@ -19,10 +20,13 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
       setHolderDoc("");
       setBankName("");
       setNotes("");
+      setPixKeyTypeUnsupported(false);
       return;
     }
 
-    setPixKeyType(destination.pixKeyType === "CPF" || destination.pixKeyType === "CNPJ" ? destination.pixKeyType : "CPF");
+    const type = pixKeyTypeFromLegacy(destination.pixKeyType);
+    setPixKeyType(type ?? "CPF");
+    setPixKeyTypeUnsupported(!type);
     setPixKey(destination.pixKey ?? "");
     setHolderName(destination.holderName ?? "");
     setHolderDoc(destination.holderDoc ?? "");
@@ -31,13 +35,13 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
   }, [destination]);
 
   const normalizedPixKey = useMemo(
-    () => normalizeWalletPixKey(pixKeyType, pixKey),
+    () => normalizePixKeyForSubmit(pixKeyType, pixKey),
     [pixKeyType, pixKey]
   );
 
   return {
     pixKeyType,
-    setPixKeyType,
+    setPixKeyType: (type) => { setPixKeyType(type); setPixKey(""); setPixKeyTypeUnsupported(false); },
     pixKey,
     setPixKey,
     holderName,
@@ -49,5 +53,6 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
     notes,
     setNotes,
     normalizedPixKey,
+    pixKeyTypeUnsupported,
   };
 }
