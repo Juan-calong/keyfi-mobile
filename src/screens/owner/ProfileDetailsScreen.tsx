@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -27,8 +28,24 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { IosConfirm, type IosConfirmAction } from "../../ui/components/IosConfirm";
 import { useNavigation } from "@react-navigation/native";
 import { AppBackButton } from "../../ui/components/AppBackButton";
+import { AccountDeletionModal } from "../../features/account-deletion/AccountDeletionModal";
+import { useAccountDeletionFlow } from "../../features/account-deletion/useAccountDeletionFlow";
 
 type MeDTO = any;
+
+const accountDeletionStyles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center" },
+  icon: {
+    width: 32,
+    height: 32,
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  text: { fontSize: 16, fontWeight: "800", color: "#DC2626" },
+});
 
 const onlyDigits = (v: any) => String(v ?? "").replace(/\D/g, "");
 const trim = (v: any) => String(v ?? "").trim();
@@ -547,6 +564,7 @@ export function OwnerProfileDetailsScreen() {
   const nav = useNavigation<any>();
   const qc = useQueryClient();
   const logout = useAuthStore((s) => s.logout);
+  const accountDeletion = useAccountDeletionFlow("SALON_OWNER");
 
   const [confirm, setConfirm] = useState<null | { title: string; message: string; actions: IosConfirmAction[] }>(null);
 
@@ -919,6 +937,19 @@ export function OwnerProfileDetailsScreen() {
               <View style={{ height: 16 }} />
 
               <Pressable
+                onPress={accountDeletion.begin}
+                style={({ pressed }) => [{ backgroundColor: "#FFF", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, borderWidth: 1, borderColor: "#FECACA", flexDirection: "row", alignItems: "center", justifyContent: "space-between", opacity: pressed ? 0.9 : 1, marginBottom: 10 }]}
+              >
+                <View style={accountDeletionStyles.row}>
+                  <View style={accountDeletionStyles.icon}>
+                    <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                  </View>
+                  <Text style={accountDeletionStyles.text}>Excluir conta</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(220,38,38,0.65)" />
+              </Pressable>
+
+              <Pressable
                 onPress={() => {
                   setConfirm({
                     title: "Sair da conta",
@@ -1156,6 +1187,8 @@ export function OwnerProfileDetailsScreen() {
           </>
         )}
       </Container>
+
+      <AccountDeletionModal flow={accountDeletion} />
 
       <IosConfirm
         visible={!!confirm}

@@ -17,6 +17,10 @@ export const endpoints = {
     passwordForgot: "/auth/password/forgot",
     passwordReset: "/auth/password/reset",
     social: "/auth/social",
+    accountDeletionReauthenticationRequest:
+      "/auth/reauthentication/account-deletion/request",
+    accountDeletionReauthenticationConfirm:
+      "/auth/reauthentication/account-deletion/confirm",
   },
 
   onboarding: {
@@ -26,6 +30,7 @@ export const endpoints = {
 
   profiles: {
     me: "/profiles/me",
+    account: "/profiles/me/account",
   },
 
   categories: {

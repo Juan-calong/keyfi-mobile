@@ -30,6 +30,8 @@ import { LinkSalonView } from '../../features/components/seller-profile/componen
 import { PixView } from '../../features/components/seller-profile/components/PixView';
 import { BeneficiaryView } from '../../features/components/seller-profile/components/BeneficiaryView';
 import { ReferralLinksView } from '../../features/components/seller-profile/components/ReferralLinksView';
+import { AccountDeletionModal } from '../../features/account-deletion/AccountDeletionModal';
+import { useAccountDeletionFlow } from '../../features/account-deletion/useAccountDeletionFlow';
 
 // ajuste aqui se você já tiver um client api central
 const api = axios.create({
@@ -45,6 +47,7 @@ type ConfirmState = null | {
 export function SellerProfileScreen() {
   const logout = useAuthStore(s => s.logout);
   const token = useAuthStore(s => s.token);
+  const accountDeletion = useAccountDeletionFlow('SELLER');
 
   const [view, setView] = useState<ViewMode>('HOME');
   const [salonId, setSalonId] = useState('');
@@ -207,6 +210,7 @@ export function SellerProfileScreen() {
                 ],
               })
             }
+            onDeleteAccount={accountDeletion.begin}
           />
         ) : view === 'TOKEN' ? (
           <TokenView
@@ -311,6 +315,7 @@ export function SellerProfileScreen() {
           actions={confirm?.actions || []}
           onClose={() => setConfirm(null)}
         />
+        <AccountDeletionModal flow={accountDeletion} />
       </Container>
     </Screen>
   );
