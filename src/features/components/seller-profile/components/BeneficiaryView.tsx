@@ -3,13 +3,13 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Card } from "../../../../ui/components/Card";
 
+import { PIX_KEY_TYPES } from "../sellerProfile.types";
 import type {
   BeneficiaryFormState,
-  BeneficiaryPixKeyType,
   SellerBeneficiaryDTO,
 } from "../sellerProfile.types";
 import { beneficiaryStyles, pix, s } from "../sellerProfile.styles";
-import { formatDateOnlyBR, formatDateTimeBR, maskPixCpfCnpjByType } from "../sellerProfile.utils";
+import { formatDateOnlyBR, formatDateTimeBR, formatPixKeyForDisplay, getPixKeyboardType, getPixPlaceholder } from "../sellerProfile.utils";
 
 type Props = {
   beneficiary: SellerBeneficiaryDTO | null;
@@ -131,7 +131,7 @@ export function BeneficiaryView({
 
         <Text style={[pix.label, { marginTop: 14 }]}>Tipo de chave PIX</Text>
         <View style={pix.chipsRow}>
-          {(["CPF", "CNPJ"] as BeneficiaryPixKeyType[]).map((tp) => (
+          {PIX_KEY_TYPES.map((tp) => (
             <Pressable
               key={tp}
               onPress={() => form.setPixKeyType(tp)}
@@ -145,7 +145,7 @@ export function BeneficiaryView({
             >
               <Text style={[pix.chipText, form.pixKeyType === tp && pix.chipTextActive]}>
                 {form.pixKeyType === tp ? "✓ " : ""}
-                {tp}
+                {{ CPF: "CPF", CNPJ: "CNPJ", EMAIL: "E-mail", PHONE: "Telefone", RANDOM: "Chave aleatória" }[tp]}
               </Text>
             </Pressable>
           ))}
@@ -154,14 +154,17 @@ export function BeneficiaryView({
         <Text style={[pix.label, { marginTop: 14 }]}>Chave PIX</Text>
         <TextInput
           value={form.pixKey}
-          onChangeText={(value) => form.setPixKey(maskPixCpfCnpjByType(form.pixKeyType, value))}
-          placeholder="CPF ou CNPJ"
+          onChangeText={(value) => form.setPixKey(formatPixKeyForDisplay(form.pixKeyType, value))}
+          placeholder={getPixPlaceholder(form.pixKeyType)}
           placeholderTextColor={"rgba(0,0,0,0.35)"}
-          keyboardType="numeric"
+          keyboardType={getPixKeyboardType(form.pixKeyType)}
           autoCapitalize="none"
           autoCorrect={false}
           style={pix.input}
+          testID="beneficiary-pix-key-input"
+          accessibilityLabel="Chave PIX do beneficiário"
         />
+        {form.pixKeyTypeUnsupported ? <Text style={pix.sub}>O tipo de chave salvo não é suportado. Escolha um tipo para continuar.</Text> : null}
 
         <View style={[pix.hairline, { marginVertical: 18 }]} />
 
@@ -315,7 +318,7 @@ export function BeneficiaryView({
         <View style={{ gap: 10 }}>
           <Pressable
             onPress={onSave}
-            disabled={savePending || deletePending}
+            disabled={savePending || deletePending || form.pixKeyTypeUnsupported}
             style={({ pressed }) => [
               pix.btn,
               pressed && { opacity: 0.85 },

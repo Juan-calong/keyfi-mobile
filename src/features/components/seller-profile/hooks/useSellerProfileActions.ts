@@ -7,13 +7,14 @@ import { api } from "../../../../core/api/client";
 import { endpoints } from "../../../../core/api/endpoints";
 import { SellerService } from "../../../../core/api/services/seller.service";
 import { friendlyError } from "../../../../core/errors/friendlyError";
+import { createIdempotencyKey } from "../../../../core/api/idempotency";
 
 import type {
   BeneficiaryPayload,
   ModalState,
   WalletPixKeyType,
 } from "../sellerProfile.types";
-import { onlyDigits, validateWalletPixKey } from "../sellerProfile.utils";
+import { buildWalletDestinationPayload } from "../sellerProfile.utils";
 import { validateBeneficiaryPayload } from "../sellerProfile.beneficiary";
 
 type SetModal = (v: ModalState) => void;
@@ -65,23 +66,9 @@ export function useSellerProfileActions(setModal: SetModal) {
 
   const savePixMut = useMutation({
     mutationFn: async (input: SavePixInput) => {
-      const err = validateWalletPixKey(input.pixKeyType, input.pixKey);
-      if (err) throw new Error(err);
+      const payload = buildWalletDestinationPayload(input);
 
-      const payload = {
-        pixKeyType: input.pixKeyType,
-        pixKey: input.normalizedPixKey,
-        holderName: String(input.holderName ?? "").trim(),
-        holderDoc: onlyDigits(input.holderDoc ?? ""),
-        bankName: String(input.bankName ?? "").trim(),
-        notes: String(input.notes ?? "").trim() || null,
-      };
-
-      if (!payload.holderName) throw new Error("Informe o nome do titular.");
-      if (!payload.holderDoc) throw new Error("Informe o CPF/CNPJ do titular (somente números).");
-      if (!payload.bankName) throw new Error("Informe o banco.");
-
-      const idem = `wallet_dest_${input.pixKeyType}_${input.normalizedPixKey}`;
+      const idem = createIdempotencyKey("wallet-dest");
 
       const res = await api.post(endpoints.wallet.destination, payload, {
         headers: { "Idempotency-Key": idem, "X-Idempotency-Key": idem },

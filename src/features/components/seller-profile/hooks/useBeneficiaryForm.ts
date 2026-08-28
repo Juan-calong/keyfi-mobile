@@ -5,7 +5,7 @@ import type {
   BeneficiaryPixKeyType,
   SellerBeneficiaryDTO,
 } from "../sellerProfile.types";
-import { isoToDateInput } from "../sellerProfile.utils";
+import { isoToDateInput, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
 import { buildBeneficiaryPayload } from "../sellerProfile.beneficiary";
 
 export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): BeneficiaryFormState {
@@ -27,6 +27,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
   const [accountHolderName, setAccountHolderName] = useState("");
   const [accountHolderDocument, setAccountHolderDocument] = useState("");
   const [notes, setNotes] = useState("");
+  const [pixKeyTypeUnsupported, setPixKeyTypeUnsupported] = useState(false);
 
   useEffect(() => {
     if (!beneficiary) {
@@ -46,6 +47,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
       setAccountHolderName("");
       setAccountHolderDocument("");
       setNotes("");
+      setPixKeyTypeUnsupported(false);
       return;
     }
 
@@ -54,11 +56,9 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     setEmail(beneficiary.email ?? "");
     setPhone(beneficiary.phone ?? "");
     setBirthDate(isoToDateInput(beneficiary.birthDate));
-    setPixKeyType(
-      beneficiary.pixKeyType === "CPF" || beneficiary.pixKeyType === "CNPJ"
-        ? beneficiary.pixKeyType
-        : "CPF"
-    );
+    const type = pixKeyTypeFromLegacy(beneficiary.pixKeyType);
+    setPixKeyType(type ?? "CPF");
+    setPixKeyTypeUnsupported(!!beneficiary.pixKey && !type);
     setPixKey(beneficiary.pixKey ?? "");
     setBankCode(beneficiary.bankCode ?? "");
     setBankName(beneficiary.bankName ?? "");
@@ -124,7 +124,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     setBirthDate,
 
     pixKeyType,
-    setPixKeyType,
+    setPixKeyType: (type) => { setPixKeyType(type); setPixKey(""); setPixKeyTypeUnsupported(false); },
     pixKey,
     setPixKey,
 
@@ -149,5 +149,6 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     setNotes,
 
     payload,
+    pixKeyTypeUnsupported,
   };
 }

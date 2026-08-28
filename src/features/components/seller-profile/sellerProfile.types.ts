@@ -1,12 +1,16 @@
-export type WalletPixKeyType = "EMAIL" | "CPF" | "CNPJ" | "PHONE" | "EVP";
+export type PixKeyType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "RANDOM";
+/** Kept only to tolerate a legacy value received from an older API response. */
+export type LegacyPixKeyType = PixKeyType | "EVP";
+export type WalletPixKeyType = PixKeyType;
+export type BeneficiaryPixKeyType = PixKeyType;
 
-export type BeneficiaryPixKeyType = "EMAIL" | "CPF" | "CNPJ" | "PHONE" | "RANDOM";
+export const PIX_KEY_TYPES: readonly PixKeyType[] = ["CPF", "CNPJ", "EMAIL", "PHONE", "RANDOM"];
 
 export type DestinationDTO = {
   id: string;
   walletId: string;
   pixKey: string;
-  pixKeyType: WalletPixKeyType;
+  pixKeyType: LegacyPixKeyType;
   holderName: string;
   holderDoc: string;
   bankName: string;
@@ -38,7 +42,7 @@ export type SellerBeneficiaryDTO = {
   phone?: string | null;
   birthDate?: string | null;
 
-  pixKeyType?: BeneficiaryPixKeyType | null;
+  pixKeyType?: LegacyPixKeyType | null;
   pixKey?: string | null;
 
   bankCode?: string | null;
@@ -141,6 +145,7 @@ export type WalletPixFormState = {
   notes: string;
   setNotes: (v: string) => void;
   normalizedPixKey: string;
+  pixKeyTypeUnsupported: boolean;
 };
 
 export type BeneficiaryFormState = {
@@ -181,4 +186,5 @@ export type BeneficiaryFormState = {
   setNotes: (v: string) => void;
 
   payload: BeneficiaryPayload;
+  pixKeyTypeUnsupported: boolean;
 };
