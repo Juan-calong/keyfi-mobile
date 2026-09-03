@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { DestinationDTO, WalletPixFormState, WalletPixKeyType } from "../sellerProfile.types";
-import { normalizePixKeyForSubmit, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
+import { formatHydratedPixKeyForDisplay, normalizePixKeyForSubmit, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
 
 export function useWalletPixForm(destination: DestinationDTO | null): WalletPixFormState {
   const [pixKeyType, setPixKeyType] = useState<WalletPixKeyType>("CPF");
@@ -27,7 +27,7 @@ export function useWalletPixForm(destination: DestinationDTO | null): WalletPixF
     const type = pixKeyTypeFromLegacy(destination.pixKeyType);
     setPixKeyType(type ?? "CPF");
     setPixKeyTypeUnsupported(!type);
-    setPixKey(destination.pixKey ?? "");
+    setPixKey(formatHydratedPixKeyForDisplay(destination.pixKeyType, destination.pixKey));
     setHolderName(destination.holderName ?? "");
     setHolderDoc(destination.holderDoc ?? "");
     setBankName(destination.bankName ?? "");

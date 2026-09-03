@@ -5,7 +5,7 @@ import type {
   BeneficiaryPixKeyType,
   SellerBeneficiaryDTO,
 } from "../sellerProfile.types";
-import { isoToDateInput, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
+import { formatHydratedPixKeyForDisplay, isoToDateInput, pixKeyTypeFromLegacy } from "../sellerProfile.utils";
 import { buildBeneficiaryPayload } from "../sellerProfile.beneficiary";
 
 export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): BeneficiaryFormState {
@@ -59,7 +59,7 @@ export function useBeneficiaryForm(beneficiary: SellerBeneficiaryDTO | null): Be
     const type = pixKeyTypeFromLegacy(beneficiary.pixKeyType);
     setPixKeyType(type ?? "CPF");
     setPixKeyTypeUnsupported(!!beneficiary.pixKey && !type);
-    setPixKey(beneficiary.pixKey ?? "");
+    setPixKey(formatHydratedPixKeyForDisplay(beneficiary.pixKeyType, beneficiary.pixKey));
     setBankCode(beneficiary.bankCode ?? "");
     setBankName(beneficiary.bankName ?? "");
     setAccountType(beneficiary.accountType ?? "CHECKING");

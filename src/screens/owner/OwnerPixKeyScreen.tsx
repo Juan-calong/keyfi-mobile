@@ -26,7 +26,7 @@ import { friendlyError } from '../../core/errors/friendlyError';
 import { AppBackButton } from '../../ui/components/AppBackButton';
 import { createIdempotencyKey } from '../../core/api/idempotency';
 import { PIX_KEY_TYPES, type LegacyPixKeyType, type PixKeyType } from '../../features/components/seller-profile/sellerProfile.types';
-import { formatPixKeyForDisplay, getPixKeyboardType, getPixPlaceholder, normalizePixKeyForSubmit, onlyDigits, pixKeyTypeFromLegacy, validatePixKeyForUx } from '../../features/components/seller-profile/sellerProfile.utils';
+import { formatHydratedPixKeyForDisplay, formatPixKeyForDisplay, getPixKeyboardType, getPixPlaceholder, normalizePixKeyForSubmit, onlyDigits, pixKeyTypeFromLegacy, validatePixKeyForUx } from '../../features/components/seller-profile/sellerProfile.utils';
 
 type DestinationDTO = {
   id: string;
@@ -115,7 +115,7 @@ export function OwnerPixKeyScreen() {
     const type = pixKeyTypeFromLegacy(destination.pixKeyType);
     setPixKeyType(type ?? 'CPF');
     setPixKeyTypeUnsupported(!type);
-    setPixKey(destination.pixKey ?? '');
+    setPixKey(formatHydratedPixKeyForDisplay(destination.pixKeyType, destination.pixKey));
     setHolderName(destination.holderName ?? '');
     setHolderDoc(destination.holderDoc ?? '');
     setBankName(destination.bankName ?? '');

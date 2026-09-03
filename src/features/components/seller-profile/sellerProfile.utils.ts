@@ -56,6 +56,12 @@ export function formatPixKeyForDisplay(type: PixKeyType, value: string) {
   return value;
 }
 
+export function formatHydratedPixKeyForDisplay(type?: LegacyPixKeyType | string | null, value?: string | null) {
+  const pixKeyType = pixKeyTypeFromLegacy(type);
+  const raw = String(value ?? "");
+  return pixKeyType ? formatPixKeyForDisplay(pixKeyType, raw) : raw;
+}
+
 export function normalizePixKeyForSubmit(type: PixKeyType, value: string) {
   const raw = String(value ?? "").trim();
   if (type === "CPF" || type === "CNPJ") return onlyDigits(raw);
