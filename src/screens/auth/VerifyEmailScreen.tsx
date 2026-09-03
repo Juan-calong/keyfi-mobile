@@ -107,7 +107,6 @@ export function VerifyEmailScreen({ navigation, route }: Props) {
     try {
       setLoading(true);
       await api.post(endpoints.auth.emailVerifyConfirm, { email: verificationEmail, code });
-      setAlert({ title: "Sucesso", message: "Email verificado com sucesso. Faça login para continuar." });
       navigation.navigate("Login", {
         email: verificationEmail,
         message: "Email verificado com sucesso. Faça login para continuar.",

@@ -71,8 +71,7 @@ export function LoginScreen() {
 
   useEffect(() => {
     if (route.params?.email) setEmail(route.params.email);
-    if (route.params?.message) showError({ title: "Aviso", message: route.params.message });
-  }, [route.params?.email, route.params?.message]);
+  }, [route.params?.email]);
 
   useEffect(() => {
     let mounted = true;
@@ -282,6 +281,7 @@ if (requiresEmailVerification) {
                 <Text style={styles.logoText}>KeyFi</Text>
               </View>
               <Text style={styles.h1}>Acesse sua conta</Text>
+              {route.params?.message ? <Text style={styles.notice}>{route.params.message}</Text> : null}
               <Text style={styles.sub}>
                 {ENABLE_SOCIAL_LOGIN
                   ? "Faça login ou continue com sua conta social."
@@ -515,6 +515,7 @@ const COLORS = {
   bg: "#FAFAFA",
   text: "#0F172A",
   sub: "#475569",
+  notice: "#047857",
   placeholder: "#94A3B8",
   border: "#E2E8F0",
   icon: "#64748B",
@@ -559,6 +560,14 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: "800",
     letterSpacing: -0.8,
+  },
+
+  notice: {
+    marginTop: 8,
+    color: COLORS.notice,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   sub: {
