@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  StatusBar,
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
@@ -126,8 +125,6 @@ export function OwnerSellersScreen() {
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: 6 }}>
-        {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
-
         {/* NAV iOS */}
 <View style={m.nav}>
   <View style={m.navSide}>

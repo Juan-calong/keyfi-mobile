@@ -7,7 +7,6 @@ import {
   TextInput,
   ScrollView,
   Platform,
-  StatusBar,
   StyleSheet,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -185,10 +184,6 @@ export function OwnerPixKeyScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Container style={{ flex: 1, paddingTop: 6 }}>
-          {Platform.OS === 'android' ? (
-            <View style={{ height: StatusBar.currentHeight ?? 0 }} />
-          ) : null}
-
           <View style={m.nav}>
             <View style={m.navSide}>
               <AppBackButton

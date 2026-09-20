@@ -9,7 +9,6 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
-  StatusBar,
 } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
@@ -202,8 +201,6 @@ onError: (e: any) => {
           keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         >
           <Container style={{ flex: 1, paddingTop: 6 }}>
-            {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
-
             {/* NAV */}
             <View style={s.nav}>
               <Pressable hitSlop={12} onPress={() => navigation.goBack()} style={s.backBtn}>

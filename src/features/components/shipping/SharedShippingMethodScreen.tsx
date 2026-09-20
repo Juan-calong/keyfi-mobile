@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  StatusBar,
   ScrollView,
 } from "react-native";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -1047,10 +1046,6 @@ const freshSelected =
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: 6 }}>
-        {Platform.OS === "android" ? (
-          <View style={{ height: StatusBar.currentHeight ?? 0 }} />
-        ) : null}
-
         <View style={s.header}>
           <Pressable onPress={onBack} hitSlop={12}>
             <Text style={s.backText}>‹</Text>

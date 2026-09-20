@@ -1,6 +1,6 @@
 // screens/owner/OwnerOrderDetailsScreen.tsx
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, StatusBar, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -265,8 +265,6 @@ export function OwnerOrderDetailsScreen() {
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: 6 }}>
-        {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
-
 <View style={m.nav}>
   <View style={m.navSide}>
     <AppBackButton

@@ -1,6 +1,6 @@
 // screens/customer/CustomerCardEntryScreen.tsx (VERSÃO CIELO + BB, sem MP)
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Platform, StatusBar } from "react-native";
+import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, Platform } from "react-native";
 import Icon from "react-native-vector-icons/Feather";
 import { useQuery } from "@tanstack/react-query";
 
@@ -144,8 +144,6 @@ export function CustomerCardEntryScreen({ route, navigation }: any) {
   return (
     <Screen>
       <Container style={{ flex: 1, paddingTop: 6 }}>
-        {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
-
         <View style={m.header}>
           <Pressable hitSlop={12} onPress={() => navigation.goBack()} style={m.backBtn}>
             <Text style={m.backText}>{"< Voltar"}</Text>

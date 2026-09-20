@@ -7,11 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
-  StatusBar,
   Linking,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import Clipboard from "@react-native-clipboard/clipboard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IosAlert } from "../../ui/components/IosAlert";
 
@@ -21,6 +21,7 @@ export function OwnerBoletoWebViewScreen({ route, navigation }: any) {
   const webRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const [modal, setModal] = useState<null | { title: string; message: string; onClose?: () => void }>(null);
 
@@ -88,7 +89,7 @@ export function OwnerBoletoWebViewScreen({ route, navigation }: any) {
 
   return (
     <View style={s.root}>
-      {Platform.OS === "android" ? <View style={{ height: StatusBar.currentHeight ?? 0 }} /> : null}
+      {Platform.OS === "android" ? <View style={{ height: insets.top }} /> : null}
 
       <View style={s.header}>
         <Pressable hitSlop={12} onPress={() => navigation.goBack()} style={s.headerBtn}>
@@ -129,7 +130,12 @@ export function OwnerBoletoWebViewScreen({ route, navigation }: any) {
       ) : (
         <>
           {loading ? (
-            <View style={s.loadingOverlay}>
+            <View
+              style={[
+                s.loadingOverlay,
+                { top: 54 + (Platform.OS === "android" ? insets.top : 0) },
+              ]}
+            >
               <ActivityIndicator />
               <Text style={s.sub}>Carregando boleto…</Text>
             </View>
@@ -203,7 +209,6 @@ const s = StyleSheet.create({
 
   loadingOverlay: {
     position: "absolute",
-    top: 54 + (Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0),
     left: 0,
     right: 0,
     bottom: 0,
