@@ -7,7 +7,6 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
-  Platform,
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";

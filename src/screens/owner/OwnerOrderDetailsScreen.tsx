@@ -1,6 +1,6 @@
 // screens/owner/OwnerOrderDetailsScreen.tsx
 import React, { useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
