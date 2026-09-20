@@ -199,7 +199,7 @@ export function VerifyEmailScreen({ navigation, route }: Props) {
 
   return (
     <Screen style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" />
 
       <KeyboardAvoidingView
         style={styles.flex}

@@ -526,7 +526,7 @@ export function RegisterCustomerScreen({ navigation }: Props) {
 
   return (
     <Screen style={{ backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <KeyboardAvoidingView

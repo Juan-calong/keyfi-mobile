@@ -82,7 +82,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
 
   return (
     <Screen style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={styles.flex}>
           <Container>

@@ -85,7 +85,7 @@ export function OwnerCartRequestDetailsScreen() {
 
   return (
     <Screen style={{ flex: 1, backgroundColor: WHITE }}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+      <StatusBar barStyle="dark-content" />
 
 <View style={s.header}>
   <View style={s.headerLeft}>

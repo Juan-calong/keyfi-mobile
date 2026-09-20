@@ -121,7 +121,7 @@ export function SharedOwnerCustomerCartScreen({
 
   return (
     <Screen style={{ backgroundColor: BG as any }}>
-      <StatusBar barStyle="dark-content" backgroundColor={BG} />
+      <StatusBar barStyle="dark-content" />
 
       <Container style={{ flex: 1, backgroundColor: BG, paddingHorizontal: 0 }}>
           <CartHeader

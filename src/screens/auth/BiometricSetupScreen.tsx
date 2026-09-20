@@ -66,7 +66,7 @@ export function BiometricSetupScreen() {
 
   return (
     <Screen style={{ backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" />
 
       <View style={[styles.navbar, { paddingTop: Math.max(insets.top, 10) }]}>
         <View style={styles.navRow}>

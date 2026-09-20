@@ -8,7 +8,6 @@ import {
   SectionList,
   Pressable,
   Platform,
-  SafeAreaView,
 } from "react-native";
 import Clipboard from "@react-native-clipboard/clipboard";
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +19,7 @@ import { Loading, ErrorState, Empty } from "../../ui/components/State";
 
 import { SellerService, type SellerPermissionDTO } from "../../core/api/services/seller.service";
 import { useSellerSessionStore } from "../../stores/seller.session.store";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SELLER_SCREENS } from "../../navigation/seller.routes";
 
 import { IosAlert } from "../../ui/components/IosAlert";

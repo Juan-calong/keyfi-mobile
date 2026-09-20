@@ -49,7 +49,7 @@ export function SellerCartRequestsScreen() {
 
   return (
     <Screen style={{ flex: 1, backgroundColor: WHITE }}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+      <StatusBar barStyle="dark-content" />
 
       <View style={s.header}>
         <Pressable onPress={() => nav.goBack?.()} hitSlop={12} style={s.headerLeft}>

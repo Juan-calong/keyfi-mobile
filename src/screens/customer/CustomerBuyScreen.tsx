@@ -622,7 +622,7 @@ useFocusEffect(
 
   return (
     <Screen style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={BLACK} />
+      <StatusBar barStyle="light-content" />
 
       <View style={styles.body}>
         <View style={styles.header}>

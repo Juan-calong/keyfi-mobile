@@ -1258,7 +1258,7 @@ const quantityTierBadges = useMemo(() => {
 
   return (
 <Screen style={{ backgroundColor: PRODUCT_DETAILS_BG as any }}>
-  <StatusBar barStyle="dark-content" backgroundColor={PRODUCT_DETAILS_BG} />
+  <StatusBar barStyle="dark-content" />
 
   <Container
     style={{

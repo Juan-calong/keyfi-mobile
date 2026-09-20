@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import {
   Alert,
-  SafeAreaView,
   StyleSheet,
   Switch,
   Text,
   View,
   Pressable,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSecurityStore } from '../../stores/security.store';
 import { getBiometryDisplayName } from '../../core/security/biometric';
 

@@ -263,7 +263,7 @@ if (requiresEmailVerification) {
 
   return (
     <Screen style={{ backgroundColor: COLORS.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg} />
+      <StatusBar barStyle="dark-content" />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

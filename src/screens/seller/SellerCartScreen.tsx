@@ -10,13 +10,13 @@ import {
   Platform,
   ToastAndroid,
   StatusBar,
-  SafeAreaView,
   StyleSheet,
   Modal,
   GestureResponderEvent,
   useWindowDimensions,
   type ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -327,7 +327,7 @@ export function SellerCartScreen() {
 
   return (
     <Screen style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
+      <StatusBar barStyle="dark-content" />
 
       <View style={styles.header}>
         <View style={[styles.headerInner, constrainedStyle]}>

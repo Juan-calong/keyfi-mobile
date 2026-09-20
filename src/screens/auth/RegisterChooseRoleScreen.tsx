@@ -43,7 +43,7 @@ export function RegisterChooseRoleScreen({ navigation }: Props) {
 
   return (
     <Screen style={styles.screen}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" />
 
       {/* NAVBAR */}
       <View style={[styles.navbar, { paddingTop: topPad }]}>
