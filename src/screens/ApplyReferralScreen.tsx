@@ -29,8 +29,8 @@ export function ApplyReferralScreen() {
     if (!cleanToken) throw new Error("TOKEN_EMPTY");
 
     const res = await api.post(endpoints.referrals.applyInviteForCurrentUser, {
-      linkType: "SELLER_INVITE",
-      sellerReferralToken: cleanToken,
+      linkType: "REFERRAL_TOKEN",
+      referralToken: cleanToken,
     });
     return res.data;
   },
@@ -47,7 +47,11 @@ export function ApplyReferralScreen() {
 
     let msg = "Não foi possível aplicar esse token.";
 
-    if (reason === "SELLER_NOT_FOUND") {
+    if (reason === "TOKEN_NOT_FOUND") {
+      msg = "Token de indicação não encontrado. Confira se você digitou o código corretamente.";
+    } else if (reason === "AMBIGUOUS_REFERRAL_TOKEN") {
+      msg = "Não foi possível validar este token. Tente novamente ou entre em contato com o suporte.";
+    } else if (reason === "SELLER_NOT_FOUND") {
       msg = "Token de vendedor não encontrado. Confira se você digitou o código correto.";
     } else if (reason === "SALON_NOT_FOUND") {
       msg = "Token de salão não encontrado.";
