@@ -16,6 +16,7 @@ import {
   bindNotifeePushOpenListener,
   handleInitialPushOpen,
   registerPushTokenWithBackend,
+  reportPushRegistrationFailure,
 } from "./src/core/push/push.service";
 import {
   clearPendingNotificationAction,
@@ -185,8 +186,8 @@ export default function App() {
   useEffect(() => {
     if (!hydrated || !token) return;
 
-    registerPushTokenWithBackend().catch(() => {
-      // Falha ao registrar push token não deve bloquear sessão.
+    registerPushTokenWithBackend().catch((error) => {
+      reportPushRegistrationFailure("unknown", error);
     });
 
     applyPendingInvite().catch(() => {
