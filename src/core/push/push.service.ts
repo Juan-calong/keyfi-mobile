@@ -5,6 +5,31 @@ import notifee, { AndroidImportance, EventType } from "@notifee/react-native";
 import { api } from "../api/client";
 
 type DevicePlatform = "ANDROID" | "IOS";
+type PushRegistrationStage =
+  | "permission"
+  | "register_remote_messages"
+  | "get_fcm_token"
+  | "backend_registration"
+  | "unknown";
+
+export function reportPushRegistrationFailure(stage: PushRegistrationStage, error: unknown) {
+  const details = error && typeof error === "object" ? error as { name?: unknown; code?: unknown } : {};
+  const errorName = typeof details.name === "string" &&
+    ["Error", "AxiosError", "FirebaseError", "NativeFirebaseError", "PermissionDenied"].includes(details.name)
+    ? details.name : "UnknownError";
+  const errorCode = typeof details.code === "string" &&
+    /^(?:messaging\/[a-z0-9_-]{1,80}|ERR_[A-Z_]+|permission_denied)$/.test(details.code)
+    ? details.code : undefined;
+
+  console.warn({
+    event: "push_registration_failed",
+    platform: Platform.OS === "ios" ? "ios" : "android",
+    stage,
+    errorName,
+    errorCode,
+    message: `Push registration failed at ${stage}`,
+  });
+}
 
 function getPlatform(): DevicePlatform {
   return Platform.OS === "ios" ? "IOS" : "ANDROID";
@@ -91,21 +116,34 @@ export async function ensurePushPermission() {
 }
 
 export async function registerPushTokenWithBackend() {
-  const allowed = await ensurePushPermission();
-  if (!allowed) {
+  let stage: PushRegistrationStage = "permission";
+  try {
+    const allowed = await ensurePushPermission();
+    if (!allowed) {
+      reportPushRegistrationFailure(stage, { name: "PermissionDenied", code: "permission_denied" });
+      return null;
+    }
+
+    stage = "register_remote_messages";
+    await messaging().registerDeviceForRemoteMessages();
+    await ensureAndroidChannel();
+    stage = "get_fcm_token";
+    const token = await messaging().getToken();
+    if (!token) {
+      reportPushRegistrationFailure(stage, { code: "messaging/no_token" });
+      return null;
+    }
+    stage = "backend_registration";
+    await api.post("/devices/push-token", {
+      token,
+      platform: getPlatform(),
+    });
+
+    return token;
+  } catch (error) {
+    reportPushRegistrationFailure(stage, error);
     return null;
   }
-
-  await messaging().registerDeviceForRemoteMessages();
-  await ensureAndroidChannel();
-  const token = await messaging().getToken();
-  if (!token) return null;
-  await api.post("/devices/push-token", {
-    token,
-    platform: getPlatform(),
-  });
-
-  return token;
 }
 
 export async function removePushTokenFromBackend() {
@@ -129,8 +167,8 @@ export function bindPushTokenRefresh() {
         token,
         platform: getPlatform(),
       });
-    } catch {
-      // Falha ao registrar refresh do token será tentada novamente em outro ciclo.
+    } catch (error) {
+      reportPushRegistrationFailure("backend_registration", error);
     }
   });
 }
