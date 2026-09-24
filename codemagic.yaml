@@ -75,6 +75,11 @@ workflows:
             --workspace "$CM_BUILD_DIR/ios/$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"
 
+      - name: Verify signed IPA push entitlements
+        script: |
+          python3 "$CM_BUILD_DIR/scripts/verify_ios_push_entitlements.py" \
+            "$CM_BUILD_DIR/build/ios/ipa"
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
