@@ -40,12 +40,18 @@ export type PersistentCartTotals = {
   total: number;
 };
 
+export type UnavailableCartItem = {
+  productId: string;
+  reason: "PRODUCT_MISSING" | "PRODUCT_INACTIVE" | "FORBIDDEN_FOR_ROLE";
+};
+
 export type PersistentCart = {
   id: string;
   userId: string;
   couponCode: string | null;
   coupon: PersistentCartCoupon | null;
   items: PersistentCartItem[];
+  unavailableItems?: UnavailableCartItem[];
   totals: PersistentCartTotals;
   warnings?: Array<{ code: string; message: string }>;
   updatedAt: string;
@@ -71,7 +77,10 @@ export type ApplyCartCouponPayload = {
 
 export async function getPersistentCart() {
   const { data } = await api.get<CartResponse>(endpoints.cart.byUser);
-  return data;
+  return {
+    ...data,
+    cart: { ...data.cart, unavailableItems: data.cart.unavailableItems ?? [] },
+  };
 }
 
 export async function addPersistentCartItem(payload: AddCartItemPayload) {

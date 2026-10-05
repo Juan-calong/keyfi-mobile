@@ -19,6 +19,8 @@ import { CartBanner } from "./CartBanner";
 import { CartCheckoutBar } from "./CartCheckoutBar";
 import { CartSummarySheet } from "./CartSummarySheet";
 import { OwnerCustomerCartRow } from "./OwnerCustomerCartRow";
+import { UnavailableCartItems } from "./UnavailableCartItems";
+import type { UnavailableCartItem } from "../../../core/api/services/cart.service";
 import { s } from "./cart.shared.styles";
 import type {
   BannerState,
@@ -29,6 +31,9 @@ import type {
 type Props = {
   cartItemsLength: number;
   rows: CartPreviewItem[];
+  unavailableItems: UnavailableCartItem[];
+  removingUnavailableProductId: string | null;
+  onRemoveUnavailableItem: (productId: string) => void;
   summary?: CartPreviewResp["summary"];
 
   isFirstLoad: boolean;
@@ -63,6 +68,9 @@ type Props = {
 export function SharedOwnerCustomerCartScreen({
   cartItemsLength,
   rows,
+  unavailableItems,
+  removingUnavailableProductId,
+  onRemoveUnavailableItem,
   summary,
   isFirstLoad,
   showError,
@@ -134,18 +142,23 @@ export function SharedOwnerCustomerCartScreen({
 
           <CartBanner banner={banner} onClose={onDismissBanner} />
 
-          {cartItemsLength === 0 ? (
-            <EmptyCartBlock />
-          ) : isFirstLoad ? (
+          {isFirstLoad ? (
             <Loading />
           ) : showError ? (
             <ErrorState onRetry={onRetry} />
-          ) : rows.length === 0 ? (
+          ) : rows.length === 0 && unavailableItems.length === 0 ? (
             <EmptyCartBlock />
           ) : (
             <View style={{ flex: 1 }}>
               <FlatList
                 data={rows}
+                ListHeaderComponent={
+                  <UnavailableCartItems
+                    items={unavailableItems}
+                    pendingProductId={removingUnavailableProductId}
+                    onRemove={onRemoveUnavailableItem}
+                  />
+                }
                 keyExtractor={(item) => item.productId}
                 renderItem={({ item }) => (
                   <OwnerCustomerCartRow
@@ -176,6 +189,7 @@ export function SharedOwnerCustomerCartScreen({
                   summary={summary}
                   canCheckout={canCheckout}
                   checkoutPending={checkoutPending}
+                  blockedMessage={unavailableItems.length > 0 ? "Remova os produtos indisponíveis para continuar a compra." : undefined}
                   onCheckout={onCheckout}
                   onOpenSummary={() => setSummaryVisible(true)}
                 />

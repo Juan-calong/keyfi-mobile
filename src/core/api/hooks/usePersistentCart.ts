@@ -28,6 +28,7 @@ export const EMPTY_PERSISTENT_CART: PersistentCart = {
   couponCode: null,
   coupon: null,
   items: [],
+  unavailableItems: [],
   totals: {
     itemsCount: 0,
     uniqueItems: 0,

@@ -8,6 +8,7 @@ type Props = {
   summary?: CartPreviewResp["summary"];
   canCheckout: boolean;
   checkoutPending: boolean;
+  blockedMessage?: string;
   onCheckout: () => void;
   onOpenSummary: () => void;
 };
@@ -16,6 +17,7 @@ export function CartCheckoutBar({
   summary,
   canCheckout,
   checkoutPending,
+  blockedMessage,
   onCheckout,
   onOpenSummary,
 }: Props) {
@@ -42,6 +44,8 @@ export function CartCheckoutBar({
           <Text style={s.checkoutText}>{checkoutPending ? "..." : "Finalizar compra"}</Text>
         </Pressable>
       </View>
+
+      {blockedMessage ? <Text style={s.checkoutBlockedMessage}>{blockedMessage}</Text> : null}
 
       <Pressable onPress={onOpenSummary} hitSlop={10} style={s.openSummaryHit}>
         <Text style={s.openSummaryText}>Ver resumo do pedido</Text>

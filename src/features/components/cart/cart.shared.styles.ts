@@ -9,6 +9,8 @@ const GREEN = "#16A34A";
 
 export const s = StyleSheet.create({
 
+  checkoutBlockedMessage: { color: "#8A1F1F", fontSize: 12, fontWeight: "700", marginTop: 10 },
+
   nav: {
     minHeight: 64,
     paddingVertical: 8,
