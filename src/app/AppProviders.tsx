@@ -1,8 +1,9 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 
-export const queryClient = new QueryClient();
+import { queryClient } from "../core/queries/queryClient";
+export { queryClient } from "../core/queries/queryClient";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
     return (

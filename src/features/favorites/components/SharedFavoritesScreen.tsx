@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -61,6 +62,11 @@ type SharedFavoritesScreenProps = {
   title: string;
   subtitle: string;
   items: FavoriteItemBase[];
+  total: number;
+  hasMore: boolean;
+  isReconciling: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
@@ -136,6 +142,11 @@ export function SharedFavoritesScreen({
   title,
   subtitle,
   items,
+  total,
+  hasMore,
+  isReconciling,
+  isFetchingNextPage,
+  onLoadMore,
   isLoading,
   isError,
   onRetry,
@@ -223,7 +234,6 @@ export function SharedFavoritesScreen({
             {canOpenProduct ? (
               <ProductFavoriteButton
                 productId={item.resolvedProductId}
-                initialFavorited={true}
                 containerStyle={s.heartBadge}
                 size={16}
                 activeColor="#E11D48"
@@ -272,12 +282,8 @@ export function SharedFavoritesScreen({
         <Text style={s.subtitle}>{subtitle}</Text>
       </View>
 
-      {isLoading ? (
+      {isError && normalizedItems.length === 0 ? (<View style={s.errorWrap}><ErrorState onRetry={onRetry} /></View>) : isLoading || (isReconciling && normalizedItems.length === 0) ? (
         <Loading />
-      ) : isError ? (
-<View style={s.errorWrap}>
-  <ErrorState onRetry={onRetry} />
-</View>
       ) : normalizedItems.length === 0 ? (
         <ScrollView
           style={s.emptyScroll}
@@ -335,6 +341,9 @@ export function SharedFavoritesScreen({
         </ScrollView>
       ) : (
         <>
+          {isError && <ErrorState onRetry={onRetry} />}
+          {isReconciling && <View accessibilityRole="progressbar"><ActivityIndicator /><Text>Atualizando favoritos…</Text></View>}
+          <Text style={s.subtitle}>{total} {total === 1 ? 'favorito' : 'favoritos'}</Text>
           <View style={s.filtersRow}>
             {[
               { label: "Todos", value: "all" as const },
@@ -362,6 +371,9 @@ export function SharedFavoritesScreen({
 
           <FlatList
             data={filteredItems}
+            onEndReached={hasMore && !isReconciling && !isFetchingNextPage ? onLoadMore : undefined}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={isFetchingNextPage ? <Loading /> : hasMore ? <Pressable accessibilityRole="button" onPress={onLoadMore}><Text>Carregar mais favoritos</Text></Pressable> : null}
             keyExtractor={(item, index) => item.listKey || `favorite-${index}`}
             numColumns={numColumns}
             columnWrapperStyle={numColumns > 1 ? [s.row, { gap: columnGap, justifyContent: "flex-start" }] : undefined}
