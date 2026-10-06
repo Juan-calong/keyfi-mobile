@@ -47,6 +47,7 @@ products: {
 
   favorite: (id: string) => `/products/${id}/favorite`,
   favorites: "/products/favorites",
+  favoriteIds: "/products/favorites/ids",
 
   comments: (id: string) => `/products/${id}/comments`,
   commentsMe: (id: string) => `/products/${id}/comments/me`,

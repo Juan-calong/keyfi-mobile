@@ -1,47 +1,35 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useFavoritesList } from "../../features/favorites/useFavoritesList";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { api } from "../../core/api/client";
-import { endpoints } from "../../core/api/endpoints";
 import {
   CUSTOMER_SCREENS,
   CustomerStackParamList,
 } from "../../navigation/customer.routes";
 import {
-  FavoriteItemBase,
   SharedFavoritesScreen,
 } from "../../features/favorites/components/SharedFavoritesScreen";
 type NavProp = NativeStackNavigationProp<CustomerStackParamList>;
 
-type FavoritesResponse = {
-  items: FavoriteItemBase[];
-  page: number;
-  limit: number;
-  total: number;
-  hasMore: boolean;
-};
-
 export function CustomerFavoritesScreen() {
   const navigation = useNavigation<NavProp>();
 
-  const favoritesQuery = useQuery({
-    queryKey: ["customer-favorites"],
-    queryFn: async () => {
-      const res = await api.get<FavoritesResponse>(endpoints.products.favorites);
-      return res.data;
-    },
-  });
-  const items = favoritesQuery.data?.items ?? [];
+  const favoritesQuery = useFavoritesList();
+  const items = favoritesQuery.items;
   
   return (
      <SharedFavoritesScreen
       title="Seus Favoritos"
       subtitle="Os produtos que você marcou com coração aparecem aqui."
       items={items}
+      total={favoritesQuery.total}
+      hasMore={favoritesQuery.hasMore}
+      isReconciling={favoritesQuery.isReconciling}
+      isFetchingNextPage={favoritesQuery.isFetchingNextPage}
+      onLoadMore={() => { favoritesQuery.fetchNextPage(); }}
       isLoading={favoritesQuery.isLoading}
       isError={favoritesQuery.isError}
-      onRetry={() => favoritesQuery.refetch()}
+      onRetry={() => { favoritesQuery.retry(); }}
       onExploreProducts={() => navigation.navigate(CUSTOMER_SCREENS.Buy)}
       onOpenProduct={(item) =>
         navigation.navigate(CUSTOMER_SCREENS.ProductDetails, {

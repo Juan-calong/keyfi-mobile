@@ -3,6 +3,7 @@ import Config from "react-native-config";
 import { useAuthStore } from "../../stores/auth.store";
 import { apiLog, apiWarn } from "./logger";
 import { endpoints } from "./endpoints";
+import { getSessionGeneration, assertSessionGeneration } from "../queries/sessionScope";
 
 const baseURL = (Config.API_BASE_URL || "").trim();
 //nothing
@@ -119,6 +120,9 @@ function hasExplicitRouteAccess(path: string, role: string | null): boolean {
 }
 
 api.interceptors.request.use((config) => {
+  const scopedConfig = config as typeof config & { _sessionGeneration?: number };
+  if (scopedConfig._sessionGeneration != null) assertSessionGeneration(scopedConfig._sessionGeneration);
+  scopedConfig._sessionGeneration = getSessionGeneration();
   const token = useAuthStore.getState().token;
   const role = useAuthStore.getState().activeRole;
 
@@ -146,7 +150,7 @@ api.interceptors.request.use((config) => {
     (config.headers as any)["x-request-id"] = rid;
   }
 
-  if (!publicRoute && token) {
+  if (!publicRoute && token && !(config as any)._preserveAuthorization) {
     if (config.headers instanceof AxiosHeaders) {
       config.headers.set("Authorization", `Bearer ${token}`);
     } else {
@@ -238,6 +242,10 @@ api.interceptors.response.use(
       return Promise.reject(err);
     }
 
+    const requestGeneration = config?._sessionGeneration;
+    if (requestGeneration != null && requestGeneration !== getSessionGeneration()) return Promise.reject(err);
+
+    if (config?._skipAuthRefresh) return Promise.reject(err);
     const isAuthRoute = path.startsWith("/auth/");
     const alreadyRetried = !!config?._retry;
 
@@ -266,7 +274,7 @@ api.interceptors.response.use(
                 });
               }
 
-              await useAuthStore.getState().resetSession();
+              if (requestGeneration === getSessionGeneration()) await useAuthStore.getState().resetSession();
               throw refreshErr;
             })
             .finally(() => {
@@ -275,6 +283,7 @@ api.interceptors.response.use(
         }
 
         await refreshPromise;
+        assertSessionGeneration(requestGeneration);
 
         if (__DEV__) {
           apiLog("[API][401][REFRESH_OK]", {
