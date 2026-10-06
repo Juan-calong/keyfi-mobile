@@ -3,14 +3,23 @@ import { endpoints } from "../api/endpoints";
 import {
   clearPendingInvite,
   getPendingInvite,
+  type PendingInvite,
 } from "../airbridge/invite-link.service";
 
 function normalizeToken(v: string) {
   return String(v || "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
-export async function applyPendingInvite() {
-  const invite = await getPendingInvite();
+async function clearAppliedInvite(invite: PendingInvite) {
+  const pending = await getPendingInvite();
+  if (pending?.inviteType === invite.inviteType && pending.token === invite.token) {
+    await clearPendingInvite();
+  }
+}
+
+export async function applyPendingInvite(receivedInvite?: PendingInvite) {
+  // Use this delivery's snapshot so another invite cannot replace its POST payload.
+  const invite = receivedInvite ?? (await getPendingInvite());
   if (!invite) return { applied: false, reason: "NO_PENDING_INVITE" };
 
   const token = normalizeToken(invite.token);
@@ -22,7 +31,7 @@ export async function applyPendingInvite() {
     });
 
     if (res.data?.ok && res.data?.applied) {
-      await clearPendingInvite();
+      await clearAppliedInvite(invite);
     }
 
     return res.data;
@@ -35,7 +44,7 @@ export async function applyPendingInvite() {
     });
 
     if (res.data?.ok && res.data?.applied) {
-      await clearPendingInvite();
+      await clearAppliedInvite(invite);
     }
 
     return res.data;

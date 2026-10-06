@@ -47,6 +47,9 @@ function BootScreen() {
   );
 }
 
+// Only concurrent deliveries are suppressed; completed attempts can be retried.
+const inFlightInvites = new Set<string>();
+
 async function handleInviteUrl(url: string) {
   const safeUrl = String(url || "").trim();
   if (!safeUrl) return;
@@ -56,18 +59,26 @@ async function handleInviteUrl(url: string) {
   const invite = parseInviteFromUrl(safeUrl);
 
   if (invite) {
-    const { hydrated, token } = useAuthStore.getState();
+    const inviteKey = `${invite.inviteType}:${invite.token}`;
+    if (inFlightInvites.has(inviteKey)) return;
+    inFlightInvites.add(inviteKey);
 
-    await savePendingInvite(invite);
+    try {
+      const { hydrated, token } = useAuthStore.getState();
 
-    if (hydrated && token) {
-      try {
-        await applyPendingInvite();
-      } catch {
-        // Falha ao aplicar convite não deve bloquear abertura do app.
+      await savePendingInvite(invite);
+
+      if (hydrated && token) {
+        try {
+          await applyPendingInvite(invite);
+        } catch {
+          // Falha ao aplicar convite não deve bloquear abertura do app.
+        }
       }
+    } finally {
+      inFlightInvites.delete(inviteKey);
     }
-}
+  }
 
   queryClient.invalidateQueries({ queryKey: ["me"] });
 }
