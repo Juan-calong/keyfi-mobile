@@ -4,5 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:keyfi.airbridge.io</string>
+		<string>applinks:keyfi.abr.ge</string>
+	</array>
 </dict>
 </plist>
