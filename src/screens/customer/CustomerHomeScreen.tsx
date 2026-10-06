@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { useFavoriteIds } from "../../features/favorites/useFavoriteIds";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
   FlatList,
   View,
@@ -9,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, DrawerActions, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import LinearGradient from "react-native-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -121,63 +122,18 @@ type ReviewItem = {
   score?: number | null;
 };
 
-const AUTO_REFRESH_MS = 60 * 1000;
 
-function getProductFavorited(p: any) {
-  return Boolean(p?.isFavorite ?? p?.favorited ?? false);
-}
 
-function normalizeId(value: unknown) {
-  return String(value ?? "").trim();
-}
 
-function getEntityIds(item: any) {
-  const ids = [
-    item?.id,
-    item?.productId,
-    item?.product?.id,
-    item?.product?.productId,
-    item?.productRef?.id,
-    item?.productRef?.productId,
-    item?.productItem?.id,
-    item?.productItem?.productId,
-    item?.data?.id,
-    item?.data?.productId,
-    item?.data?.product?.id,
-    item?.data?.product?.productId,
-  ]
-    .map((value) => normalizeId(value))
-    .filter(Boolean);
 
-  return Array.from(new Set(ids));
-}
 
-function asItems<T>(v: any): T[] {
-  if (Array.isArray(v)) return v;
-  if (Array.isArray(v?.items)) return v.items;
-  if (Array.isArray(v?.data?.items)) return v.data.items;
-  if (Array.isArray(v?.data)) return v.data;
-  return [];
-}
 
-function buildFavoriteIds(data: any) {
-  const ids = new Set<string>();
 
-  for (const item of asItems<any>(data)) {
-    for (const id of getEntityIds(item)) {
-      if (id) ids.add(id);
-    }
-  }
 
-  return ids;
-}
 
-function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
-  const itemIds = getEntityIds(item);
 
-  if (itemIds.some((id) => favoriteIds.has(id))) return true;
-  return getProductFavorited(item);
-}
+
+
 
 function toNumberBR(v: string | number | null | undefined) {
   const n = Number(String(v ?? "0").replace(",", "."));
@@ -671,7 +627,6 @@ function PreviewGrid({
               priceLabel={formatBRL(item.price)}
               oldPriceLabel={item.hasDiscount && item.originalPrice ? formatBRL(item.originalPrice) : null}
               inCart={inCart}
-              isFavorite={item.isFavorite}
               onPress={() => onPressItem(productId)}
               onToggleCart={() => (inCart ? onRemoveFromCart(productId) : onAddToCart(productId))}
             />
@@ -764,16 +719,7 @@ export function CustomerHomeScreen() {
     retry: false,
   });
 
-  const favoritesQ = useQuery({
-    queryKey: ["customer-favorites"],
-    queryFn: async () => {
-      const res = await api.get(endpoints.products.favorites, {
-        params: { take: 500 },
-      });
-      return res.data;
-    },
-    retry: false,
-  });
+  const favoritesQ = useFavoriteIds();
 
    useEffect(() => {
     let cancelled = false;
@@ -806,9 +752,6 @@ export function CustomerHomeScreen() {
     };
   }, [nav]);
 
-    const lastAutoRefreshAtRef = useRef(0);
-  const initialLoadMarkedRef = useRef(false);
-
   const refetchAll = useCallback(async () => {
     await Promise.allSettled([
       meQ.refetch(),
@@ -817,56 +760,9 @@ export function CustomerHomeScreen() {
       promosQ.refetch(),
       favoritesQ.refetch(),
     ]);
-
-    lastAutoRefreshAtRef.current = Date.now();
   }, [meQ, bannersQ, productsQ, promosQ, favoritesQ]);
 
-  useEffect(() => {
-    const allLoaded =
-      !meQ.isLoading &&
-      !bannersQ.isLoading &&
-      !productsQ.isLoading &&
-      !promosQ.isLoading &&
-      !favoritesQ.isLoading;
 
-    if (!initialLoadMarkedRef.current && allLoaded) {
-      initialLoadMarkedRef.current = true;
-      lastAutoRefreshAtRef.current = Date.now();
-    }
-  }, [
-    meQ.isLoading,
-    bannersQ.isLoading,
-    productsQ.isLoading,
-    promosQ.isLoading,
-    favoritesQ.isLoading,
-  ]);
-
-  useFocusEffect(
-    useCallback(() => {
-      const stillLoading =
-        meQ.isLoading ||
-        bannersQ.isLoading ||
-        productsQ.isLoading ||
-        promosQ.isLoading ||
-        favoritesQ.isLoading;
-
-      if (stillLoading) return;
-
-      const now = Date.now();
-      const elapsed = now - lastAutoRefreshAtRef.current;
-
-      if (elapsed < AUTO_REFRESH_MS) return;
-
-      void refetchAll();
-    }, [
-      meQ.isLoading,
-      bannersQ.isLoading,
-      productsQ.isLoading,
-      promosQ.isLoading,
-      favoritesQ.isLoading,
-      refetchAll,
-    ])
-  );
 
 
   const banners = useMemo(() => {
@@ -899,8 +795,6 @@ export function CustomerHomeScreen() {
     return map;
   }, [promoProducts]);
 
-  const favoriteIds = useMemo(() => buildFavoriteIds(favoritesQ.data), [favoritesQ.data]);
-
   const promoBasePreview = useMemo<PreviewItem[]>(
     () =>
       promoProducts.slice(0, 10).map((p) => {
@@ -918,10 +812,9 @@ export function CustomerHomeScreen() {
           promoBadgeLabel: resolvePromoBadgeLabel(merged),
           ratingValue: getProductRatingValue(merged),
           ratingCount: getProductRatingCount(merged),
-          isFavorite: resolveFavoriteFlag(p, favoriteIds),
         };
       }),
-    [promoProducts, productsById, favoriteIds]
+    [promoProducts, productsById]
   );
 
   const handleAddToCart = useCallback(
@@ -960,10 +853,9 @@ export function CustomerHomeScreen() {
         promoBadgeLabel: resolvePromoBadgeLabel(merged),
         ratingValue: getProductRatingValue(merged),
         ratingCount: getProductRatingCount(merged),
-        isFavorite: resolveFavoriteFlag(merged, favoriteIds),
       };
     });
-  }, [products, promoProductById, favoriteIds]);
+  }, [products, promoProductById]);
 
   const previewProductIds = useMemo(
     () =>

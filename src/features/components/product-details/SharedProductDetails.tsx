@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Screen } from "../../../ui/components/Screen";
 import { Container } from "../../../ui/components/Container";
@@ -89,57 +89,6 @@ type ReviewItem = {
   score?: number | null;
   adminResponse?: ProductCommentAdminResponse | null;
 };
-
-const FAVORITE_CACHE_ROOTS = new Set([
-  "customer-favorites",
-  "owner-favorites",
-  "customer-products",
-  "owner-products",
-  "customer-home-products",
-  "owner-home-products",
-  "customer-home-promos-preview",
-  "owner-home-promos-preview",
-  "customer-promos-active",
-  "owner-promos-active",
-  "product",
-]);
-
-function getQueryRootFromKey(queryKey: unknown) {
-  return Array.isArray(queryKey) ? String(queryKey[0] ?? "") : "";
-}
-
-function findFavoriteFlagInData(
-  data: any,
-  productId: string
-): boolean | undefined {
-  if (data == null) return undefined;
-
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      const found = findFavoriteFlagInData(item, productId);
-      if (typeof found === "boolean") return found;
-    }
-    return undefined;
-  }
-
-  if (Array.isArray(data?.items)) {
-    return findFavoriteFlagInData(data.items, productId);
-  }
-
-  if (Array.isArray(data?.data?.items)) {
-    return findFavoriteFlagInData(data.data.items, productId);
-  }
-
-  if (typeof data === "object") {
-    const currentId = String(data.id ?? data.productId ?? "");
-    if (currentId === productId) {
-      if (typeof data.isFavorite === "boolean") return data.isFavorite;
-      if (typeof data.favorited === "boolean") return data.favorited;
-    }
-  }
-
-  return undefined;
-}
 
 function formatBRLShort(value?: string | number | null) {
   const n = Number(value ?? 0);
@@ -222,37 +171,13 @@ function buildQuantityTierBadge(tier: any) {
   };
 }
 
-function extractItemsFromData(data: any): any[] {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.data?.items)) return data.data.items;
-  return [];
-}
 
-function getEntityId(item: any) {
-  return String(item?.id ?? item?.productId ?? "").trim();
-}
 
-function buildFavoriteIds(data: any) {
-  const ids = new Set<string>();
 
-  for (const item of extractItemsFromData(data)) {
-    const id = getEntityId(item);
-    if (id) ids.add(id);
-  }
 
-  return ids;
-}
 
-function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
-  const id = getEntityId(item);
 
-  if (id && favoriteIds.has(id)) return true;
-  if (typeof item?.isFavorite === "boolean") return item.isFavorite;
-  if (typeof item?.favorited === "boolean") return item.favorited;
 
-  return false;
-}
 
 function toNumber(value: unknown, fallback = 0) {
   const n = Number(String(value ?? "").replace(",", "."));
@@ -819,7 +744,6 @@ export function SharedProductDetails({
   const galleryListRef = useRef<FlatList<ProductMedia> | null>(null);
   const prefetchedImageUrls = useRef(new Set<string>());
   const addLock = useRef(false);
-  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     setGalleryIndex(0);
@@ -920,24 +844,6 @@ export function SharedProductDetails({
 
   const safeRelatedItems = useMemo(() => relatedItems, [relatedItems]);
 
-  const favoritesQ = useQuery({
-    queryKey:
-      viewerMode === "CUSTOMER"
-        ? ["customer-favorites"]
-        : ["owner-favorites"],
-    queryFn: async () => {
-      const res = await api.get<any>(endpoints.products.favorites, {
-        params: { take: 500 },
-      });
-      return res.data;
-    },
-    retry: false,
-  });
-
-  const favoriteIds = useMemo(
-    () => buildFavoriteIds(favoritesQ.data),
-    [favoritesQ.data]
-  );
 
 const quantityTierBadges = useMemo(() => {
   const tiers = Array.isArray((product as any)?.quantityDiscount?.tiers)
@@ -1219,42 +1125,6 @@ const quantityTierBadges = useMemo(() => {
     setMediaViewerVisible(false);
   }
 
-  const resolvedInitialFavorited = useMemo(() => {
-    if (!product?.id) return false;
-
-    if (favoriteIds.has(product.id)) return true;
-
-    if (typeof product?.isFavorite === "boolean") {
-      return product.isFavorite;
-    }
-
-    if (typeof (product as any)?.favorited === "boolean") {
-      return Boolean((product as any).favorited);
-    }
-
-    const entries = queryClient.getQueriesData({
-      predicate: (query) => {
-        const root = getQueryRootFromKey(query.queryKey);
-        if (!FAVORITE_CACHE_ROOTS.has(root)) return false;
-
-        if (root === "product") {
-          return (
-            Array.isArray(query.queryKey) &&
-            String(query.queryKey[1] ?? "") === product.id
-          );
-        }
-
-        return true;
-      },
-    });
-
-    for (const [, cachedData] of entries) {
-      const found = findFavoriteFlagInData(cachedData, product.id);
-      if (typeof found === "boolean") return found;
-    }
-
-    return false;
-  }, [favoriteIds, queryClient, product]);
 
   return (
 <Screen style={{ backgroundColor: PRODUCT_DETAILS_BG as any }}>
@@ -1406,7 +1276,6 @@ const quantityTierBadges = useMemo(() => {
                 <View style={s.heroFavoritePill}>
                   <ProductFavoriteButton
                     productId={product.id}
-                    initialFavorited={resolvedInitialFavorited}
                     variant="plain"
                     inactiveColor="#111111"
                   />
@@ -1963,7 +1832,6 @@ const quantityTierBadges = useMemo(() => {
 
                             <ProductFavoriteButton
                               productId={item.id}
-                              initialFavorited={resolveFavoriteFlag(item as any, favoriteIds)}
                               containerStyle={{
                                 position: "absolute",
                                 top: 8,

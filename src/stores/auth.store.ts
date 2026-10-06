@@ -14,7 +14,19 @@ import { ProfilesService } from "../core/api/services/profiles.service";
 import { decode as atob } from "base-64";
 import { removePushTokenFromBackend } from "../core/push/push.service";
 import { useCartStore } from "./cart.store";
-import { queryClient } from "../app/AppProviders";
+import { queryClient } from "../core/queries/queryClient";
+import { getTokenUserId, getSessionGeneration, advanceSessionGeneration, assertSessionGeneration } from "../core/queries/sessionScope";
+
+// Serialize keychain writes so an old write cannot finish after a newer login.
+let tokenPersistence: Promise<void> = Promise.resolve();
+function persistSessionToken(token: string | null, generation: number): Promise<void> {
+  const pending = tokenPersistence.then(async () => {
+    assertSessionGeneration(generation);
+    if (token) { await saveToken(token); } else { await clearToken(); }
+  });
+  tokenPersistence = pending.catch(() => {});
+  return pending;
+}
 
 function decodeJwtPayload(token: string): any | null {
   try {
@@ -76,14 +88,6 @@ function clearAirbridgeUserSafe() {
   } catch {
     // Não bloqueia logout/reset se Airbridge falhar.
   }
-}
-
-function getTokenUserId(token: string | null | undefined): string | null {
-  if (!token) return null;
-  const sub = decodeJwtPayload(token)?.sub;
-  if (sub == null) return null;
-  const normalized = String(sub).trim();
-  return normalized || null;
 }
 
 function clearSessionScopedClientState() {
@@ -188,111 +192,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   pendingBiometricEmail: null,
 
   hydrate: async () => {
+    let generation = getSessionGeneration();
     try {
       const token = await loadToken();
-
+      assertSessionGeneration(generation);
       if (!token) {
         clearAirbridgeUserSafe();
-
-        set({
-          token: null,
-          activeRole: null,
-          needsOnboarding: false,
-          needsBiometricSetup: false,
-          pendingBiometricEmail: null,
-          hydrated: true,
-        });
+        set({ token: null, activeRole: null, needsOnboarding: false,
+          needsBiometricSetup: false, pendingBiometricEmail: null, hydrated: true });
         return;
       }
-
       if (isJwtExpired(token)) {
-
-        try {
-          await get().refreshSession();
-
-          try {
-            await get().syncMe();
-          } catch {
-            await clearToken();
-            clearAirbridgeUserSafe();
-
-            set({
-              token: null,
-              activeRole: null,
-              needsOnboarding: false,
-              needsBiometricSetup: false,
-              pendingBiometricEmail: null,
-              hydrated: true,
-            });
-            return;
-          }
-
-          set({
-            hydrated: true,
-          });
-          return;
-        } catch {
-          await clearToken();
-          clearAirbridgeUserSafe();
-
-          set({
-            token: null,
-            activeRole: null,
-            needsOnboarding: false,
-            needsBiometricSetup: false,
-            pendingBiometricEmail: null,
-            hydrated: true,
-          });
-          return;
-        }
+        await get().refreshSession();
+      } else {
+        const payload = decodeJwtPayload(token);
+        clearSessionScopedClientState();
+        set({ token, activeRole: (payload?.role as Role) ?? null,
+          needsOnboarding: String(payload?.onboardingStatus || "") === "INCOMPLETE",
+          needsBiometricSetup: false, pendingBiometricEmail: null, hydrated: false });
       }
-
-      const payload = decodeJwtPayload(token);
-      const role = (payload?.role as Role) ?? null;
-      const onboardingStatus = String(payload?.onboardingStatus || "");
-
-      clearSessionScopedClientState();
-
-      set({
-        token,
-        activeRole: role,
-        needsOnboarding: onboardingStatus === "INCOMPLETE",
-        needsBiometricSetup: false,
-        pendingBiometricEmail: null,
-        hydrated: false,
-      });
-
-      try {
-        await get().syncMe();
-
-        set({
-          hydrated: true,
-        });
-      } catch {
-        await clearToken();
-        clearAirbridgeUserSafe();
-
-        set({
-          token: null,
-          activeRole: null,
-          needsOnboarding: false,
-          needsBiometricSetup: false,
-          pendingBiometricEmail: null,
-          hydrated: true,
-        });
-      }
+      generation = getSessionGeneration();
+      // syncMe validates its own captured generation before publishing a role.
+      await get().syncMe();
+      set({ hydrated: true });
     } catch {
-      await clearToken();
+      if (generation !== getSessionGeneration()) return;
+      await persistSessionToken(null, generation);
+      if (generation !== getSessionGeneration()) return;
       clearAirbridgeUserSafe();
-
-      set({
-        token: null,
-        activeRole: null,
-        needsOnboarding: false,
-        needsBiometricSetup: false,
-        pendingBiometricEmail: null,
-        hydrated: true,
-      });
+      set({ token: null, activeRole: null, needsOnboarding: false,
+        needsBiometricSetup: false, pendingBiometricEmail: null, hydrated: true });
     }
   },
 
@@ -307,9 +236,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       previousUserId !== nextUserId || (!previousUserId && !!nextUserId);
 
     if (shouldClearScopedState) {
+      set({ token: null, activeRole: null });
       clearSessionScopedClientState();
     }
-    await saveToken(token);
+    // Claim this login before awaiting persistence; newer logins supersede it.
+    const generation = advanceSessionGeneration();
+    await persistSessionToken(token, generation);
+    assertSessionGeneration(generation);
 
     const payload = decodeJwtPayload(token);
 
@@ -332,9 +265,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email, password) => {
-
+    const generation = advanceSessionGeneration();
     try {
       const data = await AuthService.login(email, password);
+      assertSessionGeneration(generation);
       const token = data.accessToken ?? data.token;
       if (!token) throw new Error("Login não retornou token.");
 
@@ -346,7 +280,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
     loginWithSocial: async (payload) => {
+    const generation = advanceSessionGeneration();
     const data = await AuthService.loginWithSocial(payload);
+    assertSessionGeneration(generation);
     const token = data?.accessToken ?? data?.token;
 
     if (!token) throw new Error("Login social não retornou token.");
@@ -356,9 +292,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithBiometrics: async () => {
+    let generation = getSessionGeneration();
     const clearBiometricSession = async () => {
-      await clearToken();
+      assertSessionGeneration(generation);
+      await persistSessionToken(null, generation);
+      assertSessionGeneration(generation);
       await disableBiometricLogin();
+      assertSessionGeneration(generation);
       clearAirbridgeUserSafe();
 
       set({
@@ -371,7 +311,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     };
 
       const clearActiveSessionOnly = async () => {
-      await clearToken();
+      assertSessionGeneration(generation);
+      await persistSessionToken(null, generation);
+      assertSessionGeneration(generation);
       clearAirbridgeUserSafe();
       set({
         token: null,
@@ -383,6 +325,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     };
 
     const creds = await loadTokenWithBiometrics();
+    assertSessionGeneration(generation);
     let token = creds?.token?.trim();
 
     if (!token) {
@@ -397,7 +340,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const role = (payload?.role as Role) ?? null;
       const onboardingStatus = String(payload?.onboardingStatus || "");
 
-      await saveToken(nextToken);
+      assertSessionGeneration(generation);
+      await persistSessionToken(nextToken, generation);
+      assertSessionGeneration(generation);
 
       set({
         token: nextToken,
@@ -406,6 +351,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
       });
+      generation = getSessionGeneration();
       };
       await applyTokenToState(token);
 
@@ -425,6 +371,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       } catch (e: any) {
+      assertSessionGeneration(generation);
         const status = getErrorStatus(e);
         const code = getErrorCode(e);
         const message = String(e?.message ?? "");
@@ -452,6 +399,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await get().syncMe();
     } catch (e: any) {
+      assertSessionGeneration(generation);
       const status = getErrorStatus(e);
       const code = getErrorCode(e);
       const message = String(e?.message ?? "");
@@ -477,6 +425,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   queueBiometricSetup: async (email: string) => {
+    const generation = getSessionGeneration();
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -489,6 +438,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       const status = await getBiometricStatus();
+      if (generation !== getSessionGeneration()) return;
 
       if (!status.available || status.enabled) {
         set({
@@ -503,6 +453,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         pendingBiometricEmail: normalizedEmail,
       });
     } catch {
+      if (generation !== getSessionGeneration()) return;
       set({
         needsBiometricSetup: false,
         pendingBiometricEmail: null,
@@ -565,7 +516,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   refreshSession: async () => {
 
+    const generation = getSessionGeneration();
     const data = await AuthService.refresh();
+    assertSessionGeneration(generation);
     if (!data?.accessToken) {
       throw new Error("Refresh não retornou accessToken.");
     }
@@ -579,7 +532,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw new Error("Refresh retornou token sem role.");
     }
 
-    await saveToken(data.accessToken);
+    await persistSessionToken(data.accessToken, generation);
+    assertSessionGeneration(generation);
 
     set({
       token: data.accessToken,
@@ -595,7 +549,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return false;
     }
 
+    const generation = getSessionGeneration();
     const me = await ProfilesService.me();
+    assertSessionGeneration(generation);
 
     syncAirbridgeUserSafe(me);
 
@@ -615,8 +571,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: async () => {
+    set({ token: null, activeRole: null });
+    const generation = advanceSessionGeneration();
     clearSessionScopedClientState();
-    await clearToken();
+    await persistSessionToken(null, generation);
+    if (generation !== getSessionGeneration()) return;
     clearAirbridgeUserSafe();
 
     set({
@@ -629,24 +588,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    try {
-      await AuthService.logout();
-    } catch {
-      // A limpeza local não depende do logout remoto.
-    } finally {
-      try {
-        await removePushTokenFromBackend();
-      } catch {
-        // Uma falha ao remover o token push não pode manter a sessão local ativa.
-      }
-
-      try {
-        await disableBiometricLogin();
-      } catch {
-        // A limpeza do token de sessão continua obrigatória.
-      }
-
-      await get().resetSession();
-    }
+    const token = get().token;
+    const remoteLogout = AuthService.logout();
+    const removePush = removePushTokenFromBackend(token);
+    set({ token: null, activeRole: null, needsOnboarding: false,
+      needsBiometricSetup: false, pendingBiometricEmail: null });
+    const generation = advanceSessionGeneration();
+    clearSessionScopedClientState();
+    clearAirbridgeUserSafe();
+    // Start local persistence now; slow remote logout cannot retain credentials.
+    const results = await Promise.allSettled([
+      remoteLogout, removePush, disableBiometricLogin(), persistSessionToken(null, generation),
+    ]);
+    const local = results[3];
+    if (local.status === "rejected" && generation === getSessionGeneration()) throw local.reason;
   },
 }));
+
+// Covers every entry point, including biometrics, hydration and direct role changes.
+useAuthStore.subscribe((next, previous) => {
+  if (getTokenUserId(next.token) !== getTokenUserId(previous.token) ||
+      Boolean(next.token) !== Boolean(previous.token) || next.activeRole !== previous.activeRole) {
+    advanceSessionGeneration();
+  }
+});

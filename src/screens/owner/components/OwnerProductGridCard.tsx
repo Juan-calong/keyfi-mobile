@@ -15,7 +15,6 @@ type Props = {
   priceLabel: string;
   oldPriceLabel?: string | null;
   inCart: boolean;
-  isFavorite?: boolean;
   outOfStock?: boolean;
   highlighted?: boolean;
   width?: number;
@@ -56,7 +55,6 @@ export function OwnerProductGridCard({
   priceLabel,
   oldPriceLabel,
   inCart,
-  isFavorite,
   outOfStock,
   highlighted,
   width,
@@ -103,7 +101,6 @@ export function OwnerProductGridCard({
 
           <ProductFavoriteButton
             productId={productId}
-            initialFavorited={Boolean(isFavorite)}
             containerStyle={styles.favoriteBtn}
             size={18}
             activeColor="#E11D48"

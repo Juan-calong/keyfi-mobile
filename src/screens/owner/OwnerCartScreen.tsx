@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 
 import { api } from "../../core/api/client";
@@ -76,6 +76,8 @@ export function OwnerCartScreen() {
   const [modal, setModal] = useState<null | { title: string; message: string }>(null);
   const [confirm, setConfirm] = useState<null | { title: string; message: string; actions: IosConfirmAction[] }>(null);
   const [checkoutPending, setCheckoutPending] = useState(false);
+  const [removingUnavailableProductId, setRemovingUnavailableProductId] = useState<string | null>(null);
+  const removingUnavailableRef = useRef(false);
 
   const mapped = useMemo(() => mapPersistentCartToPreview(cart), [cart]);
   const rows = mapped.items;
@@ -84,6 +86,7 @@ export function OwnerCartScreen() {
   const cartItems = useMemo<CartItem[]>(() => cart.items.map((i) => ({ productId: i.productId, qty: i.qty })), [cart.items]);
   const itemsPayload = useMemo(() => cartItems.map((i) => ({ productId: i.productId, qty: i.qty })), [cartItems]);
   const appliedCoupon = cart.couponCode;
+  const unavailableItems = cart.unavailableItems ?? [];
 
   const mutating =
     addItemMutation.isPending ||
@@ -105,7 +108,7 @@ export function OwnerCartScreen() {
   }, [banner, bannerKey]);
 
   const onCheckoutPix = async () => {
-    if (checkoutPending || mutating || itemsPayload.length <= 0) return;
+    if (checkoutPending || mutating || itemsPayload.length <= 0 || unavailableItems.length > 0) return;
     setCheckoutPending(true);
 
     try {
@@ -118,21 +121,8 @@ export function OwnerCartScreen() {
       const unavailable = preview.unavailable || [];
 
       if (unavailable.length > 0) {
-        try {
-          await Promise.all(unavailable.map((u) => removeItemMutation.mutateAsync(u.productId)));
-          await cartQuery.refetch();
-          showBanner(
-            "Itens indisponíveis removidos",
-            unavailable.length === 1
-              ? "Removemos 1 item indisponível. Revise o carrinho e tente novamente."
-              : `Removemos ${unavailable.length} itens indisponíveis. Revise o carrinho e tente novamente.`
-          );
-        } catch (e: any) {
-          setModal({
-            title: "Erro ao atualizar carrinho",
-            message: friendlyError(e).message,
-          });
-        }
+        setModal({ title: "Produtos indisponíveis", message: "Há produtos indisponíveis. Remova-os do carrinho antes de continuar." });
+        await cartQuery.refetch();
         return;
       }
 
@@ -183,11 +173,28 @@ export function OwnerCartScreen() {
     nav.navigate(OWNER_SCREENS.ShippingMethod, { items: itemsPayload, couponCode: appliedCoupon || undefined });
   };
 
+  const onRemoveUnavailableItem = async (productId: string) => {
+    if (removingUnavailableRef.current || mutating) return;
+    removingUnavailableRef.current = true;
+    setRemovingUnavailableProductId(productId);
+    try {
+      await removeItemMutation.mutateAsync(productId);
+    } catch (e: any) {
+      setModal({ title: "Erro ao remover item", message: friendlyError(e).message });
+    } finally {
+      removingUnavailableRef.current = false;
+      setRemovingUnavailableProductId(null);
+    }
+  };
+
   return (
     <>
       <SharedOwnerCustomerCartScreen
         cartItemsLength={cart.items.length}
         rows={rows}
+        unavailableItems={unavailableItems}
+        removingUnavailableProductId={removingUnavailableProductId}
+        onRemoveUnavailableItem={onRemoveUnavailableItem}
         summary={summary}
         isFirstLoad={cartQuery.isLoading && !cartQuery.data}
         showError={cartQuery.isError}
@@ -260,7 +267,7 @@ export function OwnerCartScreen() {
             onError: (e: any) => setModal({ title: "Erro ao remover item", message: friendlyError(e).message }),
           })
         }
-        canCheckout={rows.length > 0}
+        canCheckout={rows.length > 0 && unavailableItems.length === 0}
         checkoutPending={checkoutPending}
         onCheckout={onCheckoutPix}
         onGoToShop={() => nav.navigate(OWNER_SCREENS.Root, { screen: OWNER_SCREENS.Tabs, params: { screen: OWNER_SCREENS.Buy } })}

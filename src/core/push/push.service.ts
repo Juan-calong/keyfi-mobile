@@ -146,12 +146,13 @@ export async function registerPushTokenWithBackend() {
   }
 }
 
-export async function removePushTokenFromBackend() {
+export async function removePushTokenFromBackend(sessionToken?: string | null) {
   try {
     const token = await messaging().getToken().catch(() => null);
 
     if (token) {
-      await api.post("/devices/push-token/remove", { token });
+      const config = sessionToken ? { headers: { Authorization: `Bearer ${sessionToken}` }, _preserveAuthorization: true, _skipAuthRefresh: true } : undefined;
+      await api.post("/devices/push-token/remove", { token }, config);
     }
 
     await messaging().deleteToken();

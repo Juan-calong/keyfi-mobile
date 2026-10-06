@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { CommonActions, NavigationContainer } from "@react-navigation/native";
 import { navigationRef } from "./src/navigation/navigationRef";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActivityIndicator, Linking, View } from "react-native";
 import { Airbridge } from "airbridge-react-native-sdk";
@@ -31,7 +31,8 @@ import {
   savePendingInvite,
 } from "./src/core/airbridge/invite-link.service";
 
-const queryClient = new QueryClient();
+import { bindQueryLifecycle } from "./src/core/queries/queryLifecycle";
+import { queryClient } from "./src/core/queries/queryClient";
 
 function BootScreen() {
   return (
@@ -47,6 +48,9 @@ function BootScreen() {
   );
 }
 
+// Only concurrent deliveries are suppressed; completed attempts can be retried.
+const inFlightInvites = new Set<string>();
+
 async function handleInviteUrl(url: string) {
   const safeUrl = String(url || "").trim();
   if (!safeUrl) return;
@@ -56,23 +60,32 @@ async function handleInviteUrl(url: string) {
   const invite = parseInviteFromUrl(safeUrl);
 
   if (invite) {
-    const { hydrated, token } = useAuthStore.getState();
+    const inviteKey = `${invite.inviteType}:${invite.token}`;
+    if (inFlightInvites.has(inviteKey)) return;
+    inFlightInvites.add(inviteKey);
 
-    await savePendingInvite(invite);
+    try {
+      const { hydrated, token } = useAuthStore.getState();
 
-    if (hydrated && token) {
-      try {
-        await applyPendingInvite();
-      } catch {
-        // Falha ao aplicar convite não deve bloquear abertura do app.
+      await savePendingInvite(invite);
+
+      if (hydrated && token) {
+        try {
+          await applyPendingInvite(invite);
+        } catch {
+          // Falha ao aplicar convite não deve bloquear abertura do app.
+        }
       }
+    } finally {
+      inFlightInvites.delete(inviteKey);
     }
-}
+  }
 
   queryClient.invalidateQueries({ queryKey: ["me"] });
 }
 
 export default function App() {
+  useEffect(() => bindQueryLifecycle(), []);
   const pendingPushOpenRef = React.useRef<any | null>(null);
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);

@@ -1,3 +1,4 @@
+import { useFavoriteIds } from "../../features/favorites/useFavoriteIds";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -15,7 +16,7 @@ import {
 } from "react-native";
 
 import { useQuery } from "@tanstack/react-query";
-import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 import { Screen } from "../../ui/components/Screen";
 import { Loading, ErrorState } from "../../ui/components/State";
@@ -91,30 +92,11 @@ function asItems<T>(v: any): T[] {
   return [];
 }
 
-function getEntityId(item: any) {
-  return String(item?.id ?? item?.productId ?? "").trim();
-}
 
-function buildFavoriteIds(data: any) {
-  const ids = new Set<string>();
 
-  for (const item of asItems<any>(data)) {
-    const id = getEntityId(item);
-    if (id) ids.add(id);
-  }
 
-  return ids;
-}
 
-function resolveFavoriteFlag(item: any, favoriteIds: Set<string>) {
-  const id = getEntityId(item);
 
-  if (id && favoriteIds.has(id)) return true;
-  if (typeof item?.isFavorite === "boolean") return item.isFavorite;
-  if (typeof item?.favorited === "boolean") return item.favorited;
-
-  return false;
-}
 
 function toNumberBR(v: string | number | null | undefined) {
   const n = Number(String(v ?? "0").replace(",", "."));
@@ -203,7 +185,6 @@ const PROMOS = "PROMOS" as const;
 
 type SortMode = "default" | "newest";
 
-const AUTO_REFRESH_MS = 60 * 1000;
 
 function FlatChip({
   label,
@@ -340,19 +321,7 @@ export function OwnerBuyScreen() {
     retry: false,
   });
 
-  const favoritesQ = useQuery({
-    queryKey: ["owner-favorites"],
-    queryFn: async () =>
-      (
-        await api.get<ListResp<Product>>(endpoints.products.favorites, {
-          params: { take: 500 },
-        })
-      ).data,
-    retry: false,
-  });
-
-  const lastAutoRefreshAtRef = useRef(0);
-const initialLoadMarkedRef = useRef(false);
+  const favoritesQ = useFavoriteIds();
 
 const refetchAll = useCallback(async () => {
   await Promise.allSettled([
@@ -361,8 +330,6 @@ const refetchAll = useCallback(async () => {
     promosQ.refetch(),
     favoritesQ.refetch(),
   ]);
-
-  lastAutoRefreshAtRef.current = Date.now();
 }, [categoriesQ, productsQ, promosQ, favoritesQ]);
 
 const handleManualRefresh = useCallback(async () => {
@@ -375,53 +342,11 @@ const handleManualRefresh = useCallback(async () => {
   }
 }, [refetchAll]);
 
-useEffect(() => {
-  const allLoaded =
-    !categoriesQ.isLoading &&
-    !productsQ.isLoading &&
-    !promosQ.isLoading &&
-    !favoritesQ.isLoading;
 
-  if (!initialLoadMarkedRef.current && allLoaded) {
-    initialLoadMarkedRef.current = true;
-    lastAutoRefreshAtRef.current = Date.now();
-  }
-}, [
-  categoriesQ.isLoading,
-  productsQ.isLoading,
-  promosQ.isLoading,
-  favoritesQ.isLoading,
-]);
-
-useFocusEffect(
-  useCallback(() => {
-    const stillLoading =
-      categoriesQ.isLoading ||
-      productsQ.isLoading ||
-      promosQ.isLoading ||
-      favoritesQ.isLoading;
-
-    if (stillLoading) return;
-
-    const now = Date.now();
-    const elapsed = now - lastAutoRefreshAtRef.current;
-
-    if (elapsed < AUTO_REFRESH_MS) return;
-
-    refetchAll().catch(() => undefined);
-  }, [
-    categoriesQ.isLoading,
-    productsQ.isLoading,
-    promosQ.isLoading,
-    favoritesQ.isLoading,
-    refetchAll,
-  ])
-);
 
   const categories = asItems<Category>(categoriesQ.data);
   const productsAll = asItems<Product>(productsQ.data);
   const promoRows = asItems<PromoRow>(promosQ.data);
-  const favoriteIds = useMemo(() => buildFavoriteIds(favoritesQ.data), [favoritesQ.data]);
 
   const promoByProductId = useMemo(() => {
     const map = new Map<string, PromoDTO>();
@@ -499,12 +424,9 @@ useFocusEffect(
         return okCat && okQ;
       })
       .map((p) => {
-        const favorited = resolveFavoriteFlag(p, favoriteIds);
 
         return {
           ...p,
-          isFavorite: favorited,
-          favorited,
         };
       });
 
@@ -517,7 +439,7 @@ useFocusEffect(
     }
 
     return filtered;
-  }, [productsAll, q, selectedCat, promoIds, sortMode, favoriteIds]);
+  }, [productsAll, q, selectedCat, promoIds, sortMode]);
 
   const indexById = useMemo(() => {
     const map = new Map<string, number>();
@@ -816,7 +738,6 @@ const promoBadgeLabel =
                     priceLabel={formatBRL(hasDiscount ? final : base)}
                     oldPriceLabel={hasDiscount ? formatBRL(base) : null}
                     inCart={inCart}
-                    isFavorite={Boolean(item.isFavorite)}
                     outOfStock={out}
                     highlighted={isHighlighted}
                     width={cardWidth}
