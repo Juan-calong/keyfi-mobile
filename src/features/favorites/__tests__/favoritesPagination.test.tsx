@@ -43,6 +43,7 @@ it.each(['CUSTOMER', 'SALON_OWNER'] as const)('paginates 0, 1, 20, 21 and 100 fa
     } finally { await h.cleanup(); }
   }
 });
+// Cold Jest transforms for the first rendered FavoritesScreen take about 6 seconds.
 it.each(['CUSTOMER', 'SALON_OWNER'] as const)('FavoritesScreen removes immediately for %s and keeps total/hasMore coherent', async (role) => {
   setUser('A', role);
   const server = backend(ids(21));
@@ -64,7 +65,7 @@ it.each(['CUSTOMER', 'SALON_OWNER'] as const)('FavoritesScreen removes immediate
     expect(props.items[19].id).toBe('p20');
     expect(props.hasMore).toBe(false);
   } finally { await h.cleanup(); }
-});
+}, 15000);
 it('shows reconciliation when Favorites opens immediately after favoriting instead of false empty', async () => {
   const server = backend([]);
   const h = harness();
