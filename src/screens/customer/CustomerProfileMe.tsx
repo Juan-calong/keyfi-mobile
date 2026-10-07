@@ -25,6 +25,8 @@ import {
   type IosConfirmAction,
 } from '../../ui/components/IosConfirm';
 
+import { openWhatsAppSupport } from '../../core/support/support.service';
+
 type MeDTO = any;
 type IconName = string;
 
@@ -328,6 +330,12 @@ export function CustomerProfileMe() {
               </SectionCard>
 
               <SectionCard title="Conta e comunicação">
+                <MenuRow
+                  iconName="logo-whatsapp"
+                  title="Suporte"
+                  subtitle="Fale com a KeyFi pelo WhatsApp"
+                  onPress={openWhatsAppSupport}
+                />
                 <MenuRow
                   iconName="notifications-outline"
                   title="Notificações"

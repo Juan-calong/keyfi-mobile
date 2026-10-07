@@ -21,6 +21,8 @@ import { endpoints } from '../core/api/endpoints';
 import { OWNER_SCREENS } from '../navigation/owner.routes';
 import { AppBackButton } from '../ui/components/AppBackButton';
 
+import { openWhatsAppSupport } from '../core/support/support.service';
+
 type MeDTO = any;
 type IconName = string;
 
@@ -489,6 +491,12 @@ export function ProfileMeScreen() {
             </SectionCard>
 
             <SectionCard title="Conta e comunicação">
+              <MenuRow
+                iconName="logo-whatsapp"
+                title="Suporte"
+                subtitle="Fale com a KeyFi pelo WhatsApp"
+                onPress={openWhatsAppSupport}
+              />
               <MenuRow
                 iconName="notifications-outline"
                 title="Notificações"

@@ -11,6 +11,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { t } from '../../../../ui/tokens';
 import { RowItem } from './RowItem';
+import { openWhatsAppSupport } from '../../../../core/support/support.service';
 
 type Props = {
   profileName: string;
@@ -187,6 +188,16 @@ export function HomeView({
           }
           rightText={hasBeneficiary ? 'OK' : 'FALTA'}
           onPress={onOpenBeneficiary}
+          hideDivider
+        />
+      </SectionCard>
+
+      <SectionCard title="Conta e comunicação">
+        <RowItem
+          iconName="logo-whatsapp"
+          title="Suporte"
+          subtitle="Fale com a KeyFi pelo WhatsApp"
+          onPress={openWhatsAppSupport}
           hideDivider
         />
       </SectionCard>
